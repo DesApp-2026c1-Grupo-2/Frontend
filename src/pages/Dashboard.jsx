@@ -18,7 +18,6 @@ const moduleColors = {
   pedidos: { title: "Pedidos", color: "from-teal-600 to-green-800" },
 };
 
-
 function DashboardGrid() {
   const navigate = useNavigate();
 
@@ -30,7 +29,8 @@ function DashboardGrid() {
         description="Seleccioná un módulo para acceder a su gestión completa."
       />
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 24 }}>
+      {/* Grid refactorizado a Tailwind */}
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-6">
         {modulesData.map((mod, i) => (
           <ModuleCard 
             key={mod.id}
@@ -44,9 +44,9 @@ function DashboardGrid() {
         ))}
       </div>
 
-      {/* Footer */}
-      <div style={{ marginTop: 72, paddingTop: 32, borderTop: "1px solid #dcfce7", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ color: "#16a34a", fontSize: 13 }}>© 2026 Sistema de Gestión Clínica</span>
+      {/* Footer refactorizado a Tailwind */}
+      <div className="mt-[72px] pt-8 border-t border-green-100 flex justify-between items-center">
+        <span className="text-green-600 text-[13px]">© 2026 Sistema de Gestión Clínica</span>
       </div>
     </AppLayout>
   );
@@ -63,7 +63,7 @@ function ModulePage() {
     <AppLayout>
       <div className={`w-full max-w-lg mx-auto mt-20 rounded-3xl bg-gradient-to-br ${pageInfo.color} p-12 text-white text-center shadow-2xl`}>
         <p className="text-green-200 text-sm font-medium uppercase tracking-widest mb-4">Módulo</p>
-        <h1 className="text-5xl font-bold mb-4" style={{ fontFamily: "'Playfair Display', serif" }}>
+        <h1 className="text-5xl font-bold mb-4 font-['Playfair_Display']">
           {pageInfo.title}
         </h1>
         <p className="text-green-100 mb-10 text-base leading-relaxed">

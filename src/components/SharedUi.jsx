@@ -1,32 +1,21 @@
 export function PageHeader({ preTitle, title, description }) {
   return (
-    <div className="mb-16" style={{ animation: "floatIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-        <div style={{
-          width: 10, height: 10, borderRadius: "50%",
-          background: "linear-gradient(135deg, #16a34a, #4ade80)",
-          boxShadow: "0 0 0 3px #dcfce7",
-        }} />
-        <span style={{ color: "#16a34a", fontWeight: 600, fontSize: 13, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+    <div className="mb-16 animate-float-in">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-green-600 to-green-400 shadow-[0_0_0_3px_#dcfce7]" />
+        <span className="text-green-600 font-semibold text-[13px] tracking-[0.1em] uppercase">
           {preTitle}
         </span>
       </div>
       
-      <h1 style={{
-        fontFamily: "'Playfair Display', serif",
-        fontSize: "clamp(2.2rem, 5vw, 3.4rem)",
-        fontWeight: 700,
-        color: "#14532d",
-        lineHeight: 1.15,
-        margin: 0,
-      }}>
+      <h1 className="font-['Playfair_Display',serif] text-[clamp(2.2rem,5vw,3.4rem)] font-bold text-green-900 leading-[1.15] m-0">
         {title}
       </h1>
       
-      <div style={{ width: 48, height: 3, background: "linear-gradient(90deg, #16a34a, #4ade80)", borderRadius: 4, marginTop: 10 }} />
+      <div className="w-12 h-[3px] bg-gradient-to-r from-green-600 to-green-400 rounded mt-2.5" />
       
       {description && (
-        <p style={{ marginTop: 16, color: "#4b7a5a", fontSize: 16, fontWeight: 300, maxWidth: 440 }}>
+        <p className="mt-4 text-[#4b7a5a] text-base font-light max-w-[440px]">
           {description}
         </p>
       )}
@@ -36,13 +25,8 @@ export function PageHeader({ preTitle, title, description }) {
 
 export function StatBadge({ text }) {
   return (
-    <div style={{
-      display: "inline-flex", alignItems: "center", gap: 6,
-      background: "#f0fdf4", border: "1px solid #bbf7d0",
-      color: "#16a34a", fontSize: 12, fontWeight: 500,
-      padding: "4px 10px", borderRadius: 20, marginTop: 14
-    }}>
-      <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+    <div className="inline-flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-600 text-xs font-medium py-1 px-2.5 rounded-[20px] mt-3.5">
+      <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 10 10">
         <circle cx="5" cy="5" r="5"/>
       </svg>
       {text}
