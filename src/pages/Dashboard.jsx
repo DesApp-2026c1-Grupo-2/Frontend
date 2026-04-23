@@ -46,7 +46,7 @@ function DashboardGrid() {
 
       {/* Footer */}
       <div style={{ marginTop: 72, paddingTop: 32, borderTop: "1px solid #dcfce7", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ color: "#86efac", fontSize: 13 }}>© 2026 Sistema de Gestión Clínica</span>
+        <span style={{ color: "#16a34a", fontSize: 13 }}>© 2026 Sistema de Gestión Clínica</span>
       </div>
     </AppLayout>
   );
