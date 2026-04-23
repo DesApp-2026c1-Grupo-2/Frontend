@@ -8,7 +8,7 @@ function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Dashboard />} />
+        <Route path="/*" element={<Dashboard />} />
         <Route path="/laboratorios" element={<Laboratorios />} />
         <Route path="/pedidos" element={<Pedidos />} />
         <Route path="/logIn" element={<LogIn />} />
