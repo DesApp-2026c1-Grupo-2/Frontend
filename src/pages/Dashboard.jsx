@@ -5,7 +5,7 @@ import { ModuleCard } from "../components/ModuleCard";
 import { LabIcon, InventoryIcon, EquipmentIcon, OrdersIcon } from "../components/icons";
 
 const modulesData = [
-  { id: "laboratorio", label: "Laboratorio", description: "Laboratorios Universitarios", stats: "5 Laboratorios Disponibles", icon: <LabIcon /> },
+  { id: "laboratorios", label: "Laboratorio", description: "Laboratorios Universitarios", stats: "5 Laboratorios Disponibles", icon: <LabIcon /> },
   { id: "inventario", label: "Inventario", description: "Control de stock y materiales del laboratorio", stats: "50 productos en stock", icon: <InventoryIcon /> },
   { id: "equipamiento", label: "Equipamiento", description: "Gestión y mantenimiento de equipo", stats: "24 equipos registrados", icon: <EquipmentIcon /> },
   { id: "pedidos", label: "Pedidos", description: "Solicitudes de reserva de laboratorios", stats: "2 pedidos pendientes", icon: <OrdersIcon /> },
@@ -39,7 +39,7 @@ function DashboardGrid() {
             stats={mod.stats}
             icon={mod.icon}
             delayIndex={i + 1}
-            onClick={() => navigate(`/modulo/${mod.id}`)}
+            onClick={() => navigate(`/${mod.id}`)}
           />
         ))}
       </div>
@@ -84,7 +84,7 @@ export default function Dashboard() {
   return (
     <Routes>
       <Route path="/" element={<DashboardGrid />} />
-      <Route path="/modulo/:id" element={<ModulePage />} />
+      <Route path="/:id" element={<ModulePage />} />
     </Routes>
   );
 }
