@@ -14,6 +14,7 @@ function AppRouter() {
         <Route path="/logIn" element={<LogIn />} />
       </Routes>
     </BrowserRouter>
+    
   );
 }
 
