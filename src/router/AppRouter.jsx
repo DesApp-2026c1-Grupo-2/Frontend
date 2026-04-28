@@ -3,6 +3,7 @@ import Dashboard from "../pages/Dashboard";
 import Laboratorios from "../pages/Laboratorios";
 import Pedidos from "../pages/Pedidos";
 import LogIn from "../pages/logIn";
+import Inventario from "../pages/inventario";
 
 function AppRouter() {
   return (
@@ -12,6 +13,7 @@ function AppRouter() {
         <Route path="/laboratorios" element={<Laboratorios />} />
         <Route path="/pedidos" element={<Pedidos />} />
         <Route path="/logIn" element={<LogIn />} />
+        <Route path="/inventario" element={<Inventario />} />
       </Routes>
     </BrowserRouter>
   );
