@@ -3,11 +3,12 @@ import { useNavigate } from "react-router-dom";
 
 const tabs = ["Equipos", "Materiales", "Reactivos", "Sustancias basicas"];
 
-const inventoryData = [
+const initialInventoryData = [
   {
     id: 1,
     categoria: "Equipos",
     tipo: "Centrifuga",
+    cantidad: 1,
     codigo: "EQ-001",
     ubicacion: "Lab 1 / Edif. A",
     estado: "Disponible",
@@ -17,6 +18,7 @@ const inventoryData = [
     id: 2,
     categoria: "Equipos",
     tipo: "Microscopio binocular",
+    cantidad: 1,
     codigo: "EQ-002",
     ubicacion: "Lab 2 / Edif. A",
     estado: "Reservado",
@@ -26,6 +28,7 @@ const inventoryData = [
     id: 3,
     categoria: "Equipos",
     tipo: "Incubadora bacteriologica",
+    cantidad: 1,
     codigo: "EQ-003",
     ubicacion: "Lab 3 / Edif. B",
     estado: "Disponible",
@@ -35,6 +38,7 @@ const inventoryData = [
     id: 4,
     categoria: "Equipos",
     tipo: "Espectrofotometro UV",
+    cantidad: 1,
     codigo: "EQ-004",
     ubicacion: "Lab 5 / Edif. C",
     estado: "Fuera de servicio",
@@ -44,6 +48,7 @@ const inventoryData = [
     id: 5,
     categoria: "Equipos",
     tipo: "Bano termostatico",
+    cantidad: 1,
     codigo: "EQ-005",
     ubicacion: "Lab 1 / Edif. A",
     estado: "Mantenimiento",
@@ -53,6 +58,7 @@ const inventoryData = [
     id: 6,
     categoria: "Materiales",
     tipo: "Gradilla de tubos",
+    cantidad: 1,
     codigo: "MT-011",
     ubicacion: "Deposito central",
     estado: "Disponible",
@@ -62,6 +68,7 @@ const inventoryData = [
     id: 7,
     categoria: "Reactivos",
     tipo: "Buffer fosfato",
+    cantidad: 1,
     codigo: "RC-023",
     ubicacion: "Camara fria 2",
     estado: "Reservado",
@@ -71,12 +78,15 @@ const inventoryData = [
     id: 8,
     categoria: "Sustancias basicas",
     tipo: "Acido citrico",
+    cantidad: 1,
     codigo: "SB-008",
     ubicacion: "Almacen quimico",
     estado: "Disponible",
     movilidad: "Fija",
   },
 ];
+
+const statusOptions = ["Disponible", "Reservado", "Fuera de servicio", "Mantenimiento"];
 
 function SearchIcon() {/* icono lupa*/ 
   return (
@@ -138,11 +148,66 @@ function Equipamiento() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("Equipos");
   const [query, setQuery] = useState("");
+  const [inventory, setInventory] = useState(initialInventoryData);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    nombre: "",
+    cantidad: "1",
+    estado: "Disponible",
+  });
+
+  const resetForm = () => {
+    setFormData({
+      nombre: "",
+      cantidad: "1",
+      estado: "Disponible",
+    });
+  };
+
+  const openForm = () => {
+    resetForm();
+    setIsFormOpen(true);
+  };
+
+  const closeForm = () => {
+    setIsFormOpen(false);
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+
+    const nombre = formData.nombre.trim();
+    const cantidad = Number.parseInt(formData.cantidad, 10);
+
+    if (!nombre || Number.isNaN(cantidad) || cantidad < 1) {
+      return;
+    }
+
+    const nextNumber = inventory.length + 1;
+    const codePrefix = activeTab === "Materiales" ? "MT" : activeTab === "Reactivos" ? "RC" : activeTab === "Sustancias basicas" ? "SB" : "EQ";
+
+    setInventory((currentInventory) => [
+      ...currentInventory,
+      {
+        id: Date.now(),
+        categoria: activeTab,
+        tipo: nombre,
+        cantidad,
+        codigo: `${codePrefix}-${String(nextNumber).padStart(3, "0")}`,
+        ubicacion: "Pendiente de asignar",
+        estado: formData.estado,
+        movilidad: "Fija",
+      },
+    ]);
+
+    closeForm();
+    resetForm();
+  };
 
   const filteredItems = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase(); /*Limpia y normaliza el texto ingresado.*/
 
-    return inventoryData.filter((item) => { /* Filtra */
+    return inventory.filter((item) => { /* Filtra */
       const matchesCategory = item.categoria === activeTab; /* Filtra Categoría */
       const matchesQuery = /* Filtra Búsqueda */
         !normalizedQuery ||
@@ -152,7 +217,7 @@ function Equipamiento() {
 
       return matchesCategory && matchesQuery;
     });
-  }, [activeTab, query]);
+  }, [activeTab, inventory, query]);
 
   return (
     <div className="mx-auto w-full max-w-6xl p-4 sm:p-6">
@@ -202,6 +267,7 @@ function Equipamiento() {
 
           <button   /* Boton nuevo equipo   NO TIENE FUNCIONALIDAD AÚN*/
             type="button"
+            onClick={openForm}
             className="inline-flex items-center justify-center rounded-xl bg-cyan-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-600"
           > + Nuevo equipo
           </button>
@@ -212,7 +278,8 @@ function Equipamiento() {
             <table className="w-full min-w-[760px] border-collapse">
               <thead>
                 <tr className="bg-slate-50 text-left">
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Tipo</th>
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Nombre</th>
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Cantidad</th>
                   <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Codigo</th>
                   <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Ubicacion</th>
                   <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Estado</th>
@@ -221,10 +288,11 @@ function Equipamiento() {
                 </tr>
               </thead>
               <tbody>
-                /* Recorre los items filtrados y los muestra en la tabla */
-                {filteredItems.map((item) => (  
+                
+                {filteredItems.map((item) => ( /* Recorre los items filtrados y los muestra en la tabla */  
                   <tr key={item.id} className="border-t border-slate-100 text-sm text-slate-700">
                     <td className="px-4 py-3 font-semibold text-slate-900">{item.tipo}</td>
+                    <td className="px-4 py-3 text-slate-500">{item.cantidad}</td>
                     <td className="px-4 py-3 text-slate-500">{item.codigo}</td>
                     <td className="px-4 py-3 text-slate-500">{item.ubicacion}</td>
                     <td className="px-4 py-3">
@@ -257,13 +325,93 @@ function Equipamiento() {
             </table>
           </div>
         </div>
-                /* Mensaje cuando no hay resultados */
-        {filteredItems.length === 0 && ( 
+                
+        {filteredItems.length === 0 && ( /* Mensaje cuando no hay resultados */ 
           <p className="mt-4 text-center text-sm text-slate-500">
             No hay resultados para el filtro seleccionado.
           </p>
         )}
       </div>
+
+      {isFormOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm" onClick={closeForm}>
+          <div
+            className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Nuevo equipo</h2>
+                <p className="mt-1 text-sm text-slate-500">Completa el formulario para registrar el equipo.</p>
+              </div>
+              <button
+                type="button"
+                onClick={closeForm}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-semibold text-slate-700">Nombre</span>
+                <input
+                  type="text"
+                  value={formData.nombre}
+                  onChange={(event) => setFormData((current) => ({ ...current, nombre: event.target.value }))}
+                  placeholder="Ej. Micropipeta digital"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
+                  required
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-semibold text-slate-700">Cantidad</span>
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.cantidad}
+                  onChange={(event) => setFormData((current) => ({ ...current, cantidad: event.target.value }))}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
+                  required
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-semibold text-slate-700">Estado</span>
+                <select
+                  value={formData.estado}
+                  onChange={(event) => setFormData((current) => ({ ...current, estado: event.target.value }))}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
+                >
+                  {statusOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closeForm}
+                  className="inline-flex items-center justify-center rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="inline-flex items-center justify-center rounded-xl bg-cyan-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-600"
+                >
+                  Guardar equipo
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
