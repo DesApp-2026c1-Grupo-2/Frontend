@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import imagenEdificios from "../assets/imagenEdificios.png";
 import { edificios } from "../data/edificios";
 import Navbar from "../components/Navbar";
+
 //import { LabIcon, InventoryIcon, EquipmentIcon, OrdersIcon } from "../components/icons";
 
 /*
@@ -118,7 +119,7 @@ function Dashboard() {
               key={i}
               onClick={() => {
                 if (!deshabilitado) {
-                  navigate("/laboratorios");
+                  navigate(ed.ruta);
                 }
               }}
               className={`
