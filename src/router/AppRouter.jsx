@@ -1,12 +1,9 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Dashboard from "../pages/Dashboard";
-import Laboratorios from "../pages/Laboratorios";
-import Pedidos from "../pages/Pedidos";
+import Laboratorios from "../pages/laboratorios";
+import Pedidos from "../pages/pedidos";
 import LogIn from "../pages/logIn";
-import LaboratoriosHC from "../pages/laboratoriosHC";
-import LaboratoriosMA from "../pages/laboratoriosMA";
-import LaboratoriosMB from "../pages/laboratoriosMB";
-import LaboratoriosSM from "../pages/laboratoriosSM";
+import Equipamiento from "../pages/equipamiento";
 
 function AppRouter() {
   return (
