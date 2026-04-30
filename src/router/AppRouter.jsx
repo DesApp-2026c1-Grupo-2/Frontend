@@ -3,6 +3,7 @@ import Dashboard from "../pages/Dashboard";
 import Laboratorios from "../pages/laboratorios";
 import Pedidos from "../pages/pedidos";
 import LogIn from "../pages/logIn";
+import Inventario from "../pages/inventario";
 import Equipamiento from "../pages/equipamiento";
 
 function AppRouter() {
@@ -16,6 +17,7 @@ function AppRouter() {
         <Route path="/laboratorios/sm" element={<LaboratoriosSM />} />
         <Route path="/pedidos" element={<Pedidos />} />
         <Route path="/logIn" element={<LogIn />} />
+        <Route path="/inventario" element={<Inventario />} />
       </Routes>
     </BrowserRouter>
     
