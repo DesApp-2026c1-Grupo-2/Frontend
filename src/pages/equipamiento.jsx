@@ -276,7 +276,7 @@ function Equipamiento() {
             />
           </div>
 
-          <button   /* Boton nuevo equipo   NO TIENE FUNCIONALIDAD AÚN*/
+          <button   /* Botón para abrir el formulario de nuevo equipo */
             type="button"
             onClick={openForm}
             className="inline-flex items-center justify-center rounded-xl bg-cyan-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-600"
