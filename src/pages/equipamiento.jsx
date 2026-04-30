@@ -183,22 +183,33 @@ function Equipamiento() {
       return;
     }
 
-    const nextNumber = inventory.length + 1;
     const codePrefix = activeTab === "Materiales" ? "MT" : activeTab === "Reactivos" ? "RC" : activeTab === "Sustancias basicas" ? "SB" : "EQ";
 
-    setInventory((currentInventory) => [
-      ...currentInventory,
-      {
-        id: Date.now(),
-        categoria: activeTab,
-        tipo: nombre,
-        cantidad,
-        codigo: `${codePrefix}-${String(nextNumber).padStart(3, "0")}`,
-        ubicacion: "Pendiente de asignar",
-        estado: formData.estado,
-        movilidad: "Fija",
-      },
-    ]);
+    setInventory((currentInventory) => {
+      const nextNumber =
+        currentInventory
+          .filter((item) => item.categoria === activeTab)
+          .reduce((maxNumber, item) => {
+            const [, numericPart = "0"] = item.codigo.split("-");
+            const itemNumber = Number.parseInt(numericPart, 10);
+
+            return Number.isNaN(itemNumber) ? maxNumber : Math.max(maxNumber, itemNumber);
+          }, 0) + 1;
+
+      return [
+        ...currentInventory,
+        {
+          id: Date.now(),
+          categoria: activeTab,
+          tipo: nombre,
+          cantidad,
+          codigo: `${codePrefix}-${String(nextNumber).padStart(3, "0")}`,
+          ubicacion: "Pendiente de asignar",
+          estado: formData.estado,
+          movilidad: "Fija",
+        },
+      ];
+    });
 
     closeForm();
     resetForm();
