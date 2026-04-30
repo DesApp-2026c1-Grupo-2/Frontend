@@ -1,6 +1,6 @@
 # Frontend
 
-Frontend desarrollado con React, Vite y Tailwind CSS.
+Frontend desarrollado con React, Vite y Tailwind CSS
 
 ## Tecnologías
 
