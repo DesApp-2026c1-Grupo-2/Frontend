@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Dashboard from "../pages/Dashboard";
-import Laboratorios from "../pages/Laboratorios";
-import Pedidos from "../pages/Pedidos";
+import Laboratorios from "../pages/laboratorios";
+import Pedidos from "../pages/pedidos";
 import LogIn from "../pages/logIn";
 import Equipamiento from "../pages/equipamiento";
 
