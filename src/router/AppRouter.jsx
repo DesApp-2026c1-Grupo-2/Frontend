@@ -3,8 +3,11 @@ import Dashboard from "../pages/Dashboard";
 import Laboratorios from "../pages/laboratorios";
 import Pedidos from "../pages/pedidos";
 import LogIn from "../pages/logIn";
-import Inventario from "../pages/inventario";
 import Equipamiento from "../pages/equipamiento";
+import LaboratoriosMB from "../pages/laboratoriosMB";
+import LaboratoriosHC from "../pages/laboratoriosHC";
+import LaboratoriosMA from "../pages/laboratoriosMA";
+import LaboratoriosSM from "../pages/laboratoriosSM";
 
 function AppRouter() {
   return (
@@ -16,11 +19,11 @@ function AppRouter() {
         <Route path="/laboratorios/ma" element={<LaboratoriosMA />} />
         <Route path="/laboratorios/sm" element={<LaboratoriosSM />} />
         <Route path="/pedidos" element={<Pedidos />} />
+        <Route path="/equipamiento" element={<Equipamiento />} />
         <Route path="/logIn" element={<LogIn />} />
-        <Route path="/inventario" element={<Inventario />} />
       </Routes>
     </BrowserRouter>
-    
+
   );
 }
 
