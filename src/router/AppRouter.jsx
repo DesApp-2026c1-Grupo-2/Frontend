@@ -10,8 +10,10 @@ function AppRouter() {
     <BrowserRouter>
       <Routes>
         <Route path="/*" element={<Dashboard />} />
-        <Route path="/laboratorios" element={<Laboratorios />} />
-        <Route path="/equipamiento" element={<Equipamiento />}/>
+        <Route path="/laboratorios/mb" element={<LaboratoriosMB />} />
+        <Route path="/laboratorios/hc" element={<LaboratoriosHC />} />
+        <Route path="/laboratorios/ma" element={<LaboratoriosMA />} />
+        <Route path="/laboratorios/sm" element={<LaboratoriosSM />} />
         <Route path="/pedidos" element={<Pedidos />} />
         <Route path="/logIn" element={<LogIn />} />
       </Routes>
