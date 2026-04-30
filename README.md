@@ -1,16 +1,69 @@
-# React + Vite
+# Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend desarrollado con React, Vite y Tailwind CSS.
 
-Currently, two official plugins are available:
+## Tecnologías
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **React 18** — Librería de UI basada en componentes
+- **Vite** — Bundler ultrarrápido para desarrollo y producción
+- **Tailwind CSS** — Framework de estilos utility-first
+- **PostCSS** — Procesamiento de CSS
+- **ESLint** — Linting y calidad de código
 
-## React Compiler
+## Estructura del Proyecto
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```
+├── public/               # Archivos estáticos (íconos, imágenes, etc.)
+├── src/
+│   ├── components/       # Componentes reutilizables
+│   ├── pages/            # Vistas principales de la aplicación
+│   ├── hooks/            # Custom hooks
+│   ├── services/         # Llamadas a APIs externas
+│   ├── utils/            # Funciones utilitarias
+│   ├── assets/           # Recursos estáticos (imágenes, fuentes)
+│   ├── App.jsx
+│   └── main.jsx
+├── index.html
+├── eslint.config.js
+├── postcss.config.js
+├── tailwind.config.js
+├── vite.config.js
+└── package.json
+```
 
-## Expanding the ESLint configuration
+## Instalación
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Prerrequisitos
+
+- Node.js 18+
+- npm 
+
+### Pasos
+
+1. Clonar el repositorio:
+
+```bash
+git clone <url-del-repositorio>
+cd <nombre-del-proyecto>
+```
+
+2. Instalar dependencias:
+
+```bash
+npm install
+```
+
+5. Iniciar el servidor de desarrollo:
+
+```bash
+npm run dev
+```
+
+## Scripts Disponibles
+
+| Comando           | Descripción                                  |
+| ----------------- | -------------------------------------------- |
+| `npm run dev`     | Inicia el servidor de desarrollo con HMR     |
+| `npm run build`   | Genera el build optimizado para producción   |
+| `npm run preview` | Previsualiza el build de producción en local |
+| `npm run lint`    | Ejecuta ESLint sobre el código fuente        |
