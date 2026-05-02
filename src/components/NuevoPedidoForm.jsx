@@ -1,17 +1,50 @@
 import { useState } from "react";
-import { STEPS, LABS, ACTIVIDADES } from '../data/pedidos';
+import { STEPS, LABS } from '../data/pedidos'; 
+
+const RECURSOS_DB = [
+  { tipo: "Material", nombre: "Tubos eppendorf", cantidad: 60 },
+  { tipo: "Reactivo", nombre: "Buffer de lisis", cantidad: 1 }, 
+  { tipo: "Equipo", nombre: "Micropipetas P200", cantidad: 4 },
+  { tipo: "Equipo", nombre: "Espectrofotómetro UV", cantidad: 1 },
+  { tipo: "Equipo", nombre: "Centrífuga de mesa", cantidad: 2 }
+];
 
 export default function NuevoPedidoForm({ onClose, onCrear }) {
   const [step, setStep] = useState(0);
+
   const [form, setForm] = useState({
-    docente: "", alumnos: "", fecha: "", hora: "10:00",
-    duracion: "2 horas", lab: "", actividad: "", observaciones: "",
+    materia: "", 
+    docente: "", 
+    alumnos: "", 
+    fecha: "", 
+    hora: "10:00",
+    laboratorio: "", 
+    recursos: [], 
   });
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
+
+  const toggleRecurso = (recurso) => {
+    setForm((prev) => {
+      const existe = prev.recursos.some((r) => r.nombre === recurso.nombre);
+      if (existe) {
+      
+        return { ...prev, recursos: prev.recursos.filter((r) => r.nombre !== recurso.nombre) };
+      } else {
+
+        return { ...prev, recursos: [...prev.recursos, recurso] };
+      }
+    });
+  };
+
   const handleCrear = () => {
-    onCrear(form);
+
+    const payload = {
+      ...form,
+      alumnos: Number(form.alumnos)
+    };
+    onCrear(payload);
     onClose();
   };
 
@@ -38,9 +71,16 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
             ))}
           </div>
 
-          {/* Step 0: Datos */}
+
           {step === 0 && (
             <div className="grid grid-cols-2 gap-4">
+
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-zinc-600 mb-1">Materia</label>
+                <input type="text" placeholder="Ej: Biología Celular" value={form.materia} onChange={set("materia")}
+                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-zinc-400" />
+              </div>
+
               {[["Docente solicitante","docente","text","Dr. Herrera"],["Cantidad de alumnos","alumnos","number","28"]].map(([label,key,type,ph]) => (
                 <div key={key}>
                   <label className="block text-sm font-medium text-zinc-600 mb-1">{label}</label>
@@ -58,60 +98,52 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
                 <input type="time" value={form.hora} onChange={set("hora")}
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all" />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-zinc-600 mb-1">Duración</label>
-                <select value={form.duracion} onChange={set("duracion")}
+              
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-zinc-600 mb-1">Laboratorio</label>
+                <select value={form.laboratorio} onChange={set("laboratorio")}
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all">
-                  {["1 hora","2 horas","3 horas","4 horas"].map(o => <option key={o}>{o}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-zinc-600 mb-1">Laboratorio (opcional)</label>
-                <select value={form.lab} onChange={set("lab")}
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all">
-                  <option value="">Sin preferencia</option>
+                  <option value="">Seleccionar laboratorio...</option>
                   {LABS.map(l => <option key={l}>{l}</option>)}
                 </select>
               </div>
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-zinc-600 mb-1">Actividad tipo</label>
-                <select value={form.actividad} onChange={set("actividad")}
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all">
-                  <option value="">Seleccionar actividad...</option>
-                  {ACTIVIDADES.map(a => <option key={a}>{a}</option>)}
-                </select>
-              </div>
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-zinc-600 mb-1">Observaciones</label>
-                <textarea rows={3} value={form.observaciones} onChange={set("observaciones")}
-                  placeholder="Notas adicionales..."
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 resize-none transition-all placeholder:text-zinc-400" />
-              </div>
             </div>
           )}
 
-          {/* Step 1: Recursos */}
           {step === 1 && (
             <div className="space-y-4">
-              <p className="text-zinc-500 text-sm italic">Recursos sugeridos para <span className="text-emerald-600 font-semibold">{form.actividad || "la actividad"}</span>:</p>
-              {["Tubos eppendorf × 60","Buffer de lisis × 500 ml","Micropipetas P200 × 4","Espectrofotómetro UV (EQ-004)","Centrífuga de mesa × 2"].map((r, i) => (
-                <label key={i} className="flex items-center gap-3 bg-white hover:bg-emerald-50 rounded-xl px-4 py-3 cursor-pointer border border-zinc-200 hover:border-emerald-200 transition-colors group">
-                  <input type="checkbox" defaultChecked className="accent-emerald-500 w-4 h-4" />
-                  <span className="text-zinc-700 text-sm font-medium group-hover:text-emerald-800">{r}</span>
-                </label>
-              ))}
+              <p className="text-zinc-500 text-sm italic">Seleccionar recursos requeridos:</p>
+              <div className="grid grid-cols-1 gap-2">
+                {RECURSOS_DB.map((r, i) => (
+                  <label key={i} className="flex items-center gap-3 bg-white hover:bg-emerald-50 rounded-xl px-4 py-3 cursor-pointer border border-zinc-200 hover:border-emerald-200 transition-colors group">
+                    <input 
+                      type="checkbox" 
+                      className="accent-emerald-500 w-4 h-4"
+                      checked={form.recursos.some(rec => rec.nombre === r.nombre)}
+                      onChange={() => toggleRecurso(r)}
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-zinc-700 text-sm font-medium group-hover:text-emerald-800">
+                        {r.nombre} (x{r.cantidad})
+                      </span>
+                      <span className="text-zinc-400 text-xs">{r.tipo}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
             </div>
           )}
 
-          {/* Step 2: Revisión */}
           {step === 2 && (
             <div className="space-y-1 bg-zinc-50 p-6 rounded-2xl border border-zinc-100">
               <p className="text-zinc-400 text-xs uppercase tracking-wider font-bold mb-4">Resumen del pedido</p>
               {[
-                ["Docente", form.docente || "—"],["Alumnos", form.alumnos || "—"],
+                ["Materia", form.materia || "—"],
+                ["Docente", form.docente || "—"],
+                ["Alumnos", form.alumnos || "—"],
                 ["Fecha y hora", form.fecha ? `${form.fecha} ${form.hora}` : "—"],
-                ["Duración", form.duracion],["Laboratorio", form.lab || "Sin preferencia"],
-                ["Actividad", form.actividad || "—"],["Observaciones", form.observaciones || "Sin observaciones"],
+                ["Laboratorio", form.laboratorio || "—"],
+                ["Recursos", `${form.recursos.length} items seleccionados`]
               ].map(([k,v]) => (
                 <div key={k} className="flex justify-between border-b border-zinc-200/60 py-2 last:border-0">
                   <span className="text-zinc-500 text-sm">{k}</span>
@@ -121,7 +153,6 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
             </div>
           )}
 
-          {/* Step 3: Envío */}
           {step === 3 && (
             <div className="flex flex-col items-center justify-center py-8 gap-3">
               <div className="w-20 h-20 rounded-full bg-emerald-100 border-4 border-white shadow-sm flex items-center justify-center text-emerald-600 text-3xl">✓</div>
@@ -130,8 +161,6 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
             </div>
           )}
         </div>
-
-        {/* Footer */}
         <div className="flex justify-between px-8 py-5 border-t border-zinc-100 bg-zinc-50/50 rounded-b-2xl">
           <button onClick={step === 0 ? onClose : () => setStep(s => s - 1)}
             className="px-5 py-2 rounded-xl text-sm font-medium text-zinc-600 border border-zinc-200 bg-white hover:bg-zinc-50 hover:text-zinc-800 transition-all shadow-sm">
