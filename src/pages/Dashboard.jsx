@@ -3,7 +3,6 @@ import { AppLayout } from "../components/AppLayout";
 import { useNavigate } from "react-router-dom";
 import imagenEdificios from "../assets/imagenEdificios.png";
 import { edificios } from "../data/edificios";
-import Navbar from "../components/Navbar";
 
 //import { LabIcon, InventoryIcon, EquipmentIcon, OrdersIcon } from "../components/icons";
 
@@ -100,9 +99,7 @@ function Dashboard() {
 
   return (
     <>
-      <Navbar />
-
-      <div className="w-screen h-[calc(100vh-70px)] mt-[70px] overflow-hidden relative">
+      <div className="w-screen h-[calc(100vh-70px)] overflow-hidden relative">
 
         {/* Fondo */}
         <img
