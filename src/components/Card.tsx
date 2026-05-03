@@ -38,14 +38,29 @@ export const Card: React.FC<CardProps> = ({
     lg: 'p-6',
   };
 
+  const isClickable = Boolean(onClick);
   const hoverClass = hover ? 'transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl cursor-pointer' : '';
-  const clickableClass = onClick ? 'cursor-pointer' : '';
+  const clickableClass = isClickable ? 'cursor-pointer' : '';
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!onClick) {
+      return;
+    }
+
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onClick();
+    }
+  };
 
   return (
     <div
       id={id}
       className={`${baseClasses} ${variantClasses[variant]} ${paddingClasses[padding]} ${hoverClass} ${clickableClass} ${className}`}
       onClick={onClick}
+      onKeyDown={isClickable ? handleKeyDown : undefined}
+      role={isClickable ? 'button' : undefined}
+      tabIndex={isClickable ? 0 : undefined}
     >
       {children}
     </div>
