@@ -193,7 +193,7 @@ function AlertCard({ item }) {
             <StatusPill status={item.estado} />
           </div>
           <div className="mt-0.5 text-xs text-slate-500">
-            Código {item.codigo} · {item.ubicacion} · 1 unidad
+            Código {item.codigo} · {item.ubicacion} · {item.cantidad} {item.cantidad === 1 ? "unidad" : "unidades"}
           </div>
         </div>
       </div>
