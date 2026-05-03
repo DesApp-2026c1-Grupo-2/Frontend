@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import api from "../api/axios";
 import NuevoPedidoForm from "../components/NuevoPedidoForm";
 import EstadoBadge from "../components/EstadoBadge";
-import Navbar from "../components/Navbar";
 import { PageHeader } from "../components/SharedUi";
 
 const PENDING_STATES = ["Pendiente", "En Revisión"];
@@ -169,7 +168,6 @@ export default function PedidosLaboratorio() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 px-8 py-8">
-      <Navbar />
       <PageHeader title="Pedidos" />
 
       {/* Tabs */}
