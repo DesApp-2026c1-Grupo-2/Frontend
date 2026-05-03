@@ -311,7 +311,7 @@ function Equipamiento() {
             </div>
 
             {/* Tabs con íconos */}
-            <div className="mb-4 flex w-full overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm gap-1 scrollbar-none">
+            <div className="mb-4 flex w-full overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm gap-1">
               {tabs.map(({ label, icon }) => {
                 const TabIcon = icon;
                 const isActive = label === activeTab;
