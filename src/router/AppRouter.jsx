@@ -1,12 +1,8 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Layout from "../components/Layout";
-
 import Dashboard from "../pages/Dashboard";
-import LaboratoriosMB from "../pages/laboratoriosMB";
-import LaboratoriosHC from "../pages/laboratoriosHC";
-import LaboratoriosMA from "../pages/laboratoriosMA";
-import LaboratoriosSM from "../pages/laboratoriosSM";
+import Laboratorios from "../pages/laboratorios";
 import Pedidos from "../pages/pedidos";
+import LogIn from "../pages/logIn";
 import Equipamiento from "../pages/equipamiento";
 import LaboratoriosMB from "../pages/laboratoriosMB";
 import LaboratoriosHC from "../pages/laboratoriosHC";
@@ -27,7 +23,7 @@ function AppRouter() {
         <Route path="/logIn" element={<LogIn />} />
       </Routes>
     </BrowserRouter>
-
+    
   );
 }
 
