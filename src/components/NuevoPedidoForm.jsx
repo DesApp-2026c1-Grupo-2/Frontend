@@ -24,22 +24,79 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-
   const toggleRecurso = (recurso) => {
     setForm((prev) => {
       const existe = prev.recursos.some((r) => r.nombre === recurso.nombre);
       if (existe) {
-      
         return { ...prev, recursos: prev.recursos.filter((r) => r.nombre !== recurso.nombre) };
       } else {
-
-        return { ...prev, recursos: [...prev.recursos, recurso] };
+        // Se agrega con cantidad: 1 por defecto al tildarlo
+        return { ...prev, recursos: [...prev.recursos, { ...recurso, cantidad: 1 }] };
       }
     });
   };
 
-  const handleCrear = () => {
+  // NUEVA FUNCIÓN: Actualiza la cantidad de un recurso ya seleccionado
+  const actualizarCantidad = (nombreRecurso, nuevaCantidad) => {
+    setForm((prev) => ({
+      ...prev,
+      recursos: prev.recursos.map((r) => 
+        r.nombre === nombreRecurso 
+          ? { ...r, cantidad: Number(nuevaCantidad) } 
+          : r
+      )
+    }));
+  };
 
+  const handleSiguiente = () => {
+    // Validaciones del Paso 0: Datos Básicos
+    if (step === 0) {
+      if (!form.materia || !form.docente || !form.alumnos || !form.fecha || !form.hora || !form.laboratorio) {
+        alert("Error: Faltan completar datos obligatorios en el formulario.");
+        return;
+      }
+
+      // Simulación de laboratorio ocupado
+      const laboratorioOcupado = form.laboratorio === "Laboratorio A" && form.hora === "10:00"; 
+      if (laboratorioOcupado) {
+        alert("Error: El laboratorio seleccionado no está disponible en esa fecha y hora.");
+        return;
+      }
+    }
+
+    // Validaciones del Paso 1: Recursos y Equipos
+    if (step === 1) {
+      let errorEquipo = false;
+      let errorStock = false;
+
+      form.recursos.forEach((recursoSolicitado) => {
+        const recursoDB = RECURSOS_DB.find(r => r.nombre === recursoSolicitado.nombre);
+        
+        // Ahora sí comparamos la cantidad que el usuario escribió vs el stock
+        if (recursoDB && recursoSolicitado.cantidad > recursoDB.cantidad) {
+          if (recursoDB.tipo === "Equipo") {
+            errorEquipo = true;
+          } else {
+            errorStock = true;
+          }
+        }
+      });
+
+      if (errorEquipo) {
+        alert("Error: Hay equipos insuficientes para satisfacer este pedido. Revisa las cantidades.");
+        return;
+      }
+
+      if (errorStock) {
+        alert("Error: Hay stock insuficiente de materiales o reactivos para este pedido. Revisa las cantidades.");
+        return;
+      }
+    }
+
+    setStep((s) => s + 1);
+  };
+
+  const handleCrear = () => {
     const payload = {
       ...form,
       alumnos: Number(form.alumnos)
@@ -71,10 +128,8 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
             ))}
           </div>
 
-
           {step === 0 && (
             <div className="grid grid-cols-2 gap-4">
-
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-zinc-600 mb-1">Materia</label>
                 <input type="text" placeholder="Ej: Biología Celular" value={form.materia} onChange={set("materia")}
@@ -104,7 +159,7 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
                 <select value={form.laboratorio} onChange={set("laboratorio")}
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all">
                   <option value="">Seleccionar laboratorio...</option>
-                  {LABS.map(l => <option key={l}>{l}</option>)}
+                  {LABS?.map(l => <option key={l} value={l}>{l}</option>)}
                 </select>
               </div>
             </div>
@@ -112,24 +167,47 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
 
           {step === 1 && (
             <div className="space-y-4">
-              <p className="text-zinc-500 text-sm italic">Seleccionar recursos requeridos:</p>
+              <p className="text-zinc-500 text-sm italic">Seleccionar recursos requeridos e indicar cantidad:</p>
               <div className="grid grid-cols-1 gap-2">
-                {RECURSOS_DB.map((r, i) => (
-                  <label key={i} className="flex items-center gap-3 bg-white hover:bg-emerald-50 rounded-xl px-4 py-3 cursor-pointer border border-zinc-200 hover:border-emerald-200 transition-colors group">
-                    <input 
-                      type="checkbox" 
-                      className="accent-emerald-500 w-4 h-4"
-                      checked={form.recursos.some(rec => rec.nombre === r.nombre)}
-                      onChange={() => toggleRecurso(r)}
-                    />
-                    <div className="flex flex-col">
-                      <span className="text-zinc-700 text-sm font-medium group-hover:text-emerald-800">
-                        {r.nombre} (x{r.cantidad})
-                      </span>
-                      <span className="text-zinc-400 text-xs">{r.tipo}</span>
+                {RECURSOS_DB.map((r, i) => {
+                  const seleccionado = form.recursos.find(rec => rec.nombre === r.nombre);
+                  
+                  return (
+                    <div key={i} className="flex items-center justify-between bg-white hover:bg-emerald-50 rounded-xl px-4 py-3 border border-zinc-200 hover:border-emerald-200 transition-colors group">
+                      
+                      {/* Lado Izquierdo: Checkbox y Texto (clickable) */}
+                      <label className="flex items-center gap-3 cursor-pointer flex-1">
+                        <input 
+                          type="checkbox" 
+                          className="accent-emerald-500 w-4 h-4"
+                          checked={!!seleccionado}
+                          onChange={() => toggleRecurso(r)}
+                        />
+                        <div className="flex flex-col">
+                          <span className="text-zinc-700 text-sm font-medium group-hover:text-emerald-800">
+                            {r.nombre} (Disponibles: {r.cantidad})
+                          </span>
+                          <span className="text-zinc-400 text-xs">{r.tipo}</span>
+                        </div>
+                      </label>
+
+                      {/* Lado Derecho: Input de cantidad (solo aparece si está tildado) */}
+                      {seleccionado && (
+                        <div className="flex items-center gap-2 ml-4">
+                          <span className="text-xs text-zinc-500 font-medium">Cant:</span>
+                          <input 
+                            type="number" 
+                            min="1" 
+                            max={r.cantidad}
+                            value={seleccionado.cantidad} 
+                            onChange={(e) => actualizarCantidad(r.nombre, e.target.value)}
+                            className="w-16 bg-zinc-50 border border-zinc-300 rounded-lg px-2 py-1 text-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all text-center shadow-sm"
+                          />
+                        </div>
+                      )}
                     </div>
-                  </label>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -143,13 +221,23 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
                 ["Alumnos", form.alumnos || "—"],
                 ["Fecha y hora", form.fecha ? `${form.fecha} ${form.hora}` : "—"],
                 ["Laboratorio", form.laboratorio || "—"],
-                ["Recursos", `${form.recursos.length} items seleccionados`]
               ].map(([k,v]) => (
                 <div key={k} className="flex justify-between border-b border-zinc-200/60 py-2 last:border-0">
                   <span className="text-zinc-500 text-sm">{k}</span>
                   <span className="text-zinc-800 font-semibold text-sm text-right max-w-[200px]">{v}</span>
                 </div>
               ))}
+              
+              {/* Desglose de recursos en el resumen */}
+              <div className="pt-2">
+                <span className="text-zinc-500 text-sm block mb-2">Recursos ({form.recursos.length}):</span>
+                {form.recursos.map((r, i) => (
+                  <div key={i} className="flex justify-between items-center text-xs py-1">
+                    <span className="text-zinc-600">- {r.nombre}</span>
+                    <span className="font-medium text-zinc-800">x{r.cantidad}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -161,22 +249,24 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
             </div>
           )}
         </div>
+        
         <div className="flex justify-between px-8 py-5 border-t border-zinc-100 bg-zinc-50/50 rounded-b-2xl">
           <button onClick={step === 0 ? onClose : () => setStep(s => s - 1)}
             className="px-5 py-2 rounded-xl text-sm font-medium text-zinc-600 border border-zinc-200 bg-white hover:bg-zinc-50 hover:text-zinc-800 transition-all shadow-sm">
             {step === 0 ? "Cancelar" : "Anterior"}
           </button>
-          {step < 3 ? (
-            <button onClick={() => setStep(s => s + 1)}
+          
+          {step < 2 ? (
+            <button onClick={handleSiguiente}
               className="px-6 py-2 rounded-xl text-sm bg-emerald-500 text-white font-bold hover:bg-emerald-600 transition-all shadow-md shadow-emerald-200">
               Siguiente
             </button>
-          ) : (
+          ) : step === 2 ? (
             <button onClick={handleCrear}
               className="px-6 py-2 rounded-xl text-sm bg-emerald-500 text-white font-bold hover:bg-emerald-600 transition-all shadow-md shadow-emerald-200">
               Cerrar y Finalizar
             </button>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
