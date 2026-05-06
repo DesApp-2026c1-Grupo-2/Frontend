@@ -61,6 +61,7 @@ function LaboratoriosSM() {
       <Navbar />
 
       {/* MAPA */}
+      {/* Contenedor principal */}
       <div className="w-full h-[calc(100vh-70px)] mt-[70px] relative">
 
         <img

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import Navbar from "../components/NavBar";
 import laboratorioImg from "../assets/laboratoriosHC.png";
 import { useEffect } from "react";
 
@@ -43,9 +42,6 @@ function LaboratoriosHC() {
 
   return (
     <div className="w-full h-[calc(100vh-70px)] mt-[70px] relative bg-[#f9fbfc]">
-
-      {/* Navbar */}
-      <Navbar />
 
       {/* Contenedor principal */}
       <div className="w-full h-[calc(100vh-70px)] mt-[70px] relative">
