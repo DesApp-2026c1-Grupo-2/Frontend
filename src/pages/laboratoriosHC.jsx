@@ -1,12 +1,33 @@
 import { useState } from "react";
 import Navbar from "../components/NavBar";
 import laboratorioImg from "../assets/laboratoriosHC.png";
+import { useEffect } from "react";
 
 function LaboratoriosHC() {
   const [labActivo, setLabActivo] = useState(null);
   const [mensaje, setMensaje] = useState("");
-  //para los ocupados
+  const [laboratorios, setLaboratorios] = useState([]);
   
+  // TRAER DATOS DEL BACK
+  useEffect(() => {
+    fetch("http://localhost:3000/laboratorio")
+      .then(res => res.json())
+      .then(data => {
+        console.log("LABS:", data);
+        setLaboratorios(data);
+      })
+      .catch(err => console.error(err));
+  }, []);
+
+  const labSeleccionado = laboratorios.find(
+  (l) =>
+    l.nombre?.toLowerCase().trim() === labActivo?.toLowerCase().trim()
+  );
+
+  //si esta cargado o no
+  const labExiste = labSeleccionado && (
+    labSeleccionado.capacidad || labSeleccionado.tipo
+  );
   
   //aca va el back despues
   const handleReservar = (lab) => {
@@ -109,9 +130,21 @@ function LaboratoriosHC() {
               Laboratorio {labActivo}
             </h2>
 
-            <p className="text-sm">Capacidad: 30</p>
-            <p className="text-sm mb-3">Tipo: Computación</p>
+            {labExiste ? (
+              <>
+                <p className="text-sm">
+                  Capacidad: {labSeleccionado.capacidad}
+                </p>
 
+                <p className="text-sm mb-3">
+                  Tipo: {labSeleccionado.tipo}
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-gray-500 mb-3">
+                Laboratorio no cargado
+              </p>
+            )}
             <div className="flex flex-col gap-2 mt-3">
 
   <button
