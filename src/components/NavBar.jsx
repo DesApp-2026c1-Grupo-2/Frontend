@@ -9,7 +9,10 @@ function Navbar() {
     flex items-center justify-between px-8">
 
       {/* Logo / nombre */}
-      <h1 className="text-green-800 font-bold text-lg">
+      <h1
+        onClick={() => navigate("/")}
+        className="text-green-800 font-bold text-lg cursor-pointer hover:text-green-900 transition"
+      >
         Universidad Nacional de Hurlingham
       </h1>
 
@@ -34,6 +37,13 @@ function Navbar() {
           className="text-green-700 font-medium hover:text-green-900 transition"
         >
           Pedidos
+        </button>
+
+        <button
+          onClick={() => navigate("/logIn")}
+          className="text-green-700 font-medium hover:text-green-900 transition"
+        >
+          LogIn
         </button>
       </div>
     </div>
