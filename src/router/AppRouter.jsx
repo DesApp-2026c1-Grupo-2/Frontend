@@ -23,6 +23,7 @@ function AppRouter() {
           <Route path="/laboratorios/hc" element={<LaboratoriosHC />} />
           <Route path="/laboratorios/ma" element={<LaboratoriosMA />} />
           <Route path="/laboratorios/sm" element={<LaboratoriosSM />} />//*/}
+          <Route path="/*" element={<Edificios />} /> {/* primer vista del administrador?????? */}
           <Route path="/edificios" element={<Edificios />} />
           <Route path="/inventario" element={<Inventario />} />
           <Route path="/equipamiento" element={<Equipamiento />} />
