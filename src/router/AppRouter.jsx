@@ -10,6 +10,7 @@ import Pedidos from "../pages/pedidos";
 import Equipamiento from "../pages/equipamiento";
 import LogIn from "../pages/logIn";
 import Inventario from "../pages/inventario";
+import Edificios from "../pages/edificios";
 
 function AppRouter() {
   return (
@@ -17,11 +18,13 @@ function AppRouter() {
       <Routes>
         {/* RUTAS CON NAVBAR */}
         <Route element={<Layout />}>
-          <Route path="/*" element={<Dashboard />} />
+          {/*<Route path="/*" element={<Dashboard />} />
           <Route path="/laboratorios/mb" element={<LaboratoriosMB />} />
           <Route path="/laboratorios/hc" element={<LaboratoriosHC />} />
           <Route path="/laboratorios/ma" element={<LaboratoriosMA />} />
-          <Route path="/laboratorios/sm" element={<LaboratoriosSM />} />
+          <Route path="/laboratorios/sm" element={<LaboratoriosSM />} />//*/}
+          <Route path="/*" element={<Edificios />} /> {/* primer vista del administrador?????? */}
+          <Route path="/edificios" element={<Edificios />} />
           <Route path="/inventario" element={<Inventario />} />
           <Route path="/equipamiento" element={<Equipamiento />} />
           <Route path="/pedidos" element={<Pedidos />} />
