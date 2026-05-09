@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { STEPS, LABS } from '../data/pedidos'; 
+import { STEPS } from '../data/pedidos'; 
 
 const RECURSOS_DB = [
   { tipo: "Material", nombre: "Tubos eppendorf", cantidad: 60 },
@@ -9,7 +9,7 @@ const RECURSOS_DB = [
   { tipo: "Equipo", nombre: "Centrífuga de mesa", cantidad: 2 }
 ];
 
-export default function NuevoPedidoForm({ onClose, onCrear }) {
+export default function NuevoPedidoForm({ onClose, onCrear, labs = [] }) {
   const [step, setStep] = useState(0);
 
   const [form, setForm] = useState({
@@ -56,10 +56,8 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
         return;
       }
 
-      // Simulación de laboratorio ocupado
-      const laboratorioOcupado = form.laboratorio === "Laboratorio A" && form.hora === "10:00"; 
-      if (laboratorioOcupado) {
-        alert("Error: El laboratorio seleccionado no está disponible en esa fecha y hora.");
+      if (labs.length === 0) {
+        alert("Error: No hay laboratorios disponibles en este momento.");
         return;
       }
     }
@@ -99,10 +97,9 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
   const handleCrear = () => {
     const payload = {
       ...form,
-      alumnos: Number(form.alumnos)
+      alumnos: Number(form.alumnos),
     };
     onCrear(payload);
-    onClose();
   };
 
   return (
@@ -159,7 +156,20 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
                 <select value={form.laboratorio} onChange={set("laboratorio")}
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all">
                   <option value="">Seleccionar laboratorio...</option>
-                  {LABS?.map(l => <option key={l} value={l}>{l}</option>)}
+                  {labs.length > 0 ? (
+                    labs.map((lab) => (
+                      <option
+                        key={lab._id}
+                        value={lab.nombre}
+                      >
+                        {`${lab.nombre} — ${lab.capacidad} alumnos`}
+                      </option>
+                    ))
+                  ) : (
+                    <option disabled value="">
+                      No hay laboratorios disponibles
+                    </option>
+                  )}
                 </select>
               </div>
             </div>

@@ -106,6 +106,7 @@ export default function PedidosLaboratorio() {
   const [tab, setTab] = useState("todos");
   const [modalPedido, setModalPedido] = useState(null);
   const [showNuevo, setShowNuevo] = useState(false);
+  const [labsDisponibles, setLabsDisponibles] = useState([]);
 
   const pendientes = pedidos.filter((p) => PENDING_STATES.includes(p.estado));
   const lista = tab === "pendientes" ? pendientes : pedidos;
@@ -114,10 +115,15 @@ export default function PedidosLaboratorio() {
   useEffect(() => {
     const fetchPedidos = async () => {
       try {
-        const res = await api.get("/pedido"); // Solo usamos el endpoint relativo
-        setPedidos(res.data);
+        const [resPedidos, resLabs] = await Promise.all([
+          api.get("/pedido"),
+          api.get("/laboratorios/disponibles-check"),
+        ]);
+
+        setPedidos(resPedidos.data);
+        setLabsDisponibles(resLabs.data || []);
       } catch (error) {
-        console.error("Error al cargar pedidos:", error.message);
+        console.error("Error al cargar pedidos o laboratorios:", error.message);
       } finally {
         setIsLoading(false);
       }
@@ -154,8 +160,12 @@ export default function PedidosLaboratorio() {
       setPedidos((prev) => [...prev, res.data]);
       setShowNuevo(false);
     } catch (error) {
-      console.error("Error al crear:", error.response?.data || error.message);
-      alert("Error al guardar el pedido.");
+      const backendMessage =
+        error.response?.data?.errores?.join("\n") ||
+        error.response?.data?.error ||
+        error.message;
+      console.error("Error al crear:", backendMessage);
+      alert(`Error al guardar el pedido:\n${backendMessage}`);
     }
   };
 
@@ -294,6 +304,7 @@ export default function PedidosLaboratorio() {
         <NuevoPedidoForm
           onClose={() => setShowNuevo(false)}
           onCrear={crearPedido}
+          labs={labsDisponibles}
         />
       )}
     </div>
