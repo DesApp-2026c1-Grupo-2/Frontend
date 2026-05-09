@@ -1,11 +1,12 @@
 import { useNavigate } from "react-router-dom";
 
 export default function EdificioCard({ edificio }) {
+
   const navigate = useNavigate();
 
   return (
     <div
-      onClick={() => navigate(`/laboratorios/${edificio.id}`)}
+      onClick={() => navigate(`/laboratorios/${edificio._id}`)}
       className="
         bg-white
         rounded-2xl
