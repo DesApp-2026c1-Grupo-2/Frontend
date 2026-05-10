@@ -1,16 +1,17 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "../components/Layout";
 
-import Dashboard from "../pages/Dashboard";
-import LaboratoriosMB from "../pages/laboratoriosMB";
-import LaboratoriosHC from "../pages/laboratoriosHC";
-import LaboratoriosMA from "../pages/laboratoriosMA";
-import LaboratoriosSM from "../pages/laboratoriosSM";
+//import Dashboard from "../pages/Dashboard";
+//import LaboratoriosMB from "../pages/laboratoriosMB";
+//import LaboratoriosHC from "../pages/laboratoriosHC";
+//import LaboratoriosMA from "../pages/laboratoriosMA";
+//import LaboratoriosSM from "../pages/laboratoriosSM";
 import Pedidos from "../pages/pedidos";
 import Equipamiento from "../pages/equipamiento";
 import LogIn from "../pages/logIn";
 import Inventario from "../pages/inventario";
 import Edificios from "../pages/edificios";
+import Laboratorios from "../pages/laboratorios";
 
 function AppRouter() {
   return (

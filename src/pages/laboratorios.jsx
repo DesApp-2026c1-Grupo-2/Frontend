@@ -1,140 +1,104 @@
 import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import api from "../api/axios";
 
-function Laboratorios() {
+export default function Laboratorios() {
+  const { id } = useParams();
+
   const [laboratorios, setLaboratorios] = useState([]);
-  const [filtro, setFiltro] = useState("Todos");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // reemplazar esto por la API
-    setLaboratorios([
-      { id: 1, nombre: "Laboratorio A1", capacidad: 30, reservasHoy: 0, estado: "Disponible" },
-      { id: 2, nombre: "Laboratorio A2", capacidad: 25, reservasHoy: 1, estado: "Ocupado" },
-      { id: 3, nombre: "Laboratorio B1", capacidad: 40, reservasHoy: 0, estado: "Disponible" },
-      { id: 4, nombre: "Laboratorio B2", capacidad: 20, reservasHoy: 2, estado: "Mantenimiento" },
-      { id: 5, nombre: "Laboratorio C1", capacidad: 35, reservasHoy: 0, estado: "Disponible" },
-    ]);
-  }, []);
+    const fetchLaboratorios = async () => {
+      try {
+        const res = await api.get(
+          `/laboratorio/edificio/${id}`
+        );
 
-  // filtror laboratorios según el estado seleccionado
-  const laboratoriosFiltrados =
-    filtro === "Todos"
-      ? laboratorios
-      : laboratorios.filter((l) => l.estado === filtro);
+        setLaboratorios(res.data);
+      } catch (error) {
+        console.error(
+          "Error al cargar laboratorios:",
+          error.response?.data || error.message
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchLaboratorios();
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        Cargando laboratorios...
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-slate-50 text-slate-800 px-8 py-8">
 
-      {/*  Header */}
-      <div>
-        <h1 className="text-2xl font-semibold">Laboratorios</h1>
-        <p className="text-gray-500">
-          Estado y disponibilidad de los laboratorios
-        </p>
+      {/* HEADER */}
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-semibold text-slate-800">
+          Laboratorios del edificio
+        </h1>
       </div>
 
-      {/*  Cards resumen */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-xl shadow">
-          <p className="text-sm text-gray-500">Total</p>
-          <p className="text-xl font-semibold">{laboratorios.length}</p>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl shadow">
-          <p className="text-sm text-gray-500">Disponibles</p>
-          <p className="text-xl font-semibold">
-            {laboratorios.filter(l => l.estado === "Disponible").length}
-          </p>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl shadow">
-          <p className="text-sm text-gray-500">Ocupados</p>
-          <p className="text-xl font-semibold">
-            {laboratorios.filter(l => l.estado === "Ocupado").length}
-          </p>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl shadow">
-          <p className="text-sm text-gray-500">Mantenimiento</p>
-          <p className="text-xl font-semibold">
-            {laboratorios.filter(l => l.estado === "Mantenimiento").length}
-          </p>
-        </div>
-      </div>
-
-      {/*  Filtros */}
-      <div className="flex gap-2">
-        {["Todos", "Disponible", "Ocupado", "Mantenimiento"].map((estado) => (
-          <button
-            key={estado}
-            onClick={() => setFiltro(estado)}
-            className={`px-3 py-1 text-sm rounded-full border transition ${
-              filtro === estado
-                ? "bg-blue-600 text-white"
-                : "bg-white text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            {estado}
-          </button>
-        ))}
-      </div>
-
-      {/*  Lista */}
-      <div className="bg-white rounded-xl shadow p-4">
-        <h2 className="text-lg font-medium mb-4">
-          Estado de Laboratorios
-        </h2>
-
-        <div className="space-y-4">
-          {laboratoriosFiltrados.map((lab) => (
-            <div
-              key={lab.id}
-              className="flex items-center justify-between p-4 border rounded-lg"
-            >
-              {/*  Info izquierda */}
-              <div className="flex items-center gap-3">
-                <div className="bg-blue-100 text-blue-600 p-2 rounded-lg">
-              
-                </div>
-
-                <div>
-                  <p className="font-medium">{lab.nombre}</p>
-                  <p className="text-sm text-gray-500">
-                    Capacidad: {lab.capacidad} alumnos
-                  </p>
-                </div>
-              </div>
-
-              {/* Info derecha */}
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-gray-500">
-                  {lab.reservasHoy} reservas hoy
-                </span>
-
-                <span
-                  className={`px-3 py-1 text-xs rounded-full ${
-                    lab.estado === "Disponible"
-                      ? "bg-green-100 text-green-600"
-                      : lab.estado === "Ocupado"
-                      ? "bg-yellow-100 text-yellow-600"
-                      : "bg-red-100 text-red-600"
-                  }`}
+      {/* TABLE */}
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-200 bg-slate-50">
+              {["ID", "NOMBRE", "CAPACIDAD", "ESTADO"].map((col) => (
+                <th
+                  key={col}
+                  className="text-left text-xs font-semibold text-slate-500 tracking-wider px-5 py-3"
                 >
-                  {lab.estado}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
 
-        {/*  Mensaje si no hay resultados */}
-        {laboratoriosFiltrados.length === 0 && (
-          <p className="text-center text-gray-500 mt-4">
-            No hay laboratorios para este filtro
-          </p>
-        )}
+          <tbody>
+            {laboratorios.map((lab, i) => (
+              <tr
+                key={lab._id}
+                className={`border-b border-slate-100 last:border-none hover:bg-emerald-50/50 transition-colors ${
+                  i % 2 === 1 ? "bg-slate-50/30" : ""
+                }`}
+              >
+                <td className="px-5 py-4 text-slate-500 font-mono text-xs">
+                  {lab._id?.slice(-6)}
+                </td>
+
+                <td className="px-5 py-4 text-slate-800 font-medium">
+                  {lab.nombre}
+                </td>
+
+                <td className="px-5 py-4 text-slate-600">
+                  {lab.capacidad ?? "—"}
+                </td>
+
+                <td className="px-5 py-4">
+                  <span
+                    className={`px-2 py-1 rounded-md text-xs font-medium ${
+                      lab.disponible
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-red-100 text-red-700"
+                    }`}
+                  >
+                    {lab.disponible ? "Disponible" : "Ocupado"}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 }
-
-export default Laboratorios;
