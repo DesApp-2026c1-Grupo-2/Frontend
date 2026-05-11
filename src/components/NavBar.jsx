@@ -18,12 +18,6 @@ function Navbar() {
 
       {/* Botones */}
       <div className="flex gap-6">
-        <button
-          onClick={() => navigate("/inventario")}
-          className="text-green-700 font-medium hover:text-green-900 transition"
-        >
-          Inventario
-        </button>
 
         <button
           onClick={() => navigate("/equipamiento")}
