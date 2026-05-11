@@ -15,13 +15,13 @@ export default function LaboratorioTable({ laboratorios }) {
         <tbody>
           {laboratorios.map((lab, i) => (
             <tr
-              key={lab._id}
+              key={lab.id}
               className={`border-b hover:bg-emerald-50/40 ${
                 i % 2 ? "bg-slate-50/30" : ""
               }`}
             >
               <td className="px-5 py-4 font-mono text-xs">
-                {lab._id?.slice(-6)}
+                {lab.id?.slice(-6)}
               </td>
 
               <td className="px-5 py-4 font-medium">
