@@ -1,140 +1,133 @@
 import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 
-function Laboratorios() {
+import {
+  obtenerLaboratoriosPorEdificio,
+  crearLaboratorio,
+} from "../services/laboratorioService";
+
+import LaboratorioTable from "../components/laboratorios/LaboratorioTable";
+import LaboratorioModal from "../components/laboratorios/LaboratorioModal";
+
+export default function Laboratorios() {
+  const { id } = useParams();
+
+  if (!id) { // hay q eliminar todo el if???????
+    return (
+      <div className="p-6 text-red-600">  
+        Error: no se recibió el ID del edificio
+      </div>
+    );
+  }
+
   const [laboratorios, setLaboratorios] = useState([]);
-  const [filtro, setFiltro] = useState("Todos");
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [mostrarModal, setMostrarModal] = useState(false);
+
+  const [formData, setFormData] = useState({
+    nombre: "",
+    capacidad: "",
+    tipo: "",
+    estado: "disponible",
+  });
+
+  // =========================
+  // GET
+  // =========================
+  const cargarLaboratorios = async () => {
+    try {
+      const data = await obtenerLaboratoriosPorEdificio(id);
+      setLaboratorios(data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // reemplazar esto por la API
-    setLaboratorios([
-      { id: 1, nombre: "Laboratorio A1", capacidad: 30, reservasHoy: 0, estado: "Disponible" },
-      { id: 2, nombre: "Laboratorio A2", capacidad: 25, reservasHoy: 1, estado: "Ocupado" },
-      { id: 3, nombre: "Laboratorio B1", capacidad: 40, reservasHoy: 0, estado: "Disponible" },
-      { id: 4, nombre: "Laboratorio B2", capacidad: 20, reservasHoy: 2, estado: "Mantenimiento" },
-      { id: 5, nombre: "Laboratorio C1", capacidad: 35, reservasHoy: 0, estado: "Disponible" },
-    ]);
-  }, []);
+    cargarLaboratorios();
+  }, [id]);
 
-  // filtror laboratorios según el estado seleccionado
-  const laboratoriosFiltrados =
-    filtro === "Todos"
-      ? laboratorios
-      : laboratorios.filter((l) => l.estado === filtro);
+  // =========================
+  // INPUTS
+  // =========================
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  // =========================
+  // CREATE
+  // =========================
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    console.log("FORM DATA:", formData); // eliminaraaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    console.log("FORM:", formData);
+    console.log("ID:", id);
+
+    try {
+      const nuevoLab = await crearLaboratorio({
+        ...formData,
+        capacidad: Number(formData.capacidad),
+        edificioId: id,
+      });
+
+      setLaboratorios((prev) => [...prev, nuevoLab]);
+
+      setFormData({
+        nombre: "",
+        capacidad: "",
+        tipo: "",
+        estado: "disponible",
+      });
+
+      setMostrarModal(false);
+    } catch (error) {
+      console.error("ERROR BACK:", error.response?.data || error);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        Cargando laboratorios...
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-slate-50 px-8 py-8">
 
-      {/*  Header */}
-      <div>
-        <h1 className="text-2xl font-semibold">Laboratorios</h1>
-        <p className="text-gray-500">
-          Estado y disponibilidad de los laboratorios
-        </p>
+      {/* HEADER */}
+      <div className="flex justify-between mb-6">
+        <h1 className="text-2xl font-semibold">
+          Laboratorios del edificio
+        </h1>
+
+        <button
+          onClick={() => setMostrarModal(true)}
+          className="px-4 py-2 bg-emerald-500 text-white rounded-xl"
+        >
+          + Nuevo laboratorio
+        </button>
       </div>
 
-      {/*  Cards resumen */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-xl shadow">
-          <p className="text-sm text-gray-500">Total</p>
-          <p className="text-xl font-semibold">{laboratorios.length}</p>
-        </div>
+      {/* TABLE */}
+      <LaboratorioTable laboratorios={laboratorios} />
 
-        <div className="bg-white p-4 rounded-xl shadow">
-          <p className="text-sm text-gray-500">Disponibles</p>
-          <p className="text-xl font-semibold">
-            {laboratorios.filter(l => l.estado === "Disponible").length}
-          </p>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl shadow">
-          <p className="text-sm text-gray-500">Ocupados</p>
-          <p className="text-xl font-semibold">
-            {laboratorios.filter(l => l.estado === "Ocupado").length}
-          </p>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl shadow">
-          <p className="text-sm text-gray-500">Mantenimiento</p>
-          <p className="text-xl font-semibold">
-            {laboratorios.filter(l => l.estado === "Mantenimiento").length}
-          </p>
-        </div>
-      </div>
-
-      {/*  Filtros */}
-      <div className="flex gap-2">
-        {["Todos", "Disponible", "Ocupado", "Mantenimiento"].map((estado) => (
-          <button
-            key={estado}
-            onClick={() => setFiltro(estado)}
-            className={`px-3 py-1 text-sm rounded-full border transition ${
-              filtro === estado
-                ? "bg-blue-600 text-white"
-                : "bg-white text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            {estado}
-          </button>
-        ))}
-      </div>
-
-      {/*  Lista */}
-      <div className="bg-white rounded-xl shadow p-4">
-        <h2 className="text-lg font-medium mb-4">
-          Estado de Laboratorios
-        </h2>
-
-        <div className="space-y-4">
-          {laboratoriosFiltrados.map((lab) => (
-            <div
-              key={lab.id}
-              className="flex items-center justify-between p-4 border rounded-lg"
-            >
-              {/*  Info izquierda */}
-              <div className="flex items-center gap-3">
-                <div className="bg-blue-100 text-blue-600 p-2 rounded-lg">
-              
-                </div>
-
-                <div>
-                  <p className="font-medium">{lab.nombre}</p>
-                  <p className="text-sm text-gray-500">
-                    Capacidad: {lab.capacidad} alumnos
-                  </p>
-                </div>
-              </div>
-
-              {/* Info derecha */}
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-gray-500">
-                  {lab.reservasHoy} reservas hoy
-                </span>
-
-                <span
-                  className={`px-3 py-1 text-xs rounded-full ${
-                    lab.estado === "Disponible"
-                      ? "bg-green-100 text-green-600"
-                      : lab.estado === "Ocupado"
-                      ? "bg-yellow-100 text-yellow-600"
-                      : "bg-red-100 text-red-600"
-                  }`}
-                >
-                  {lab.estado}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/*  Mensaje si no hay resultados */}
-        {laboratoriosFiltrados.length === 0 && (
-          <p className="text-center text-gray-500 mt-4">
-            No hay laboratorios para este filtro
-          </p>
-        )}
-      </div>
+      {/* MODAL */}
+      <LaboratorioModal
+        mostrar={mostrarModal}
+        cerrarModal={() => setMostrarModal(false)}
+        formData={formData}
+        handleChange={handleChange}
+        handleSubmit={handleSubmit}
+      />
     </div>
   );
 }
-
-export default Laboratorios;

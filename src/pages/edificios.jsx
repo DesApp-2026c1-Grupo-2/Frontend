@@ -82,7 +82,7 @@ export default function Edificios() {
       setMostrarModal(false);
 
     } catch (error) {
-      console.error(error);
+      console.error("ERROR BACK:", error.response?.data || error);
     }
   };
 
@@ -118,7 +118,7 @@ export default function Edificios() {
 
         {edificios.map((edificio) => (
           <EdificioCard
-            key={edificio._id}
+            key={edificio.id}
             edificio={edificio}
           />
         ))}

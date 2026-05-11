@@ -6,7 +6,7 @@ export default function EdificioCard({ edificio }) {
 
   return (
     <div
-      onClick={() => navigate(`/laboratorios/${edificio._id}`)}
+      onClick={() => navigate(`/edificios/${edificio.id}/laboratorios`)}
       className="
         bg-white
         rounded-2xl
