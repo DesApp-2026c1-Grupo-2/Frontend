@@ -35,7 +35,7 @@ export default function LaboratorioTable({ laboratorios }) {
               <td className="px-5 py-4">
                 <span
                   className={`px-2 py-1 rounded text-xs font-medium ${
-                    lab.estado === "Disponible"
+                    lab.estado === "disponible"
                       ? "bg-emerald-100 text-emerald-700"
                       : "bg-red-100 text-red-700"
                   }`}

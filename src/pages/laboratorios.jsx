@@ -12,6 +12,14 @@ import LaboratorioModal from "../components/laboratorios/LaboratorioModal";
 export default function Laboratorios() {
   const { id } = useParams();
 
+  if (!id) { // hay q eliminar todo el if???????
+    return (
+      <div className="p-6 text-red-600">  
+        Error: no se recibió el ID del edificio
+      </div>
+    );
+  }
+
   const [laboratorios, setLaboratorios] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -21,7 +29,7 @@ export default function Laboratorios() {
     nombre: "",
     capacidad: "",
     tipo: "",
-    estado: "Disponible",
+    estado: "disponible",
   });
 
   // =========================
@@ -58,9 +66,14 @@ export default function Laboratorios() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    console.log("FORM DATA:", formData); // eliminaraaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    console.log("FORM:", formData);
+    console.log("ID:", id);
+
     try {
       const nuevoLab = await crearLaboratorio({
         ...formData,
+        capacidad: Number(formData.capacidad),
         edificioId: id,
       });
 
@@ -70,12 +83,12 @@ export default function Laboratorios() {
         nombre: "",
         capacidad: "",
         tipo: "",
-        estado: "Disponible",
+        estado: "disponible",
       });
 
       setMostrarModal(false);
     } catch (error) {
-      console.error(error);
+      console.error("ERROR BACK:", error.response?.data || error);
     }
   };
 
