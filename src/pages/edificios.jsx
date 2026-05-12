@@ -17,7 +17,6 @@ export default function Edificios() {
   const [formData, setFormData] = useState({
     nombre: "",
     direccion: "",
-    cantidadAulas: "",
   });
 
   /*
@@ -65,7 +64,6 @@ export default function Edificios() {
       const nuevoEdificio = await crearEdificio({
         nombre: formData.nombre,
         direccion: formData.direccion,
-        cantidadAulas: Number(formData.cantidadAulas),
       });
 
       setEdificios((prev) => [
@@ -76,7 +74,6 @@ export default function Edificios() {
       setFormData({
         nombre: "",
         direccion: "",
-        cantidadAulas: "",
       });
 
       setMostrarModal(false);
