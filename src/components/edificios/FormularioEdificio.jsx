@@ -64,34 +64,6 @@ export default function FormularioEdificio({
         />
       </div>
 
-      {/* CANTIDAD AULAS */}
-      <div>
-        <label className="block mb-2 font-medium">
-          Cantidad de aulas
-        </label>
-
-        <input
-          type="number"
-          name="cantidadAulas"
-          value={formData.cantidadAulas}
-          onChange={handleChange}
-          min="0"
-          placeholder="10"
-          required
-          className="
-            w-full
-            border
-            border-gray-300
-            rounded-xl
-            px-4
-            py-3
-            outline-none
-            focus:ring-2
-            focus:ring-blue-500
-          "
-        />
-      </div>
-
       {/* BOTONES */}
       <div className="flex justify-end gap-3 pt-2">
 
