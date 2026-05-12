@@ -27,7 +27,7 @@ export default function EdificioCard({ edificio }) {
       </p>
 
       <p className="text-gray-600 mt-3">
-        Aulas: {edificio.cantidadAulas}
+        🧪 Laboratorios: {edificio.cantidadLaboratorios}
       </p>
     </div>
   );
