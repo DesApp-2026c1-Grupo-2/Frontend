@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 
 import EdificioCard from "../components/edificios/EdificioCard";
 import CrearEdificioModal from "../components/edificios/CrearEdificioModal";
@@ -9,6 +10,8 @@ import {
 } from "../services/edificioService";
 
 export default function Edificios() {
+
+  const location = useLocation();
 
   const [edificios, setEdificios] = useState([]);
 
@@ -38,6 +41,10 @@ export default function Edificios() {
   useEffect(() => {
     cargarEdificios();
   }, []);
+
+  useEffect(() => {
+    cargarEdificios();
+  }, [location.pathname]);  
 
   /*
     =========================
