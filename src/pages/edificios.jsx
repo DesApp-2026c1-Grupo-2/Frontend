@@ -112,7 +112,7 @@ export default function Edificios() {
 
         {edificios.map((edificio) => (
           <EdificioCard
-            key={edificio._id}
+            key={edificio.id}
             edificio={edificio}
           />
         ))}
