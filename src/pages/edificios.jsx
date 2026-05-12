@@ -61,15 +61,12 @@ export default function Edificios() {
 
     try {
 
-      const nuevoEdificio = await crearEdificio({
+      await crearEdificio({
         nombre: formData.nombre,
         direccion: formData.direccion,
       });
 
-      setEdificios((prev) => [
-        ...prev,
-        nuevoEdificio,
-      ]);
+      await cargarEdificios();
 
       setFormData({
         nombre: "",
@@ -79,7 +76,7 @@ export default function Edificios() {
       setMostrarModal(false);
 
     } catch (error) {
-      console.error(error);
+      console.error("ERROR BACK:", error.response?.data || error);
     }
   };
 
