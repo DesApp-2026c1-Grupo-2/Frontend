@@ -12,14 +12,6 @@ import LaboratorioModal from "../components/laboratorios/LaboratorioModal";
 export default function Laboratorios() {
   const { id } = useParams();
 
-  if (!id) { // hay q eliminar todo el if???????
-    return (
-      <div className="p-6 text-red-600">  
-        Error: no se recibió el ID del edificio
-      </div>
-    );
-  }
-
   const [laboratorios, setLaboratorios] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
