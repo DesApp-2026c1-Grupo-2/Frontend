@@ -66,10 +66,6 @@ export default function Laboratorios() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    console.log("FORM DATA:", formData); // eliminaraaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-    console.log("FORM:", formData);
-    console.log("ID:", id);
-
     try {
       const nuevoLab = await crearLaboratorio({
         ...formData,
