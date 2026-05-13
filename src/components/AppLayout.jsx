@@ -1,4 +1,4 @@
-export function AppLayout({children}) {
+export function AppLayout({children, fullWidth = false }) {
   return (
     <div className="min-h-screen bg-green-50 font-['DM_Sans',sans-serif] relative overflow-hidden">
 
