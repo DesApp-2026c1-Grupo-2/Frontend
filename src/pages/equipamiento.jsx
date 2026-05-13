@@ -1,7 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "../components/Card";
 import { Button } from "../components/Button";
+import * as equipamientoService from "../services/equipamiento";
+
 
 const tabs = [
   { label: "Equipos", icon: DeviceTabIcon },
@@ -10,18 +12,56 @@ const tabs = [
   { label: "Sustancias basicas", icon: PillTabIcon },
 ];
 
-const initialInventoryData = [
-  { id: 1, categoria: "Equipos", tipo: "Centrifuga", codigo: "EQ-001", ubicacion: "Lab 1 / Edif. A", estado: "Disponible", movilidad: "Fija", cantidad: 1 },
-  { id: 2, categoria: "Equipos", tipo: "Microscopio binocular", codigo: "EQ-002", ubicacion: "Lab 2 / Edif. A", estado: "Reservado", movilidad: "Movible", cantidad: 1 },
-  { id: 3, categoria: "Equipos", tipo: "Incubadora bacteriologica", codigo: "EQ-003", ubicacion: "Lab 3 / Edif. B", estado: "Disponible", movilidad: "Fija", cantidad: 1 },
-  { id: 4, categoria: "Equipos", tipo: "Espectrofotometro UV", codigo: "EQ-004", ubicacion: "Lab 5 / Edif. C", estado: "Fuera de servicio", movilidad: "Fija", cantidad: 1 },
-  { id: 5, categoria: "Equipos", tipo: "Bano termostatico", codigo: "EQ-005", ubicacion: "Lab 1 / Edif. A", estado: "Mantenimiento", movilidad: "Movible", cantidad: 1 },
-  { id: 6, categoria: "Materiales", tipo: "Gradilla de tubos", codigo: "MT-011", ubicacion: "Deposito central", estado: "Disponible", movilidad: "Movible", cantidad: 1 },
-  { id: 7, categoria: "Reactivos", tipo: "Buffer fosfato", codigo: "RC-023", ubicacion: "Camara fria 2", estado: "Reservado", movilidad: "Fija", cantidad: 1 },
-  { id: 8, categoria: "Sustancias basicas", tipo: "Acido citrico", codigo: "SB-008", ubicacion: "Almacen quimico", estado: "Disponible", movilidad: "Fija", cantidad: 1 },
-];
+// Mapeo de tipos del backend a categorías del frontend
+const tipoToCategoria = {
+  'material': 'Materiales',
+  'reactivo': 'Reactivos',
+  'sustancia': 'Sustancias basicas',
+  'equipo': 'Equipos'
+};
 
-const statusOptions = ["Disponible", "Reservado", "Fuera de servicio", "Mantenimiento"];
+// Función para mapear datos del backend a la estructura del frontend
+const mapearDatosBackend = (items, lotes) => {
+  const inventario = [];
+  
+  items.forEach(item => {
+    const lotesDelItem = lotes.filter(lote => 
+      (typeof lote.itemId === 'object' ? lote.itemId._id : lote.itemId) === item._id
+    );
+    
+    lotesDelItem.forEach(lote => {
+      inventario.push({
+        id: lote._id,
+        loteId: lote._id,
+        itemId: item._id,
+        categoria: tipoToCategoria[item.tipo] || 'Equipos',
+        tipo: item.nombre,
+        codigo: item.codigo,
+        ubicacion: lote.ubicacion,
+        estado: mapearEstado(lote.estado),
+        cantidad: lote.cantidadDisponible,
+        movilidad: "Fija", // Por defecto, se puede agregar al modelo si es necesario
+        unidad: item.unidad,
+        esConsumible: item.esConsumible,
+      });
+    });
+  });
+  
+  return inventario;
+};
+
+// Mapear estados del backend al frontend
+const mapearEstado = (estadoBackend) => {
+  const estadoMap = {
+    'disponible': 'Disponible',
+    'reservado': 'Reservado',
+    'en_uso': 'En uso',
+    'descartado': 'Descartado'
+  };
+  return estadoMap[estadoBackend] || 'Disponible';
+};
+
+const statusOptions = ["Disponible", "Reservado", "En uso", "Descartado"];
 
 /* ─── Iconos generales ─── */
 function SearchIcon() {
@@ -206,45 +246,103 @@ function Equipamiento() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("Equipos");
   const [query, setQuery] = useState("");
-  const [inventory, setInventory] = useState(initialInventoryData);
+  const [inventory, setInventory] = useState([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [formData, setFormData] = useState({ nombre: "", cantidad: "1", estado: "Disponible" });
+  const [formData, setFormData] = useState({ nombre: "", cantidad: "1", estado: "Disponible", ubicacion: "", unidad: "unidad" });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const resetForm = () => setFormData({ nombre: "", cantidad: "1", estado: "Disponible" });
+  // Cargar datos del backend al montar el componente
+  useEffect(() => {
+    const cargar = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const items = await equipamientoService.getItems();
+        const lotes = await equipamientoService.getLotes();
+        const inventarioMapeado = mapearDatosBackend(items, lotes);
+        setInventory(inventarioMapeado);
+      } catch (err) {
+        console.error("Error al cargar datos:", err);
+        setError("No se pudieron cargar los datos del inventario");
+      } finally {
+        setLoading(false);
+      }
+    };
+    cargar();
+  }, []);
+
+  // Funcion helper para recargar datos
+  const recargarInventario = async () => {
+    try {
+      const items = await equipamientoService.getItems();
+      const lotes = await equipamientoService.getLotes();
+      const inventarioMapeado = mapearDatosBackend(items, lotes);
+      setInventory(inventarioMapeado);
+    } catch (err) {
+      console.error("Error al recargar datos:", err);
+      setError("No se pudieron recargar los datos");
+    }
+  };
+
+  const resetForm = () => setFormData({ nombre: "", cantidad: "1", estado: "Disponible", ubicacion: "", unidad: "unidad" });
   const openForm = () => { resetForm(); setIsFormOpen(true); };
   const closeForm = () => setIsFormOpen(false);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const nombre = formData.nombre.trim();
     const cantidad = Number.parseInt(formData.cantidad, 10);
-    if (!nombre || Number.isNaN(cantidad) || cantidad < 1) return;
+    const ubicacion = formData.ubicacion.trim();
+    
+    if (!nombre || Number.isNaN(cantidad) || cantidad < 1 || !ubicacion) {
+      alert("Por favor completa todos los campos");
+      return;
+    }
 
-    const codePrefix = activeTab === "Materiales" ? "MT" : activeTab === "Reactivos" ? "RC" : activeTab === "Sustancias basicas" ? "SB" : "EQ";
+    try {
+      // Determinar tipo basado en la categoría activa
+      const tipoItem = Object.keys(tipoToCategoria).find(
+        key => tipoToCategoria[key] === activeTab
+      ) || 'material';
 
-    setInventory((current) => {
-      const nextNumber = current
+      // Generar código
+      const codePrefix = activeTab === "Materiales" ? "MT" : activeTab === "Reactivos" ? "RC" : activeTab === "Sustancias basicas" ? "SB" : "EQ";
+      const nextNumber = inventory
         .filter((item) => item.categoria === activeTab)
         .reduce((max, item) => {
           const [, num = "0"] = item.codigo.split("-");
           const n = Number.parseInt(num, 10);
           return Number.isNaN(n) ? max : Math.max(max, n);
         }, 0) + 1;
+      const codigo = `${codePrefix}-${String(nextNumber).padStart(3, "0")}`;
 
-      return [...current, {
-        id: Date.now(),
-        categoria: activeTab,
-        tipo: nombre,
-        cantidad,
-        codigo: `${codePrefix}-${String(nextNumber).padStart(3, "0")}`,
-        ubicacion: "Pendiente de asignar",
-        estado: formData.estado,
-        movilidad: "Fija",
-      }];
-    });
+      // Crear el Item
+      const nuevoItem = await equipamientoService.createItem({
+        tipo: tipoItem,
+        nombre: nombre,
+        codigo: codigo,
+        unidad: formData.unidad,
+        esConsumible: true, // Se puede hacer configurable
+        requiereReceta: tipoItem === 'reactivo' ? false : undefined
+      });
 
-    closeForm();
-    resetForm();
+      // Crear el Lote asociado
+      await equipamientoService.createLote({
+        itemId: nuevoItem._id,
+        cantidadDisponible: cantidad,
+        ubicacion: ubicacion,
+        estado: formData.estado.toLowerCase().replace(' ', '_')
+      });
+
+      // Recargar datos
+      await recargarInventario();
+      closeForm();
+      resetForm();
+    } catch (err) {
+      console.error("Error al crear item/lote:", err);
+      alert("Error al crear el ítem: " + (err.response?.data?.error || err.message));
+    }
   };
 
   const alertItems = inventory.filter((i) => i.estado !== "Disponible");
@@ -351,6 +449,18 @@ function Equipamiento() {
 
             {/* Tabla */}
             <div className="overflow-hidden rounded-2xl border border-slate-200">
+              {loading ? (
+                <div className="flex items-center justify-center p-8">
+                  <div className="text-center">
+                    <div className="mb-3 h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-cyan-500 mx-auto"></div>
+                    <p className="text-sm text-slate-500">Cargando inventario...</p>
+                  </div>
+                </div>
+              ) : error ? (
+                <div className="p-4 bg-rose-50 border-b border-rose-200">
+                  <p className="text-sm text-rose-700 font-medium">{error}</p>
+                </div>
+              ) : null}
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[820px] border-collapse">
                   <thead>
@@ -365,7 +475,7 @@ function Equipamiento() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredItems.map((item) => (
+                    {!loading && filteredItems.map((item) => (
                       <tr key={item.id} className="border-t border-slate-100 text-sm text-slate-700">
                         <td className="px-4 py-3 font-semibold text-slate-900">{item.tipo}</td>
                         <td className="px-4 py-3 text-slate-500">{item.cantidad}</td>
@@ -465,13 +575,39 @@ function Equipamiento() {
                 />
               </label>
 
+              <div className="grid grid-cols-2 gap-4">
+                <label className="block">
+                  <span className="mb-1.5 block text-sm font-semibold text-slate-700">Cantidad</span>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.cantidad}
+                    onChange={(e) => setFormData((c) => ({ ...c, cantidad: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
+                    required
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-1.5 block text-sm font-semibold text-slate-700">Unidad</span>
+                  <input
+                    type="text"
+                    value={formData.unidad}
+                    onChange={(e) => setFormData((c) => ({ ...c, unidad: e.target.value }))}
+                    placeholder="Ej. unidad, ml, g"
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
+                    required
+                  />
+                </label>
+              </div>
+
               <label className="block">
-                <span className="mb-1.5 block text-sm font-semibold text-slate-700">Cantidad</span>
+                <span className="mb-1.5 block text-sm font-semibold text-slate-700">Ubicación</span>
                 <input
-                  type="number"
-                  min="1"
-                  value={formData.cantidad}
-                  onChange={(e) => setFormData((c) => ({ ...c, cantidad: e.target.value }))}
+                  type="text"
+                  value={formData.ubicacion}
+                  onChange={(e) => setFormData((c) => ({ ...c, ubicacion: e.target.value }))}
+                  placeholder="Ej. Lab 1 / Edif. A"
                   className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
                   required
                 />

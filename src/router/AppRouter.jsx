@@ -9,7 +9,6 @@ import Layout from "../components/Layout";
 import Pedidos from "../pages/pedidos";
 import Equipamiento from "../pages/equipamiento";
 import LogIn from "../pages/logIn";
-
 import Edificios from "../pages/edificios";
 import Laboratorios from "../pages/laboratorios";
 
