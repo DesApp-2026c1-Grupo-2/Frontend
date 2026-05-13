@@ -4,7 +4,7 @@ export default function LaboratorioTable({ laboratorios }) {
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-slate-50 border-b">
-            {["ID", "NOMBRE", "CAPACIDAD", "TIPO", "ESTADO"].map((col) => (
+            {["ID", "NOMBRE", "CAPACIDAD", "TIPO", "ESTADO", "EQUIPOS FIJOS"].map((col) => (
               <th key={col} className="text-left px-5 py-3 text-xs font-semibold">
                 {col}
               </th>
@@ -42,6 +42,20 @@ export default function LaboratorioTable({ laboratorios }) {
                 >
                   {lab.estado}
                 </span>
+              </td>
+
+              <td className="px-5 py-4 text-sm">
+                {lab.equiposFijos?.length > 0 ? (
+                  <ul className="list-disc ml-4">
+                    {lab.equiposFijos.map((eq) => (
+                      <li key={eq.id || eq._id}>
+                        {eq.nombre}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <span className="text-slate-400">Sin equipos</span>
+                )}
               </td>
             </tr>
           ))}
