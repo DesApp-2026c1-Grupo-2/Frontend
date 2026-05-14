@@ -71,7 +71,27 @@ const mapearEstado = (estadoBackend) => {
   return estadoMap[estadoBackend] || 'Disponible';
 };
 
-const statusOptions = ["Disponible", "Reservado", "En uso", "Descartado"];
+// Fuente única de verdad para estados y estilos asociados
+const statusConfig = {
+  Disponible: {
+    statusClassName: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    alertClassName: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  },
+  Reservado: {
+    statusClassName: "bg-amber-100 text-amber-700 border-amber-200",
+    alertClassName: "bg-amber-50 text-amber-700 border-amber-200",
+  },
+  "En uso": {
+    statusClassName: "bg-blue-100 text-blue-700 border-blue-200",
+    alertClassName: "bg-blue-50 text-blue-700 border-blue-200",
+  },
+  Descartado: {
+    statusClassName: "bg-rose-100 text-rose-700 border-rose-200",
+    alertClassName: "bg-rose-50 text-rose-700 border-rose-200",
+  },
+};
+
+const statusOptions = Object.keys(statusConfig);
 
 /* ─── Iconos generales ─── */
 function SearchIcon() {
