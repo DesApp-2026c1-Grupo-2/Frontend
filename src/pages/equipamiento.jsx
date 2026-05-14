@@ -327,13 +327,25 @@ function Equipamiento() {
         requiereReceta: tipoItem === 'reactivo' ? false : undefined
       });
 
-      // Crear el Lote asociado
-      await equipamientoService.createLote({
-        itemId: nuevoItem._id,
-        cantidadDisponible: cantidad,
-        ubicacion: ubicacion,
-        estado: formData.estado.toLowerCase().replace(' ', '_')
-      });
+      try {
+        // Crear el Lote asociado
+        await equipamientoService.createLote({
+          itemId: nuevoItem._id,
+          cantidadDisponible: cantidad,
+          ubicacion: ubicacion,
+          estado: formData.estado.toLowerCase().replace(' ', '_')
+        });
+      } catch (loteError) {
+        if (nuevoItem?._id && typeof equipamientoService.deleteItem === "function") {
+          try {
+            await equipamientoService.deleteItem(nuevoItem._id);
+          } catch (rollbackError) {
+            console.error("No se pudo revertir el item creado tras fallar el lote:", rollbackError);
+          }
+        }
+
+        throw loteError;
+      }
 
       // Recargar datos
       await recargarInventario();
