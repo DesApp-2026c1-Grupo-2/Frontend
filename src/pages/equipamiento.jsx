@@ -323,7 +323,7 @@ function Equipamiento() {
         nombre: nombre,
         codigo: codigo,
         unidad: formData.unidad,
-        esConsumible: true, // Se puede hacer configurable
+        esConsumible: tipoItem !== 'equipo', // Equipos no deben registrarse como consumibles
         requiereReceta: tipoItem === 'reactivo' ? false : undefined
       });
 
