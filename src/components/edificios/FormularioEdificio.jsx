@@ -5,14 +5,11 @@ export default function FormularioEdificio({
   cerrarModal,
 }) {
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-4"
-    >
+    <form onSubmit={handleSubmit} className="space-y-5">
 
       {/* NOMBRE */}
       <div>
-        <label className="block mb-2 font-medium">
+        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
           Nombre
         </label>
 
@@ -24,22 +21,20 @@ export default function FormularioEdificio({
           placeholder="Edificio Central"
           required
           className="
-            w-full
-            border
-            border-gray-300
-            rounded-xl
-            px-4
-            py-3
-            outline-none
-            focus:ring-2
-            focus:ring-blue-500
+            w-full px-4 py-3 rounded-xl
+            border border-slate-200
+            bg-white text-slate-800
+            focus:outline-none
+            focus:ring-2 focus:ring-emerald-200
+            focus:border-emerald-300
+            transition
           "
         />
       </div>
 
       {/* DIRECCION */}
       <div>
-        <label className="block mb-2 font-medium">
+        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
           Dirección
         </label>
 
@@ -51,15 +46,13 @@ export default function FormularioEdificio({
           placeholder="Av. Siempre Viva 123"
           required
           className="
-            w-full
-            border
-            border-gray-300
-            rounded-xl
-            px-4
-            py-3
-            outline-none
-            focus:ring-2
-            focus:ring-blue-500
+            w-full px-4 py-3 rounded-xl
+            border border-slate-200
+            bg-white text-slate-800
+            focus:outline-none
+            focus:ring-2 focus:ring-emerald-200
+            focus:border-emerald-300
+            transition
           "
         />
       </div>
@@ -71,11 +64,11 @@ export default function FormularioEdificio({
           type="button"
           onClick={cerrarModal}
           className="
-            px-4
-            py-2
-            rounded-xl
-            bg-gray-200
-            hover:bg-gray-300
+            px-4 py-2 rounded-xl text-sm
+            border border-slate-200
+            text-slate-600 bg-white
+            hover:bg-slate-50 hover:border-slate-300
+            transition
           "
         >
           Cancelar
@@ -84,18 +77,17 @@ export default function FormularioEdificio({
         <button
           type="submit"
           className="
-            px-4
-            py-2
-            rounded-xl
-            bg-blue-600
-            text-white
-            hover:bg-blue-700
+            px-4 py-2 rounded-xl text-sm font-medium
+            bg-emerald-500 text-white
+            hover:bg-emerald-600
+            shadow-sm transition
           "
         >
           Guardar
         </button>
 
       </div>
+
     </form>
   );
 }

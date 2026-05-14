@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import EdificioCard from "../components/edificios/EdificioCard";
 import CrearEdificioModal from "../components/edificios/CrearEdificioModal";
+import { PageHeader } from "../components/SharedUi";
 
-import {
-  obtenerEdificios,
-  crearEdificio,
-} from "../services/edificioService";
+import {obtenerEdificios, crearEdificio } from "../services/edificioService";
 
 export default function Edificios() {
 
@@ -17,6 +15,8 @@ export default function Edificios() {
 
   const [mostrarModal, setMostrarModal] = useState(false);
 
+  const navigate= useNavigate();
+  
   const [formData, setFormData] = useState({
     nombre: "",
     direccion: "",
@@ -87,43 +87,96 @@ export default function Edificios() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-100 p-4 md:p-8">
+     return (
+    <div className="min-h-screen bg-slate-50 px-4 sm:px-6 lg:px-8 py-6">
 
-      {/* HEADER */}
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8">
-
-        <h1 className="text-3xl font-bold text-gray-800">
-          Edificios
-        </h1>
+      {/* HEADER (igual estilo Pedidos) */}
+      <div className="flex items-center justify-between mb-6">
+        <PageHeader
+            preTitle="Gestión"
+            title="Edificios"
+            description="Administración de edificios y sus laboratorios"
+        />
 
         <button
           onClick={() => setMostrarModal(true)}
           className="
-            bg-blue-600
-            hover:bg-blue-700
-            text-white
-            px-5
-            py-3
-            rounded-xl
-            shadow-md
-            transition
+            px-4 py-2 rounded-xl text-sm font-medium border
+            border-emerald-200 text-emerald-600 bg-white
+            hover:bg-emerald-50 hover:text-emerald-700
+            transition-colors shadow-sm
           "
         >
-          Crear edificio
+          + Crear edificio
         </button>
       </div>
 
-      {/* GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* TABLA (igual lógica visual que Pedidos) */}
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-x-auto shadow-sm">
+        <table className="w-full text-sm min-w-[700px]">
 
-        {edificios.map((edificio) => (
-          <EdificioCard
-            key={edificio.id}
-            edificio={edificio}
-          />
-        ))}
+          <thead>
+            <tr className="border-b border-slate-200 bg-slate-50">
+              <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500">
+                ID
+              </th>
+              <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500">
+                NOMBRE
+              </th>
+              <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500">
+                DIRECCIÓN
+              </th>
+              <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500">
+                LABORATORIOS
+              </th>
+              <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500">
+                ACCIONES
+              </th>
+            </tr>
+          </thead>
 
+          <tbody>
+            {edificios.map((e) => (
+              <tr
+                key={e.id}
+                className="border-b border-slate-100 hover:bg-emerald-50/50 transition-colors last:border-none"
+              >
+                <td className="px-5 py-4 font-mono text-xs text-slate-500">
+                  {e.id?.slice(-6)}
+                </td>
+
+                <td className="px-5 py-4 font-medium text-slate-800">
+                  {e.nombre}
+                </td>
+
+                <td className="px-5 py-4 text-slate-600">
+                  {e.direccion}
+                </td>
+
+                <td className="px-5 py-4 text-slate-600">
+                  {e.cantidadLaboratorios}
+                </td>
+
+                <td className="px-5 py-4">
+                  <button
+                    onClick={() =>
+                      navigate(`/edificios/${e.id}/laboratorios`)
+                    }
+                    className="
+                      px-3 py-1.5 rounded-lg text-xs border
+                      border-slate-200 bg-white text-slate-600
+                      hover:border-emerald-300 hover:text-emerald-700
+                      transition
+                    "
+                  >
+                    Ver
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+
+        </table>
       </div>
 
       {/* MODAL */}
@@ -134,7 +187,6 @@ export default function Edificios() {
         handleChange={handleChange}
         handleSubmit={handleCrearEdificio}
       />
-
     </div>
   );
 }
