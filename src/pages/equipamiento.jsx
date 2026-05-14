@@ -23,11 +23,21 @@ const tipoToCategoria = {
 // Función para mapear datos del backend a la estructura del frontend
 const mapearDatosBackend = (items, lotes) => {
   const inventario = [];
+  const lotesPorItemId = new Map();
+
+  lotes.forEach(lote => {
+    const itemId = typeof lote.itemId === 'object' ? lote.itemId._id : lote.itemId;
+    const lotesDelItem = lotesPorItemId.get(itemId);
+
+    if (lotesDelItem) {
+      lotesDelItem.push(lote);
+    } else {
+      lotesPorItemId.set(itemId, [lote]);
+    }
+  });
   
   items.forEach(item => {
-    const lotesDelItem = lotes.filter(lote => 
-      (typeof lote.itemId === 'object' ? lote.itemId._id : lote.itemId) === item._id
-    );
+    const lotesDelItem = lotesPorItemId.get(item._id) || [];
     
     lotesDelItem.forEach(lote => {
       inventario.push({
