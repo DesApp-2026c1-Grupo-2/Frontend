@@ -1,4 +1,4 @@
-export default function FormularioLaboratorio({
+export default function NuevoLaboratorioForm({
   formData,
   handleChange,
   handleSubmit,
@@ -97,36 +97,35 @@ export default function FormularioLaboratorio({
           <option value="mixto">Mixto</option>
         </select>
       </div>
-
-      {/* ESTADO */}
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1.5">
-          Estado
-        </label>
-
-        <select
-          name="estado"
-          value={formData.estado}
-          onChange={handleChange}
+      {/* EQUIPOS FIJOS */}
+      <div className="flex items-center gap-3 pt-1">
+        <input
+          type="checkbox"
+          name="tieneEquipos"
+          checked={formData.tieneEquipos}
+          onChange={handleChange} 
           className="
-            w-full
-            rounded-xl
-            border border-slate-200
-            bg-white
-            px-4 py-2.5
-            text-sm text-slate-700
-            outline-none
-            transition-colors
-            focus:border-emerald-300
-            focus:ring-4
-            focus:ring-emerald-100
+            h-4 w-4
+            rounded
+            border-slate-300
+            text-emerald-500
+            focus:ring-emerald-200
           "
-        >
-          <option value="disponible">Disponible</option>
-          <option value="reservado">Reservado</option>
-          <option value="en mantenimiento">En mantenimiento</option>
-          <option value="fuera de servicio">Fuera de servicio</option>
-        </select>
+        />
+
+        <label className="text-sm text-slate-700">
+          Este laboratorio posee equipos fijos
+        </label>
+      </div>
+
+      {/* INFO */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+        <p className="text-xs text-slate-500">
+          El laboratorio será creado automáticamente con estado
+          <span className="font-medium text-emerald-600">
+            {" "}disponible
+          </span>.
+        </p>
       </div>
 
       {/* BOTONES */}
@@ -163,7 +162,7 @@ export default function FormularioLaboratorio({
             transition-colors
           "
         >
-          Guardar cambios
+          Crear laboratorio
         </button>
       </div>
     </form>
