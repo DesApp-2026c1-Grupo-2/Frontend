@@ -6,15 +6,28 @@ import { PageHeader } from "../components/SharedUi";
 
 const PENDING_STATES = ["Pendiente", "En Revisión"];
 
+const formatDocente = (doc) => {
+  if (!doc) return "—";
+  if (typeof doc === "string") return doc;
+  return `${doc.nombre || ""} ${doc.apellido || ""}`.trim() || doc.email || "—";
+};
+
+const formatLaboratorio = (lab) => {
+  if (!lab) return "—";
+  if (typeof lab === "string") return lab;
+  return lab.nombre || "—";
+};
+
 // 1. Reconstruimos el Modal adaptado a Mongoose
 function Modal({ pedido, onClose, onAprobar, onRechazar }) {
+  const pedidoId = pedido._id || pedido.id || "";
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
       <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden">
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-slate-100 bg-slate-50">
           <h2 className="text-slate-800 font-semibold text-lg flex items-center gap-2">
             <span className="text-slate-400 font-mono text-sm">
-              #{pedido._id?.slice(-6)}
+              #{pedidoId.slice(-6)}
             </span>
             {pedido.materia}
           </h2>
@@ -28,9 +41,9 @@ function Modal({ pedido, onClose, onAprobar, onRechazar }) {
 
         <div className="px-6 py-5 grid grid-cols-2 gap-y-4 gap-x-6 text-sm">
           {[
-            ["Docente", pedido.docente],
+            ["Docente", formatDocente(pedido.docente)],
             ["Fecha y Hora", `${pedido.fecha} a las ${pedido.hora}`],
-            ["Laboratorio", pedido.laboratorio],
+            ["Laboratorio", formatLaboratorio(pedido.laboratorio)],
             ["Alumnos", pedido.alumnos],
           ].map(([label, val]) => (
             <div key={label}>
@@ -56,9 +69,9 @@ function Modal({ pedido, onClose, onAprobar, onRechazar }) {
                 >
                   <div>
                     <p className="text-slate-800 text-sm font-medium">
-                      {r.nombre}
+                      {r.nombre || (r.recursoId && r.recursoId.nombre) || "Recurso"}
                     </p>
-                    <p className="text-slate-400 text-xs">{r.tipo}</p>
+                    <p className="text-slate-400 text-xs">{r.tipo || r.tipoRecurso || "—"}</p>
                   </div>
                   <span className="bg-white border border-slate-200 text-slate-600 text-xs font-bold px-2 py-1 rounded-md">
                     x{r.cantidad}
@@ -80,13 +93,13 @@ function Modal({ pedido, onClose, onAprobar, onRechazar }) {
           {PENDING_STATES.includes(pedido.estado) && (
             <>
               <button
-                onClick={() => onRechazar(pedido._id)}
+                onClick={() => onRechazar(pedidoId)}
                 className="px-4 py-2 rounded-xl text-sm text-red-600 bg-white border border-red-200 hover:border-red-300 hover:bg-red-50 transition-colors"
               >
                 Rechazar
               </button>
               <button
-                onClick={() => onAprobar(pedido._id)}
+                onClick={() => onAprobar(pedidoId)}
                 className="px-4 py-2 rounded-xl text-sm bg-emerald-500 text-white font-semibold hover:bg-emerald-600 shadow-sm transition-colors"
               >
                 Aprobar pedido
@@ -227,23 +240,25 @@ export default function PedidosLaboratorio() {
             </tr>
           </thead>
           <tbody>
-            {lista.map((p, i) => (
-              <tr
-                key={p._id}
-                className={`border-b border-slate-100 last:border-none hover:bg-emerald-50/50 transition-colors ${i % 2 === 1 ? "bg-slate-50/30" : ""}`}
-              >
-                <td className="px-5 py-4 text-slate-500 font-mono text-xs">
-                  {p._id?.slice(-6)}
-                </td>
-                <td className="px-5 py-4 text-slate-800 font-medium">
-                  {p.materia}
-                </td>
-                <td className="px-5 py-4 text-slate-600">{p.docente}</td>
-                <td className="px-5 py-4 text-slate-600">
-                  {p.fecha} {p.hora}
-                </td>
-                <td className="px-5 py-4 text-slate-600">{p.laboratorio}</td>
-                <td className="px-5 py-4 text-slate-600">{p.alumnos}</td>
+            {lista.map((p, i) => {
+              const pId = p._id || p.id || "";
+              return (
+                <tr
+                  key={pId || i}
+                  className={`border-b border-slate-100 last:border-none hover:bg-emerald-50/50 transition-colors ${i % 2 === 1 ? "bg-slate-50/30" : ""}`}
+                >
+                  <td className="px-5 py-4 text-slate-500 font-mono text-xs">
+                    {pId.slice(-6)}
+                  </td>
+                  <td className="px-5 py-4 text-slate-800 font-medium">
+                    {p.materia}
+                  </td>
+                  <td className="px-5 py-4 text-slate-600">{formatDocente(p.docente)}</td>
+                  <td className="px-5 py-4 text-slate-600">
+                    {p.fecha} {p.hora}
+                  </td>
+                  <td className="px-5 py-4 text-slate-600">{formatLaboratorio(p.laboratorio)}</td>
+                  <td className="px-5 py-4 text-slate-600">{p.alumnos}</td>
                 <td className="px-5 py-4">
                   <EstadoBadge estado={p.estado} />
                 </td>
@@ -258,13 +273,13 @@ export default function PedidosLaboratorio() {
                     {PENDING_STATES.includes(p.estado) && (
                       <>
                         <button
-                          onClick={() => aprobar(p._id)}
+                        onClick={() => aprobar(pId)}
                           className="px-3 py-1.5 rounded-lg text-xs bg-emerald-500 text-white font-semibold hover:bg-emerald-600 shadow-sm transition-colors"
                         >
                           Aprobar
                         </button>
                         <button
-                          onClick={() => rechazar(p._id)}
+                        onClick={() => rechazar(pId)}
                           className="px-3 py-1.5 rounded-lg text-xs bg-white text-red-600 border border-red-200 hover:bg-red-50 hover:border-red-300 shadow-sm transition-colors"
                         >
                           Rechazar
@@ -273,8 +288,9 @@ export default function PedidosLaboratorio() {
                     )}
                   </div>
                 </td>
-              </tr>
-            ))}
+            </tr>
+          );
+        })}
           </tbody>
         </table>
       </div>
