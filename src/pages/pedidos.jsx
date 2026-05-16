@@ -18,6 +18,13 @@ const formatLaboratorio = (lab) => {
   return lab.nombre || "—";
 };
 
+const formatFechaHora = (fechaHoraStr) => {
+  if (!fechaHoraStr) return "—";
+  const d = new Date(fechaHoraStr);
+  if (isNaN(d.getTime())) return fechaHoraStr; // Fallback
+  return `${d.toLocaleDateString()} a las ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+};
+
 // 1. Reconstruimos el Modal adaptado a Mongoose
 function Modal({ pedido, onClose, onAprobar, onRechazar }) {
   const pedidoId = pedido._id || pedido.id || "";
@@ -42,7 +49,7 @@ function Modal({ pedido, onClose, onAprobar, onRechazar }) {
         <div className="px-6 py-5 grid grid-cols-2 gap-y-4 gap-x-6 text-sm">
           {[
             ["Docente", formatDocente(pedido.docente)],
-            ["Fecha y Hora", `${pedido.fecha} a las ${pedido.hora}`],
+            ["Fecha y Hora", formatFechaHora(pedido.fechaHora || pedido.fecha)],
             ["Laboratorio", formatLaboratorio(pedido.laboratorio)],
             ["Alumnos", pedido.alumnos],
           ].map(([label, val]) => (
@@ -69,7 +76,7 @@ function Modal({ pedido, onClose, onAprobar, onRechazar }) {
                 >
                   <div>
                     <p className="text-slate-800 text-sm font-medium">
-                      {r.nombre || (r.recursoId && r.recursoId.nombre) || "Recurso"}
+                      {r.nombre || (r.recursoId && r.recursoId.nombre) || "Recurso no identificado"}
                     </p>
                     <p className="text-slate-400 text-xs">{r.tipo || r.tipoRecurso || "—"}</p>
                   </div>
@@ -118,6 +125,7 @@ export default function PedidosLaboratorio() {
   const [tab, setTab] = useState("todos");
   const [modalPedido, setModalPedido] = useState(null);
   const [showNuevo, setShowNuevo] = useState(false);
+  const [labsDisponibles, setLabsDisponibles] = useState([]);
 
   const pendientes = pedidos.filter((p) => PENDING_STATES.includes(p.estado));
   const lista = tab === "pendientes" ? pendientes : pedidos;
@@ -126,10 +134,15 @@ export default function PedidosLaboratorio() {
   useEffect(() => {
     const fetchPedidos = async () => {
       try {
-        const res = await api.get("/pedido"); // Solo usamos el endpoint relativo
-        setPedidos(res.data);
+        const [resPedidos, resLabs] = await Promise.all([
+          api.get("/pedido"),
+          api.get("/laboratorio/disponibles"),
+        ]);
+
+        setPedidos(resPedidos.data);
+        setLabsDisponibles(resLabs.data || []);
       } catch (error) {
-        console.error("Error al cargar pedidos:", error.message);
+        console.error("Error al cargar pedidos o laboratorios:", error.message);
       } finally {
         setIsLoading(false);
       }
@@ -137,24 +150,31 @@ export default function PedidosLaboratorio() {
     fetchPedidos();
   }, []);
 
-  // 2. Actualizar estado
-  const actualizarEstadoPedido = async (id, nuevoEstado) => {
+  const aprobar = async (id) => {
     try {
-      await api.patch(`/pedido/${id}/estado`, { estado: nuevoEstado });
+      const res = await api.patch(`/pedido/${id}/aprobar`);
       setPedidos((ps) =>
-        ps.map((p) => (p._id === id ? { ...p, estado: nuevoEstado } : p)),
+        ps.map((p) => ((p._id || p.id) === id ? res.data.pedido : p))
       );
       setModalPedido(null);
     } catch (error) {
-      console.error(
-        "Error al actualizar:",
-        error.response?.data || error.message,
-      );
+      console.error("Error al aprobar:", error.response?.data || error.message);
+      alert(`Error al aprobar el pedido: ${error.response?.data?.error || "Error interno del servidor"}`);
     }
   };
 
-  const aprobar = (id) => actualizarEstadoPedido(id, "Aceptado");
-  const rechazar = (id) => actualizarEstadoPedido(id, "Rechazado");
+  const rechazar = async (id) => {
+    try {
+      const res = await api.patch(`/pedido/${id}/estado`, { estado: "Rechazado" });
+      setPedidos((ps) =>
+        ps.map((p) => ((p._id || p.id) === id ? res.data : p))
+      );
+      setModalPedido(null);
+    } catch (error) {
+      console.error("Error al rechazar:", error.response?.data || error.message);
+      alert(`Error al rechazar el pedido: ${error.response?.data?.error || "Error interno del servidor"}`);
+    }
+  };
 
   const crearPedido = async (datosFormulario) => {
     try {
@@ -167,7 +187,7 @@ export default function PedidosLaboratorio() {
       setShowNuevo(false);
     } catch (error) {
       console.error("Error al crear:", error.response?.data || error.message);
-      alert("Error al guardar el pedido.");
+      alert(`Error al guardar el pedido: ${error.response?.data?.error || "Error interno del servidor"}`);
     }
   };
 
@@ -255,7 +275,7 @@ export default function PedidosLaboratorio() {
                   </td>
                   <td className="px-5 py-4 text-slate-600">{formatDocente(p.docente)}</td>
                   <td className="px-5 py-4 text-slate-600">
-                    {p.fecha} {p.hora}
+                    {formatFechaHora(p.fechaHora || p.fecha)}
                   </td>
                   <td className="px-5 py-4 text-slate-600">{formatLaboratorio(p.laboratorio)}</td>
                   <td className="px-5 py-4 text-slate-600">{p.alumnos}</td>
@@ -308,6 +328,7 @@ export default function PedidosLaboratorio() {
         <NuevoPedidoForm
           onClose={() => setShowNuevo(false)}
           onCrear={crearPedido}
+          labs={labsDisponibles}
         />
       )}
     </div>
