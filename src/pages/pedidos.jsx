@@ -2,20 +2,39 @@ import { useState, useEffect } from "react";
 import api from "../api/axios";
 import NuevoPedidoForm from "../components/NuevoPedidoForm";
 import EstadoBadge from "../components/EstadoBadge";
-import Navbar from "../components/Navbar";
 import { PageHeader } from "../components/SharedUi";
 
 const PENDING_STATES = ["Pendiente", "En Revisión"];
 
+const formatDocente = (doc) => {
+  if (!doc) return "—";
+  if (typeof doc === "string") return doc;
+  return `${doc.nombre || ""} ${doc.apellido || ""}`.trim() || doc.email || "—";
+};
+
+const formatLaboratorio = (lab) => {
+  if (!lab) return "—";
+  if (typeof lab === "string") return lab;
+  return lab.nombre || "—";
+};
+
+const formatFechaHora = (fechaHoraStr) => {
+  if (!fechaHoraStr) return "—";
+  const d = new Date(fechaHoraStr);
+  if (isNaN(d.getTime())) return fechaHoraStr; // Fallback
+  return `${d.toLocaleDateString()} a las ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+};
+
 // 1. Reconstruimos el Modal adaptado a Mongoose
 function Modal({ pedido, onClose, onAprobar, onRechazar }) {
+  const pedidoId = pedido._id || pedido.id || "";
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
       <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden">
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-slate-100 bg-slate-50">
           <h2 className="text-slate-800 font-semibold text-lg flex items-center gap-2">
             <span className="text-slate-400 font-mono text-sm">
-              #{pedido._id?.slice(-6)}
+              #{pedidoId.slice(-6)}
             </span>
             {pedido.materia}
           </h2>
@@ -29,9 +48,9 @@ function Modal({ pedido, onClose, onAprobar, onRechazar }) {
 
         <div className="px-6 py-5 grid grid-cols-2 gap-y-4 gap-x-6 text-sm">
           {[
-            ["Docente", pedido.docente],
-            ["Fecha y Hora", `${pedido.fecha} a las ${pedido.hora}`],
-            ["Laboratorio", pedido.laboratorio],
+            ["Docente", formatDocente(pedido.docente)],
+            ["Fecha y Hora", formatFechaHora(pedido.fechaHora || pedido.fecha)],
+            ["Laboratorio", formatLaboratorio(pedido.laboratorio)],
             ["Alumnos", pedido.alumnos],
           ].map(([label, val]) => (
             <div key={label}>
@@ -57,9 +76,9 @@ function Modal({ pedido, onClose, onAprobar, onRechazar }) {
                 >
                   <div>
                     <p className="text-slate-800 text-sm font-medium">
-                      {r.nombre}
+                      {r.nombre || (r.recursoId && r.recursoId.nombre) || "Recurso no identificado"}
                     </p>
-                    <p className="text-slate-400 text-xs">{r.tipo}</p>
+                    <p className="text-slate-400 text-xs">{r.tipo || r.tipoRecurso || "—"}</p>
                   </div>
                   <span className="bg-white border border-slate-200 text-slate-600 text-xs font-bold px-2 py-1 rounded-md">
                     x{r.cantidad}
@@ -81,13 +100,13 @@ function Modal({ pedido, onClose, onAprobar, onRechazar }) {
           {PENDING_STATES.includes(pedido.estado) && (
             <>
               <button
-                onClick={() => onRechazar(pedido._id)}
+                onClick={() => onRechazar(pedidoId)}
                 className="px-4 py-2 rounded-xl text-sm text-red-600 bg-white border border-red-200 hover:border-red-300 hover:bg-red-50 transition-colors"
               >
                 Rechazar
               </button>
               <button
-                onClick={() => onAprobar(pedido._id)}
+                onClick={() => onAprobar(pedidoId)}
                 className="px-4 py-2 rounded-xl text-sm bg-emerald-500 text-white font-semibold hover:bg-emerald-600 shadow-sm transition-colors"
               >
                 Aprobar pedido
@@ -131,24 +150,31 @@ export default function PedidosLaboratorio() {
     fetchPedidos();
   }, []);
 
-  // 2. Actualizar estado
-  const actualizarEstadoPedido = async (id, nuevoEstado) => {
+  const aprobar = async (id) => {
     try {
-      await api.patch(`/pedido/${id}/estado`, { estado: nuevoEstado });
+      const res = await api.patch(`/pedido/${id}/aprobar`);
       setPedidos((ps) =>
-        ps.map((p) => (p._id === id ? { ...p, estado: nuevoEstado } : p)),
+        ps.map((p) => ((p._id || p.id) === id ? res.data.pedido : p))
       );
       setModalPedido(null);
     } catch (error) {
-      console.error(
-        "Error al actualizar:",
-        error.response?.data || error.message,
-      );
+      console.error("Error al aprobar:", error.response?.data || error.message);
+      alert(`Error al aprobar el pedido: ${error.response?.data?.error || "Error interno del servidor"}`);
     }
   };
 
-  const aprobar = (id) => actualizarEstadoPedido(id, "Aceptado");
-  const rechazar = (id) => actualizarEstadoPedido(id, "Rechazado");
+  const rechazar = async (id) => {
+    try {
+      const res = await api.patch(`/pedido/${id}/estado`, { estado: "Rechazado" });
+      setPedidos((ps) =>
+        ps.map((p) => ((p._id || p.id) === id ? res.data : p))
+      );
+      setModalPedido(null);
+    } catch (error) {
+      console.error("Error al rechazar:", error.response?.data || error.message);
+      alert(`Error al rechazar el pedido: ${error.response?.data?.error || "Error interno del servidor"}`);
+    }
+  };
 
   const crearPedido = async (datosFormulario) => {
     try {
@@ -160,12 +186,8 @@ export default function PedidosLaboratorio() {
       setPedidos((prev) => [...prev, res.data]);
       setShowNuevo(false);
     } catch (error) {
-      const backendMessage =
-        error.response?.data?.errores?.join("\n") ||
-        error.response?.data?.error ||
-        error.message;
-      console.error("Error al crear:", backendMessage);
-      alert(`Error al guardar el pedido:\n${backendMessage}`);
+      console.error("Error al crear:", error.response?.data || error.message);
+      alert(`Error al guardar el pedido: ${error.response?.data?.error || "Error interno del servidor"}`);
     }
   };
 
@@ -179,7 +201,6 @@ export default function PedidosLaboratorio() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 px-8 py-8">
-      <Navbar />
       <PageHeader title="Pedidos" />
 
       {/* Tabs */}
@@ -239,23 +260,25 @@ export default function PedidosLaboratorio() {
             </tr>
           </thead>
           <tbody>
-            {lista.map((p, i) => (
-              <tr
-                key={p._id}
-                className={`border-b border-slate-100 last:border-none hover:bg-emerald-50/50 transition-colors ${i % 2 === 1 ? "bg-slate-50/30" : ""}`}
-              >
-                <td className="px-5 py-4 text-slate-500 font-mono text-xs">
-                  {p._id?.slice(-6)}
-                </td>
-                <td className="px-5 py-4 text-slate-800 font-medium">
-                  {p.materia}
-                </td>
-                <td className="px-5 py-4 text-slate-600">{p.docente}</td>
-                <td className="px-5 py-4 text-slate-600">
-                  {p.fecha} {p.hora}
-                </td>
-                <td className="px-5 py-4 text-slate-600">{p.laboratorio}</td>
-                <td className="px-5 py-4 text-slate-600">{p.alumnos}</td>
+            {lista.map((p, i) => {
+              const pId = p._id || p.id || "";
+              return (
+                <tr
+                  key={pId || i}
+                  className={`border-b border-slate-100 last:border-none hover:bg-emerald-50/50 transition-colors ${i % 2 === 1 ? "bg-slate-50/30" : ""}`}
+                >
+                  <td className="px-5 py-4 text-slate-500 font-mono text-xs">
+                    {pId.slice(-6)}
+                  </td>
+                  <td className="px-5 py-4 text-slate-800 font-medium">
+                    {p.materia}
+                  </td>
+                  <td className="px-5 py-4 text-slate-600">{formatDocente(p.docente)}</td>
+                  <td className="px-5 py-4 text-slate-600">
+                    {formatFechaHora(p.fechaHora || p.fecha)}
+                  </td>
+                  <td className="px-5 py-4 text-slate-600">{formatLaboratorio(p.laboratorio)}</td>
+                  <td className="px-5 py-4 text-slate-600">{p.alumnos}</td>
                 <td className="px-5 py-4">
                   <EstadoBadge estado={p.estado} />
                 </td>
@@ -270,13 +293,13 @@ export default function PedidosLaboratorio() {
                     {PENDING_STATES.includes(p.estado) && (
                       <>
                         <button
-                          onClick={() => aprobar(p._id)}
+                        onClick={() => aprobar(pId)}
                           className="px-3 py-1.5 rounded-lg text-xs bg-emerald-500 text-white font-semibold hover:bg-emerald-600 shadow-sm transition-colors"
                         >
                           Aprobar
                         </button>
                         <button
-                          onClick={() => rechazar(p._id)}
+                        onClick={() => rechazar(pId)}
                           className="px-3 py-1.5 rounded-lg text-xs bg-white text-red-600 border border-red-200 hover:bg-red-50 hover:border-red-300 shadow-sm transition-colors"
                         >
                           Rechazar
@@ -285,8 +308,9 @@ export default function PedidosLaboratorio() {
                     )}
                   </div>
                 </td>
-              </tr>
-            ))}
+            </tr>
+          );
+        })}
           </tbody>
         </table>
       </div>

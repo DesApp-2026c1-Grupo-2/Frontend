@@ -1,16 +1,16 @@
-import { useState } from "react";
-import { STEPS } from '../data/pedidos'; 
+import { useState, useEffect } from "react";
+import api from "../api/axios";
+import { useAuth } from "../context/AuthContext";
 
-const RECURSOS_DB = [
-  { tipo: "Material", nombre: "Tubos eppendorf", cantidad: 60 },
-  { tipo: "Reactivo", nombre: "Buffer de lisis", cantidad: 1 }, 
-  { tipo: "Equipo", nombre: "Micropipetas P200", cantidad: 4 },
-  { tipo: "Equipo", nombre: "Espectrofotómetro UV", cantidad: 1 },
-  { tipo: "Equipo", nombre: "Centrífuga de mesa", cantidad: 2 }
-];
+const STEPS = ["Datos Básicos", "Recursos", "Resumen", "Enviado"];
 
-export default function NuevoPedidoForm({ onClose, onCrear, labs = [] }) {
+export default function NuevoPedidoForm({ onClose, onCrear }) {
+  const { user } = useAuth();
   const [step, setStep] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [laboratorios, setLaboratorios] = useState([]);
+  const [docentes, setDocentes] = useState([]);
+  const [recursosDB, setRecursosDB] = useState([]);
 
   const [form, setForm] = useState({
     materia: "", 
@@ -22,26 +22,86 @@ export default function NuevoPedidoForm({ onClose, onCrear, labs = [] }) {
     recursos: [], 
   });
 
+  // Recuperar información real del backend
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Promise.allSettled evita que si una falla, todo el form colapse
+        const [labsRes, usersRes, equiposRes, itemsRes] = await Promise.allSettled([
+          api.get("/laboratorio"),
+          api.get("/usuario"),
+          api.get("/equipo"),
+          api.get("/item")
+        ]);
+
+        if (labsRes.status === "fulfilled") setLaboratorios(labsRes.value.data);
+        
+        let docs = [];
+        if (usersRes.status === "fulfilled") {
+          const data = usersRes.value.data;
+          const usuariosArray = Array.isArray(data) ? data : (data.usuarios || []);
+          docs = usuariosArray.filter(u => u.rol === "DOCENTE");
+        }
+
+        // Garantizar que el usuario logueado aparezca en la lista y autoseleccionarlo por defecto
+        if (user && (user.id || user._id)) {
+          const userId = user.id || user._id;
+          const userInDocs = docs.find(d => (d._id === userId || d.id === userId));
+          if (!userInDocs) {
+            docs.push({ _id: userId, nombre: user.nombre || user.email || "Usuario", apellido: user.apellido || "Actual" });
+          }
+          setForm(prev => ({ ...prev, docente: userId }));
+        }
+        setDocentes(docs);
+
+        let recursosRecopilados = [];
+        
+        if (equiposRes.status === "fulfilled") {
+          const equipos = equiposRes.value.data
+            .filter(e => e.estado === "disponible") // Traemos solo equipos disponibles
+            .map(e => ({ ...e, tipoRecurso: "Equipo", tipoDetalle: "Equipo" }));
+          recursosRecopilados = [...recursosRecopilados, ...equipos];
+        }
+        
+        if (itemsRes.status === "fulfilled") {
+          const items = itemsRes.value.data.map(i => ({
+            ...i,
+            tipoRecurso: "Item",
+            // Joi Schema requiere mayúscula inicial en el campo "tipo" -> "Material", "Reactivo", "Sustancia"
+            tipoDetalle: i.tipo ? (i.tipo.charAt(0).toUpperCase() + i.tipo.slice(1)) : "Material"
+          }));
+          recursosRecopilados = [...recursosRecopilados, ...items];
+        }
+
+        setRecursosDB(recursosRecopilados);
+      } catch (error) {
+        console.error("Error al cargar datos:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [user]);
+
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const toggleRecurso = (recurso) => {
     setForm((prev) => {
-      const existe = prev.recursos.some((r) => r.nombre === recurso.nombre);
+      const recursoId = recurso._id || recurso.id;
+      const existe = prev.recursos.some((r) => (r._id || r.id) === recursoId);
       if (existe) {
-        return { ...prev, recursos: prev.recursos.filter((r) => r.nombre !== recurso.nombre) };
+        return { ...prev, recursos: prev.recursos.filter((r) => (r._id || r.id) !== recursoId) };
       } else {
-        // Se agrega con cantidad: 1 por defecto al tildarlo
         return { ...prev, recursos: [...prev.recursos, { ...recurso, cantidad: 1 }] };
       }
     });
   };
 
-  // NUEVA FUNCIÓN: Actualiza la cantidad de un recurso ya seleccionado
-  const actualizarCantidad = (nombreRecurso, nuevaCantidad) => {
+  const actualizarCantidad = (idRecurso, nuevaCantidad) => {
     setForm((prev) => ({
       ...prev,
       recursos: prev.recursos.map((r) => 
-        r.nombre === nombreRecurso 
+        (r._id || r.id) === idRecurso 
           ? { ...r, cantidad: Number(nuevaCantidad) } 
           : r
       )
@@ -55,38 +115,12 @@ export default function NuevoPedidoForm({ onClose, onCrear, labs = [] }) {
         alert("Error: Faltan completar datos obligatorios en el formulario.");
         return;
       }
-
-      if (labs.length === 0) {
-        alert("Error: No hay laboratorios disponibles en este momento.");
-        return;
-      }
     }
 
     // Validaciones del Paso 1: Recursos y Equipos
     if (step === 1) {
-      let errorEquipo = false;
-      let errorStock = false;
-
-      form.recursos.forEach((recursoSolicitado) => {
-        const recursoDB = RECURSOS_DB.find(r => r.nombre === recursoSolicitado.nombre);
-        
-        // Ahora sí comparamos la cantidad que el usuario escribió vs el stock
-        if (recursoDB && recursoSolicitado.cantidad > recursoDB.cantidad) {
-          if (recursoDB.tipo === "Equipo") {
-            errorEquipo = true;
-          } else {
-            errorStock = true;
-          }
-        }
-      });
-
-      if (errorEquipo) {
-        alert("Error: Hay equipos insuficientes para satisfacer este pedido. Revisa las cantidades.");
-        return;
-      }
-
-      if (errorStock) {
-        alert("Error: Hay stock insuficiente de materiales o reactivos para este pedido. Revisa las cantidades.");
+      if (form.recursos.length === 0) {
+        alert("Error: Debes seleccionar al menos un recurso.");
         return;
       }
     }
@@ -95,12 +129,30 @@ export default function NuevoPedidoForm({ onClose, onCrear, labs = [] }) {
   };
 
   const handleCrear = () => {
+    // Damos formato requerido por el Schema Joi del backend
     const payload = {
-      ...form,
+      materia: form.materia,
+      docente: form.docente,
+      laboratorio: form.laboratorio,
+      fecha: form.fecha,
+      hora: form.hora,
       alumnos: Number(form.alumnos),
+      recursos: form.recursos.map((r) => ({
+        recursoId: r._id || r.id,
+        tipoRecurso: r.tipoRecurso,
+        modeloRef: r.tipoRecurso, // Validado por Joi
+        tipo: r.tipoDetalle,      // Validado por Joi
+        cantidad: Number(r.cantidad)
+      }))
     };
+
     onCrear(payload);
+    setStep(3); // Avanzamos a pantalla de éxito temporalmente hasta que el componente padre cierre el modal
   };
+
+  if (loading) {
+    return <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/40 backdrop-blur-sm"><div className="bg-white p-6 rounded-2xl">Cargando datos...</div></div>;
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/40 backdrop-blur-sm p-4">
@@ -133,13 +185,21 @@ export default function NuevoPedidoForm({ onClose, onCrear, labs = [] }) {
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-zinc-400" />
               </div>
 
-              {[["Docente solicitante","docente","text","Dr. Herrera"],["Cantidad de alumnos","alumnos","number","28"]].map(([label,key,type,ph]) => (
-                <div key={key}>
-                  <label className="block text-sm font-medium text-zinc-600 mb-1">{label}</label>
-                  <input type={type} placeholder={ph} value={form[key]} onChange={set(key)}
-                    className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-zinc-400" />
-                </div>
-              ))}
+              <div>
+                <label className="block text-sm font-medium text-zinc-600 mb-1">Docente solicitante</label>
+                <select value={form.docente} onChange={set("docente")}
+                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all">
+                  <option value="">Seleccionar docente...</option>
+                  {docentes.map(d => <option key={d._id || d.id} value={d._id || d.id}>{d.nombre} {d.apellido}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-zinc-600 mb-1">Cantidad de alumnos</label>
+                <input type="number" placeholder="Ej: 28" value={form.alumnos} onChange={set("alumnos")}
+                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-zinc-400" />
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-zinc-600 mb-1">Fecha</label>
                 <input type="date" value={form.fecha} onChange={set("fecha")}
@@ -156,20 +216,7 @@ export default function NuevoPedidoForm({ onClose, onCrear, labs = [] }) {
                 <select value={form.laboratorio} onChange={set("laboratorio")}
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all">
                   <option value="">Seleccionar laboratorio...</option>
-                  {labs.length > 0 ? (
-                    labs.map((lab) => (
-                      <option
-                        key={lab._id}
-                        value={lab.nombre}
-                      >
-                        {`${lab.nombre} — ${lab.capacidad} alumnos`}
-                      </option>
-                    ))
-                  ) : (
-                    <option disabled value="">
-                      No hay laboratorios disponibles
-                    </option>
-                  )}
+                  {laboratorios.map(l => <option key={l._id || l.id} value={l._id || l.id}>{l.nombre} (Cap: {l.capacidad})</option>)}
                 </select>
               </div>
             </div>
@@ -179,8 +226,8 @@ export default function NuevoPedidoForm({ onClose, onCrear, labs = [] }) {
             <div className="space-y-4">
               <p className="text-zinc-500 text-sm italic">Seleccionar recursos requeridos e indicar cantidad:</p>
               <div className="grid grid-cols-1 gap-2">
-                {RECURSOS_DB.map((r, i) => {
-                  const seleccionado = form.recursos.find(rec => rec.nombre === r.nombre);
+                {recursosDB.map((r, i) => {
+                  const seleccionado = form.recursos.find(rec => (rec._id || rec.id) === (r._id || r.id));
                   
                   return (
                     <div key={i} className="flex items-center justify-between bg-white hover:bg-emerald-50 rounded-xl px-4 py-3 border border-zinc-200 hover:border-emerald-200 transition-colors group">
@@ -195,9 +242,9 @@ export default function NuevoPedidoForm({ onClose, onCrear, labs = [] }) {
                         />
                         <div className="flex flex-col">
                           <span className="text-zinc-700 text-sm font-medium group-hover:text-emerald-800">
-                            {r.nombre} (Disponibles: {r.cantidad})
+                            {r.nombre} {r.tipoRecurso === 'Equipo' ? '(Disponible)' : ''}
                           </span>
-                          <span className="text-zinc-400 text-xs">{r.tipo}</span>
+                          <span className="text-zinc-400 text-xs">{r.tipoDetalle}</span>
                         </div>
                       </label>
 
@@ -208,9 +255,8 @@ export default function NuevoPedidoForm({ onClose, onCrear, labs = [] }) {
                           <input 
                             type="number" 
                             min="1" 
-                            max={r.cantidad}
                             value={seleccionado.cantidad} 
-                            onChange={(e) => actualizarCantidad(r.nombre, e.target.value)}
+                            onChange={(e) => actualizarCantidad(r._id || r.id, e.target.value)}
                             className="w-16 bg-zinc-50 border border-zinc-300 rounded-lg px-2 py-1 text-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all text-center shadow-sm"
                           />
                         </div>
@@ -227,10 +273,12 @@ export default function NuevoPedidoForm({ onClose, onCrear, labs = [] }) {
               <p className="text-zinc-400 text-xs uppercase tracking-wider font-bold mb-4">Resumen del pedido</p>
               {[
                 ["Materia", form.materia || "—"],
-                ["Docente", form.docente || "—"],
+                ["Docente", docentes.find(d => (d._id || d.id) === form.docente) 
+                  ? `${docentes.find(d => (d._id || d.id) === form.docente).nombre} ${docentes.find(d => (d._id || d.id) === form.docente).apellido}` 
+                  : "—"],
                 ["Alumnos", form.alumnos || "—"],
                 ["Fecha y hora", form.fecha ? `${form.fecha} ${form.hora}` : "—"],
-                ["Laboratorio", form.laboratorio || "—"],
+                ["Laboratorio", laboratorios.find(l => (l._id || l.id) === form.laboratorio)?.nombre || "—"],
               ].map(([k,v]) => (
                 <div key={k} className="flex justify-between border-b border-zinc-200/60 py-2 last:border-0">
                   <span className="text-zinc-500 text-sm">{k}</span>
