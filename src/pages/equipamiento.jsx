@@ -1,8 +1,10 @@
 import { useMemo, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+//import { useNavigate } from "react-router-dom";
 import { Card } from "../components/Card";
 import { Button } from "../components/Button";
+import { PageHeader } from "../components/SharedUi";
 import * as equipamientoService from "../services/equipamiento";
+
 
 
 const tabs = [
@@ -271,9 +273,58 @@ function AlertCard({ item }) {
   );
 }
 
+function InventoryCard({ item, onEdit, onDelete }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="truncate text-sm font-semibold text-slate-900">{item.tipo}</h3>
+            <StatusPill status={item.estado} />
+          </div>
+          <p className="mt-1 text-xs text-slate-500">Código {item.codigo}</p>
+        </div>
+        <MobilityPill mobility={item.movilidad} />
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+        <div className="rounded-xl bg-slate-50 p-3">
+          <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">Cantidad</span>
+          <span className="mt-1 block font-semibold text-slate-900">{item.cantidad}</span>
+        </div>
+        <div className="rounded-xl bg-slate-50 p-3">
+          <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">Ubicación</span>
+          <span className="mt-1 block font-semibold text-slate-900">{item.ubicacion}</span>
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={onEdit}
+          className="inline-flex items-center gap-2 rounded-xl bg-cyan-50 px-3 py-2 text-sm font-medium text-cyan-600 transition hover:bg-cyan-100"
+          aria-label={`Editar ${item.tipo}`}
+        >
+          <PencilIcon />
+          Editar
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          className="inline-flex items-center gap-2 rounded-xl bg-rose-50 px-3 py-2 text-sm font-medium text-rose-600 transition hover:bg-rose-100"
+          aria-label={`Eliminar ${item.tipo}`}
+        >
+          <TrashIcon />
+          Eliminar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Componente principal ─── */
 function Equipamiento() {
-  const navigate = useNavigate();
+  //const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("Equipos");
   const [query, setQuery] = useState("");
   const [inventory, setInventory] = useState([]);
@@ -410,49 +461,60 @@ function Equipamiento() {
   }, [activeTab, inventory, query]);
 
   return (
-    <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">
-      {/* Header */}
-      <div className="mb-5 flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">Equipamiento</h1>
-        <Button variant="outline" size="md" onClick={() => navigate("/")}>Volver al inicio</Button>
-      </div>
+    <div className="min-h-screen bg-white text-slate-800">
+      <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
+        <PageHeader
+          title="Equipamiento"
+          description="Consulta equipos, materiales, reactivos y sustancias básicas con el estilo compartido del resto de la app."
+        />
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {/* Stats Card */}
+        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((s) => (
-            <Card key={s.title} padding="none" className="p-5 rounded-2xl shadow-sm">
+            <Card key={s.title} padding="none" className="relative overflow-hidden rounded-[24px] border border-emerald-100 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+              {/* Badge estilo imagen: visible en pantallas pequeñas, el número grande queda en escritorio */}
+              <div className="absolute inset-x-0 top-0 h-1.5" style={{ backgroundColor: s.hex }} />
+              <div className="absolute right-4 top-4 inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold sm:hidden" style={{ backgroundColor: `${s.hex}20`, color: s.hex }}>
+                {s.value}
+              </div>
+
               <div>
-                <div className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">{s.title}</div>
-                <div className="text-5xl font-black leading-none" style={{ color: s.hex }}>{s.value}</div>
+                <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">{s.title}</div>
+                <div className="hidden text-4xl font-black leading-none text-slate-900 sm:block" style={{ color: s.hex }}>{s.value}</div>
                 <div className="mt-3 text-sm text-slate-500">{s.subtitle}</div>
               </div>
             </Card>
           ))}
-      </div>
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Tabla principal */}
-        <div className="lg:col-span-2">
-          <Card padding="md" className="p-4 sm:p-5">
-            {/* Título de sección */}
-            <div className="mb-4 flex flex-col gap-0.5 sm:flex-row sm:items-start sm:justify-between">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+          {/* Tabla principal */}
+          <Card padding="none" className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_14px_40px_rgba(15,23,42,0.06)]">
+            <div className="border-b border-slate-100 px-4 py-4 sm:px-6 sm:py-5">
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div>
-                <h2 className="text-xl font-bold text-slate-900">Últimos movimientos de stock</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Usa tus filtros para ver por categoría los registros cargados.</p>
+                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
+                  Registro activo
+                </div>
+                <h2 className="mt-3 font-['Playfair_Display',serif] text-2xl font-bold leading-tight text-emerald-950 sm:text-[2rem]">
+                  Últimos movimientos de stock
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm text-slate-500">Usa tus filtros para ver por categoría los registros cargados.</p>
               </div>
               <button
                 type="button"
                 onClick={openForm}
-                className="mt-2 sm:mt-0 shrink-0 inline-flex items-center gap-2 rounded-full border-2 border-cyan-400 bg-cyan-50 px-5 py-2.5 text-sm font-bold text-cyan-600 tracking-wide hover:bg-cyan-500 hover:text-white hover:border-cyan-500 hover:shadow-[0_0_18px_rgba(6,182,212,0.45)] active:scale-95 transition-all duration-250 cursor-pointer"
+                className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-full border border-emerald-200 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800 sm:mt-0 sm:w-auto cursor-pointer"
               >
-                <span className="text-base leading-none font-black">+</span>
+                <span className="text-base leading-none">+</span>
                 Nuevo equipo
               </button>
             </div>
+            </div>
 
-            {/* Tabs con íconos */}
-            <div className="mb-4 flex w-full overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm gap-1">
-              {tabs.map(({ label, icon }) => {
+            <div className="px-4 pt-4 sm:px-6">
+              <div className="mb-5 grid grid-cols-2 gap-2 rounded-[18px] border border-emerald-100 bg-emerald-50/40 p-1 sm:grid-cols-4">
+                {tabs.map(({ label, icon }) => {
                 const TabIcon = icon;
                 const isActive = label === activeTab;
                 return (
@@ -460,151 +522,191 @@ function Equipamiento() {
                     key={label}
                     type="button"
                     onClick={() => setActiveTab(label)}
-                    className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                    className={`flex min-w-0 items-center justify-center gap-2 rounded-[14px] px-3 py-2 text-xs font-medium transition-all duration-200 sm:shrink-0 sm:justify-start sm:px-4 sm:text-sm ${
                       isActive
-                        ? "bg-white text-slate-900 shadow-md ring-1 ring-slate-200 font-semibold"
-                        : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                        ? "bg-white text-emerald-700 shadow-sm ring-1 ring-emerald-100 font-semibold"
+                        : "text-slate-500 hover:text-emerald-700 hover:bg-white/80"
                     }`}
                   >
-                    <span className={isActive ? "text-slate-700" : "text-slate-400"}>
+                    <span className={isActive ? "text-emerald-600" : "text-slate-400"}>
                       <TabIcon />
                     </span>
                     {label}
                   </button>
                 );
               })}
-            </div>
+              </div>
 
-            {/* Búsqueda */}
-            <div className="mb-5 relative w-full max-w-sm">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                <SearchIcon />
-              </span>
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar equipo..."
-                className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-800 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
-              />
-            </div>
-
-            {/* Tabla */}
-            <div className="overflow-hidden rounded-2xl border border-slate-200">
-              {loading ? (
-                <div className="flex items-center justify-center p-8">
-                  <div className="text-center">
-                    <div className="mb-3 h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-cyan-500 mx-auto"></div>
-                    <p className="text-sm text-slate-500">Cargando inventario...</p>
-                  </div>
-                </div>
-              ) : error ? (
-                <div className="p-4 bg-rose-50 border-b border-rose-200">
-                  <p className="text-sm text-rose-700 font-medium">{error}</p>
-                </div>
-              ) : null}
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[820px] border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 text-left">
-                      <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Nombre</th>
-                      <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Cantidad</th>
-                      <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Codigo</th>
-                      <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Ubicacion</th>
-                      <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Estado</th>
-                      <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Movilidad</th>
-                      <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {!loading && filteredItems.map((item) => (
-                      <tr key={item.id} className="border-t border-slate-100 text-sm text-slate-700">
-                        <td className="px-4 py-3 font-semibold text-slate-900">{item.tipo}</td>
-                        <td className="px-4 py-3 text-slate-500">{item.cantidad}</td>
-                        <td className="px-4 py-3 text-slate-500">{item.codigo}</td>
-                        <td className="px-4 py-3 text-slate-500">{item.ubicacion}</td>
-                        <td className="px-4 py-3">
-                          <StatusPill status={item.estado} />
-                        </td>
-                        <td className="px-4 py-3">
-                          <MobilityPill mobility={item.movilidad} />
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              className="rounded-lg p-2 text-cyan-500 bg-cyan-50 hover:bg-cyan-100 transition"
-                              aria-label={`Editar ${item.tipo}`}
-                            >
-                              <PencilIcon />
-                            </button>
-                            <button
-                              type="button"
-                              className="rounded-lg p-2 text-rose-500 bg-rose-50 hover:bg-rose-100 transition"
-                              aria-label={`Eliminar ${item.tipo}`}
-                            >
-                              <TrashIcon />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              {/* Búsqueda */}
+              <div className="mb-5 relative w-full max-w-full sm:max-w-sm">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  <SearchIcon />
+                </span>
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Buscar equipo..."
+                  className="w-full rounded-full border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
+                />
               </div>
             </div>
 
-            {filteredItems.length === 0 && (
-              <p className="mt-4 text-center text-sm text-slate-500">No hay resultados para el filtro seleccionado.</p>
-            )}
-          </Card>
-        </div>
+            <div className="px-4 py-5 sm:px-6">
+              {/* Vista móvil */}
+              <div className="space-y-3 md:hidden">
+                {loading ? (
+                  <div className="flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 p-8">
+                    <div className="text-center ">
+                      <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-500"></div>
+                      <p className="text-sm text-slate-500">Cargando inventario...</p>
+                    </div>
+                  </div>
+                ) : error ? (
+                  <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
+                    <p className="text-sm font-medium text-rose-700">{error}</p>
+                  </div>
+                ) : filteredItems.length > 0 ? (
+                  filteredItems.map((item) => (
+                    <InventoryCard
+                      key={item.id}
+                      item={item}
+                      onEdit={() => {}}
+                      onDelete={() => {}}
+                    />
+                  ))
+                ) : (
+                  <p className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center text-sm text-slate-500">
+                    No hay resultados para el filtro seleccionado.
+                  </p>
+                )}
+              </div>
 
-        {/* Panel de alertas */}
-        <div>
-          <Card padding="md" className="p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-900">Alertas de inventario</h2>
-              <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-bold text-rose-600">
-                {alertItems.length} activas
-              </span>
-            </div>
-            <p className="mb-4 text-sm text-slate-500">Estados que requieren revisión o mantenimiento.</p>
+              {/* Tabla escritorio */}
+              <div className="hidden overflow-hidden rounded-[22px] border border-slate-200 md:block">
+                {loading ? (
+                  <div className="flex items-center justify-center p-8">
+                    <div className="text-center">
+                      <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-500"></div>
+                      <p className="text-sm text-slate-500">Cargando inventario...</p>
+                    </div>
+                  </div>
+                ) : error ? (
+                  <div className="border-b border-rose-200 bg-rose-50 p-4">
+                    <p className="text-sm font-medium text-rose-700">{error}</p>
+                  </div>
+                ) : null}
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[820px] border-collapse bg-white">
+                    <thead>
+                      <tr className="bg-slate-50 text-left">
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Nombre</th>
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Cantidad</th>
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Codigo</th>
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Ubicacion</th>
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Estado</th>
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Movilidad</th>
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {!loading && filteredItems.map((item) => (
+                        <tr key={item.id} className="border-t border-slate-100 text-sm text-slate-700 hover:bg-emerald-50/40 transition-colors">
+                          <td className="px-4 py-3 font-semibold text-slate-900">{item.tipo}</td>
+                          <td className="px-4 py-3 text-slate-500">{item.cantidad}</td>
+                          <td className="px-4 py-3 text-slate-500">{item.codigo}</td>
+                          <td className="px-4 py-3 text-slate-500">{item.ubicacion}</td>
+                          <td className="px-4 py-3">
+                            <StatusPill status={item.estado} />
+                          </td>
+                          <td className="px-4 py-3">
+                            <MobilityPill mobility={item.movilidad} />
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                className="rounded-lg p-2 text-cyan-500 bg-cyan-50 hover:bg-cyan-100 transition"
+                                aria-label={`Editar ${item.tipo}`}
+                              >
+                                <PencilIcon />
+                              </button>
+                              <button
+                                type="button"
+                                className="rounded-lg p-2 text-rose-500 bg-rose-50 hover:bg-rose-100 transition"
+                                aria-label={`Eliminar ${item.tipo}`}
+                              >
+                                <TrashIcon />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
 
-            <div className="flex flex-col gap-3">
-              {alertItems.map((item) => (
-                <AlertCard key={item.id} item={item} />
-              ))}
             </div>
           </Card>
+
+          {/* Panel de alertas */}
+          <div>
+            <Card padding="none" className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_14px_40px_rgba(15,23,42,0.06)]">
+              <div className="border-b border-slate-100 px-5 py-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-semibold text-emerald-950">Alertas de inventario</h2>
+                  <span className="shrink-0 rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-bold text-rose-600">
+                    {alertItems.length} activas
+                  </span>
+                </div>
+                <p className="mb-0 text-sm text-slate-500">Estados que requieren revisión o mantenimiento.</p>
+              </div>
+
+              <div className="flex flex-col gap-3 p-5">
+                {alertItems.map((item) => (
+                  <AlertCard key={item.id} item={item} />
+                ))}
+              </div>
+            </Card>
+          </div>
         </div>
       </div>
 
       {/* Modal formulario */}
       {isFormOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/45 backdrop-blur-sm sm:items-center sm:p-4"
           onClick={closeForm}
         >
           <div
-            className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"
+            className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-lg sm:rounded-[28px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-5 flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Nuevo {activeTab.slice(0, -1).toLowerCase()}</h2>
-                <p className="mt-1 text-sm text-slate-500">Completa el formulario para registrar el ítem.</p>
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:static sm:px-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">
+                    Registro
+                  </div>
+                  <h2 className="text-lg font-bold text-slate-900 sm:text-xl">
+                    Nuevo {activeTab.slice(0, -1).toLowerCase()}
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Completa el formulario para registrar el ítem.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeForm}
+                  className="rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
+                >
+                  Cerrar
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={closeForm}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
-              >
-                Cerrar
-              </button>
             </div>
 
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            <form className="flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6" onSubmit={handleSubmit}>
               <label className="block">
                 <span className="mb-1.5 block text-sm font-semibold text-slate-700">Nombre</span>
                 <input
@@ -612,12 +714,12 @@ function Equipamiento() {
                   value={formData.nombre}
                   onChange={(e) => setFormData((c) => ({ ...c, nombre: e.target.value }))}
                   placeholder="Ej. Micropipeta digital"
-                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
                   required
                 />
               </label>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <label className="block">
                   <span className="mb-1.5 block text-sm font-semibold text-slate-700">Cantidad</span>
                   <input
@@ -625,7 +727,7 @@ function Equipamiento() {
                     min="1"
                     value={formData.cantidad}
                     onChange={(e) => setFormData((c) => ({ ...c, cantidad: e.target.value }))}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
                     required
                   />
                 </label>
@@ -637,7 +739,7 @@ function Equipamiento() {
                     value={formData.unidad}
                     onChange={(e) => setFormData((c) => ({ ...c, unidad: e.target.value }))}
                     placeholder="Ej. unidad, ml, g"
-                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
                     required
                   />
                 </label>
@@ -650,7 +752,7 @@ function Equipamiento() {
                   value={formData.ubicacion}
                   onChange={(e) => setFormData((c) => ({ ...c, ubicacion: e.target.value }))}
                   placeholder="Ej. Lab 1 / Edif. A"
-                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
                   required
                 />
               </label>
@@ -660,7 +762,7 @@ function Equipamiento() {
                 <select
                   value={formData.estado}
                   onChange={(e) => setFormData((c) => ({ ...c, estado: e.target.value }))}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
                 >
                   {statusOptions.map((option) => (
                     <option key={option} value={option}>{option}</option>
@@ -669,19 +771,23 @@ function Equipamiento() {
               </label>
 
               <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto"
                   onClick={closeForm}
-                  className="inline-flex items-center justify-center rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
                 >
                   Cancelar
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  className="inline-flex items-center justify-center rounded-xl bg-cyan-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-600"
+                  variant="primary"
+                  size="sm"
+                  className="w-full sm:w-auto"
                 >
                   Guardar
-                </button>
+                </Button>
               </div>
             </form>
           </div>
