@@ -10,20 +10,26 @@ export default function CrearEdificioModal({
   if (!mostrar) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
 
-      <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-xl">
+      <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
 
-        <h2 className="text-2xl font-bold mb-5">
-          Crear edificio
-        </h2>
+        {/* HEADER */}
+        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
+          <h2 className="text-lg font-semibold text-slate-800">
+            Crear edificio
+          </h2>
+        </div>
 
-        <FormularioEdificio
-          formData={formData}
-          handleChange={handleChange}
-          handleSubmit={handleSubmit}
-          cerrarModal={cerrarModal}
-        />
+        {/* FORM */}
+        <div className="p-6">
+          <FormularioEdificio
+            formData={formData}
+            handleChange={handleChange}
+            handleSubmit={handleSubmit}
+            cerrarModal={cerrarModal}
+          />
+        </div>
 
       </div>
     </div>
