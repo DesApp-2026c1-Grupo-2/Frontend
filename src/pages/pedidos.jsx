@@ -46,7 +46,7 @@ function Modal({ pedido, onClose, onAprobar, onRechazar }) {
           </button>
         </div>
 
-        <div className="px-6 py-5 grid grid-cols-2 gap-y-4 gap-x-6 text-sm">
+        <div className="px-6 py-5 grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6 text-sm">
           {[
             ["Docente", formatDocente(pedido.docente)],
             ["Fecha y Hora", formatFechaHora(pedido.fechaHora || pedido.fecha)],
@@ -90,7 +90,7 @@ function Modal({ pedido, onClose, onAprobar, onRechazar }) {
         )}
 
         {/* Botones de acción del modal */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/50">
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-xl text-sm text-slate-600 bg-white border border-slate-300 hover:border-slate-400 hover:bg-slate-50 transition-colors"
@@ -200,11 +200,11 @@ export default function PedidosLaboratorio() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 px-8 py-8">
+    <div className="min-h-screen bg-slate-50 text-slate-800 px-4 sm:px-6 lg:px-8 py-6">
       <PageHeader title="Pedidos" />
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 mb-6">
+      <div className="flex flex-wrap items-center gap-2 mb-6">
         {["todos", "pendientes"].map((t) => (
           <button
             key={t}
@@ -236,8 +236,9 @@ export default function PedidosLaboratorio() {
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-        <table className="w-full text-sm">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[950px]">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50">
               {[
@@ -283,7 +284,7 @@ export default function PedidosLaboratorio() {
                   <EstadoBadge estado={p.estado} />
                 </td>
                 <td className="px-5 py-4">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <button
                       onClick={() => setModalPedido(p)}
                       className="px-3 py-1.5 rounded-lg text-xs border border-slate-200 bg-white text-slate-600 hover:border-emerald-300 hover:text-emerald-700 transition-colors shadow-sm"
@@ -313,6 +314,7 @@ export default function PedidosLaboratorio() {
         })}
           </tbody>
         </table>
+      </div>
       </div>
 
       {modalPedido && (
