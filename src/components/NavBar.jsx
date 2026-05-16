@@ -1,8 +1,11 @@
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+
 import logo from "../assets/Logo.png";
 
 function Navbar() {
   const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <header className="fixed top-0 left-0 z-50 w-full border-b border-lime-200/80 bg-[#b9d89b]/95 backdrop-blur-md shadow-[0_6px_24px_rgba(50,80,20,0.08)]">
@@ -20,7 +23,8 @@ function Navbar() {
           />
         </button>
 
-        <nav className="flex items-center gap-2 sm:gap-4">
+        {/* DESKTOP NAV */}
+        <nav className="hidden md:flex items-center gap-2 sm:gap-4">
           <button
             onClick={() => navigate("/")}
             className="rounded-xl px-4 py-2 text-base font-semibold text-slate-900 transition hover:bg-white/35 hover:text-green-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-700/40"
@@ -49,7 +53,65 @@ function Navbar() {
             Login
           </button>
         </nav>
+
+        {/* MOBILE BUTTON */}
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
+          className="md:hidden flex flex-col justify-center items-center gap-1.5 w-11 h-11 rounded-xl hover:bg-white/20 transition"
+        >
+          <span className={`block h-0.5 w-6 bg-slate-900 transition ${menuOpen ? "rotate-45 translate-y-2" : ""}`} />
+          <span className={`block h-0.5 w-6 bg-slate-900 transition ${menuOpen ? "opacity-0" : ""}`} />
+          <span className={`block h-0.5 w-6 bg-slate-900 transition ${menuOpen ? "-rotate-45 -translate-y-2" : ""}`} />
+        </button>
       </div>
+      {/* MOBILE MENU */}
+      {menuOpen && (
+        <div className="md:hidden border-t border-lime-200/70 bg-[#b9d89b]/95 backdrop-blur-md px-4 py-4 shadow-lg">
+          <nav className="flex flex-col gap-2">
+
+            <button
+              onClick={() => {
+                navigate("/");
+                setMenuOpen(false);
+              }}
+              className="rounded-xl px-4 py-3 text-left text-base font-semibold text-slate-900 hover:bg-white/30 transition"
+            >
+              Inicio
+            </button>
+
+            <button
+              onClick={() => {
+                navigate("/equipamiento");
+                setMenuOpen(false);
+              }}
+              className="rounded-xl px-4 py-3 text-left text-base font-semibold text-slate-900 hover:bg-white/30 transition"
+            >
+              Equipamiento
+            </button>
+
+            <button
+              onClick={() => {
+                navigate("/pedidos");
+                setMenuOpen(false);
+              }}
+              className="rounded-xl bg-[#94c463] px-4 py-3 text-left text-base font-semibold text-slate-950 transition hover:bg-[#85b957]"
+            >
+              Pedidos
+            </button>
+
+            <button
+              onClick={() => {
+                navigate("/logIn");
+                setMenuOpen(false);
+              }}
+              className="rounded-xl border-2 border-green-700 px-4 py-3 text-left text-base font-semibold text-slate-950 hover:bg-white/30 transition"
+            >
+              Login
+            </button>
+
+          </nav>
+        </div>
+      )}
     </header>
   );
 }
