@@ -136,7 +136,7 @@ export default function PedidosLaboratorio() {
       try {
         const [resPedidos, resLabs] = await Promise.all([
           api.get("/pedido"),
-          api.get("/laboratorios/disponibles-check"),
+          api.get("/laboratorio/disponibles"),
         ]);
 
         setPedidos(resPedidos.data);
