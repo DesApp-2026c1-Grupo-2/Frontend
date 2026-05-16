@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
-import { useLocation } from "react-router-dom";
 
 import EdificioCard from "../components/edificios/EdificioCard";
 import CrearEdificioModal from "../components/edificios/CrearEdificioModal";
