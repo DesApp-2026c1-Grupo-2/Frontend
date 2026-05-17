@@ -570,8 +570,6 @@ function Equipamiento() {
                     <InventoryCard
                       key={item.id}
                       item={item}
-                      onEdit={() => {}}
-                      onDelete={() => {}}
                     />
                   ))
                 ) : (
