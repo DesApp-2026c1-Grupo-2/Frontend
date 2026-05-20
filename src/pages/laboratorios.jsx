@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import {obtenerLaboratoriosPorEdificio, crearLaboratorio } from "../services/laboratorioService";
+import {obtenerLaboratoriosPorEdificio, crearLaboratorio, actualizarEstadoLaboratorio } from "../services/laboratorioService";
+import { obtenerEquipos } from "../services/equipoFijoService";
+import { obtenerEdificios } from "../services/edificioService";
 
 import LaboratorioTable from "../components/laboratorios/LaboratorioTable";
 import LaboratorioModal from "../components/laboratorios/LaboratorioModal";
@@ -11,7 +13,9 @@ export default function Laboratorios() {
   const { id } = useParams();
 
   const [laboratorios, setLaboratorios] = useState([]);
+  const [edificioNombre, setEdificioNombre] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [equipos, setEquipos] = useState([]);
 
   const [mostrarModal, setMostrarModal] = useState(false);
   const [laboratorioEditando, setLaboratorioEditando] = useState(null);
@@ -20,7 +24,6 @@ export default function Laboratorios() {
     nombre: "",
     capacidad: "",
     tipo: "",
-    tieneEquipos: false,
   });
 
   // =========================
@@ -39,8 +42,27 @@ export default function Laboratorios() {
 
   useEffect(() => {
     cargarLaboratorios();
+    cargarEquipos();
+    cargarEdificio();
   }, [id]);
 
+  // Obtener nombre del edificio
+  const cargarEdificio = async () => {
+    try {
+      const edificios = await obtenerEdificios();
+
+      const edificioActual = edificios.find(
+        (e) => e.id === id
+      );
+
+      if (edificioActual) {
+        setEdificioNombre(edificioActual.nombre);
+      }
+
+    } catch (error) {
+      console.error(error);
+    }
+  };
   // =========================
   // INPUTS
   // =========================
@@ -69,16 +91,23 @@ export default function Laboratorios() {
     try {
       // EDITAR
       if (laboratorioEditando) {
-      setLaboratorios((prev) =>
-        prev.map((lab) =>
-          lab.id === laboratorioEditando.id
-            ? {
-                ...lab,
-                ...formData,
-              }
-            : lab
-        )
-      );
+
+        await actualizarEstadoLaboratorio(
+          laboratorioEditando.id,
+          formData.estado
+        );
+
+        setLaboratorios((prev) =>
+          prev.map((lab) =>
+            lab.id === laboratorioEditando.id
+              ? {
+                  ...lab,
+                  estado: formData.estado,
+                }
+              : lab
+          )
+        );
+
         setLaboratorioEditando(null);
       }
 
@@ -104,7 +133,6 @@ export default function Laboratorios() {
         capacidad: "",
         tipo: "",
         estado: "disponible",
-        tieneEquipos: false,
       });
 
       setMostrarModal(false);
@@ -122,17 +150,36 @@ export default function Laboratorios() {
       capacidad: lab.capacidad,
       tipo: lab.tipo,
       estado: lab.estado,
-      tieneEquipos: false,
     });
 
     setMostrarModal(true);
+  };
+
+  // EQUIPOS 
+  const cargarEquipos = async () => {
+    try {
+      const data = await obtenerEquipos();
+
+      const equiposFijos = data.filter(
+        (eq) => eq.esFijo && eq.laboratorioId
+      );
+
+      setEquipos(equiposFijos);
+
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 px-8 py-8">
 
       {/* HEADER */}
-      <PageHeader title="Laboratorios" />
+      <PageHeader
+        preTitle="Edificio"
+        title={edificioNombre || "Laboratorios"}
+        description="Gestión y visualización de laboratorios"
+      />
 
       <div className="flex items-center gap-2 mb-6">
         <button
@@ -143,7 +190,6 @@ export default function Laboratorios() {
               nombre: "",
               capacidad: "",
               tipo: "",
-              tieneEquipos: false,
             });
 
             setMostrarModal(true);
@@ -157,6 +203,7 @@ export default function Laboratorios() {
       {/* TABLE */}
       <LaboratorioTable
         laboratorios={laboratorios}
+        equipos={equipos}
         onEditar={handleEditar}
       />
 

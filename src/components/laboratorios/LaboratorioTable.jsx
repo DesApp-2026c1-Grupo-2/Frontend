@@ -1,7 +1,12 @@
+import React, { useState } from "react";
+
 export default function LaboratorioTable({
   laboratorios,
+  equipos,
   onEditar,
 }) {
+  const [labExpandido, setLabExpandido] = useState(null);
+
   return (
     <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
@@ -29,8 +34,9 @@ export default function LaboratorioTable({
 
           <tbody>
             {laboratorios.map((lab, i) => (
+              
+              <React.Fragment key={lab.id}>
               <tr
-                key={lab.id}
                 className={`border-b border-slate-100 last:border-none hover:bg-emerald-50/50 transition-colors ${
                   i % 2 === 1 ? "bg-slate-50/30" : ""
                 }`}
@@ -71,8 +77,42 @@ export default function LaboratorioTable({
                 </td>
 
                 {/* EQUIPOS */}
-                <td className="px-5 py-4 text-slate-600 text-sm">
-                  {lab.tieneEquipos ? "Sí" : "No"}
+                <td className="px-5 py-4 text-sm">
+                  {(() => {
+
+                    const equiposLab = equipos.filter(
+                      (eq) => eq.laboratorioId?.id === lab.id
+                    );
+
+                    if (equiposLab.length === 0) {
+                      return (
+                        <span className="text-slate-400">
+                          No
+                        </span>
+                      );
+                    }
+
+                    return (
+                      <button
+                        onClick={() =>
+                          setLabExpandido(
+                            labExpandido === lab.id ? null : lab.id
+                          )
+                        }
+                        className="
+                          px-3 py-1 rounded-lg
+                          bg-slate-100
+                          hover:bg-emerald-100
+                          text-slate-700
+                          hover:text-emerald-700
+                          transition
+                          text-xs font-medium
+                        "
+                      >
+                        Ver equipos ({equiposLab.length})
+                      </button>
+                    );
+                  })()}
                 </td>
 
                 {/* ACCIONES */}
@@ -96,6 +136,63 @@ export default function LaboratorioTable({
                   </button>
                 </td>
               </tr>
+              {labExpandido === lab.id && (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="bg-slate-50 px-6 py-5"
+                  >
+
+                    <div className="flex flex-wrap gap-4">
+
+                      {equipos
+                        .filter(
+                          (eq) => eq.laboratorioId?.id === lab.id
+                        )
+                        .map((eq) => (
+                          <div
+                            key={eq.id}
+                            className="
+                              min-w-[220px]
+                              rounded-2xl
+                              border border-slate-200
+                              bg-white
+                              p-4
+                              shadow-sm
+                            "
+                          >
+
+                            <h4 className="font-semibold text-slate-800">
+                              {eq.nombre}
+                            </h4>
+
+                            <p className="text-sm text-slate-500 mt-1">
+                              {eq.tipo}
+                            </p>
+
+                            <span
+                              className={`
+                                inline-block mt-3
+                                px-2 py-1
+                                rounded-lg text-xs font-medium
+                                ${
+                                  eq.estado === "disponible"
+                                    ? "bg-emerald-100 text-emerald-700"
+                                    : eq.estado === "mantenimiento"
+                                    ? "bg-amber-100 text-amber-700"
+                                    : "bg-red-100 text-red-700"
+                                }
+                              `}
+                            >
+                              {eq.estado}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  </td>
+                </tr>
+              )}
+              </React.Fragment>
             ))}
           </tbody>
         </table>

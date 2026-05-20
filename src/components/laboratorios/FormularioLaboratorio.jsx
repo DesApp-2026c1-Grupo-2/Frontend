@@ -7,7 +7,7 @@ export default function FormularioLaboratorio({
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
 
-      {/* NOMBRE */}
+      {/* NOMBRE (solo lectura) */}
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1.5">
           Nombre del laboratorio
@@ -16,27 +16,19 @@ export default function FormularioLaboratorio({
         <input
           name="nombre"
           value={formData.nombre}
-          onChange={handleChange}
-          placeholder="Ej: Laboratorio 202"
+          disabled
           className="
             w-full
             rounded-xl
             border border-slate-200
-            bg-white
+            bg-slate-100
             px-4 py-2.5
-            text-sm text-slate-700
-            placeholder:text-slate-400
-            outline-none
-            transition-colors
-            focus:border-emerald-300
-            focus:ring-4
-            focus:ring-emerald-100
+            text-sm text-slate-500
           "
-          required
         />
       </div>
 
-      {/* CAPACIDAD */}
+      {/* CAPACIDAD (solo lectura) */}
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1.5">
           Capacidad
@@ -44,61 +36,41 @@ export default function FormularioLaboratorio({
 
         <input
           name="capacidad"
-          type="number"
           value={formData.capacidad}
-          onChange={handleChange}
-          placeholder="Ej: 30"
+          disabled
           className="
             w-full
             rounded-xl
             border border-slate-200
-            bg-white
+            bg-slate-100
             px-4 py-2.5
-            text-sm text-slate-700
-            placeholder:text-slate-400
-            outline-none
-            transition-colors
-            focus:border-emerald-300
-            focus:ring-4
-            focus:ring-emerald-100
+            text-sm text-slate-500
           "
-          required
         />
       </div>
 
-      {/* TIPO */}
+      {/* TIPO (solo lectura) */}
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1.5">
           Tipo de laboratorio
         </label>
 
-        <select
+        <input
           name="tipo"
           value={formData.tipo}
-          onChange={handleChange}
+          disabled
           className="
             w-full
             rounded-xl
             border border-slate-200
-            bg-white
+            bg-slate-100
             px-4 py-2.5
-            text-sm text-slate-700
-            outline-none
-            transition-colors
-            focus:border-emerald-300
-            focus:ring-4
-            focus:ring-emerald-100
+            text-sm text-slate-500
           "
-          required
-        >
-          <option value="">Seleccionar tipo</option>
-          <option value="biologia">Biología</option>
-          <option value="quimica">Química</option>
-          <option value="mixto">Mixto</option>
-        </select>
+        />
       </div>
 
-      {/* ESTADO */}
+      {/* ESTADO (EDITABLE - ÚNICO CAMPO DEL SPRINT) */}
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1.5">
           Estado
@@ -141,9 +113,7 @@ export default function FormularioLaboratorio({
             text-slate-600
             bg-white
             border border-slate-300
-            hover:border-slate-400
             hover:bg-slate-50
-            transition-colors
           "
         >
           Cancelar
@@ -159,8 +129,6 @@ export default function FormularioLaboratorio({
             text-white
             font-semibold
             hover:bg-emerald-600
-            shadow-sm
-            transition-colors
           "
         >
           Guardar cambios
