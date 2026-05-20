@@ -97,26 +97,6 @@ export default function NuevoLaboratorioForm({
           <option value="mixto">Mixto</option>
         </select>
       </div>
-      {/* EQUIPOS FIJOS */}
-      <div className="flex items-center gap-3 pt-1">
-        <input
-          type="checkbox"
-          name="tieneEquipos"
-          checked={formData.tieneEquipos}
-          onChange={handleChange} 
-          className="
-            h-4 w-4
-            rounded
-            border-slate-300
-            text-emerald-500
-            focus:ring-emerald-200
-          "
-        />
-
-        <label className="text-sm text-slate-700">
-          Este laboratorio posee equipos fijos
-        </label>
-      </div>
 
       {/* INFO */}
       <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
