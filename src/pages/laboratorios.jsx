@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import {obtenerLaboratoriosPorEdificio, crearLaboratorio } from "../services/laboratorioService";
+import {obtenerLaboratoriosPorEdificio, crearLaboratorio, actualizarEstadoLaboratorio } from "../services/laboratorioService";
 import { obtenerEquipos } from "../services/equipoFijoService";
 import { obtenerEdificios } from "../services/edificioService";
 
@@ -91,16 +91,23 @@ export default function Laboratorios() {
     try {
       // EDITAR
       if (laboratorioEditando) {
-      setLaboratorios((prev) =>
-        prev.map((lab) =>
-          lab.id === laboratorioEditando.id
-            ? {
-                ...lab,
-                ...formData,
-              }
-            : lab
-        )
-      );
+
+        await actualizarEstadoLaboratorio(
+          laboratorioEditando.id,
+          formData.estado
+        );
+
+        setLaboratorios((prev) =>
+          prev.map((lab) =>
+            lab.id === laboratorioEditando.id
+              ? {
+                  ...lab,
+                  estado: formData.estado,
+                }
+              : lab
+          )
+        );
+
         setLaboratorioEditando(null);
       }
 

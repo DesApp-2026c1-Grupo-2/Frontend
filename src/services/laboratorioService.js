@@ -9,3 +9,15 @@ export const crearLaboratorio = async (data) => {
   const res = await api.post("/laboratorio", data);
   return res.data;
 };
+
+export const actualizarEstadoLaboratorio = async (
+  idLaboratorio,
+  estado
+) => {
+  const res = await api.patch(
+    `/laboratorio/${idLaboratorio}/estado`,
+    { estado }
+  );
+
+  return res.data;
+};
