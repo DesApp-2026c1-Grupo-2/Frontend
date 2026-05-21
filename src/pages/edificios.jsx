@@ -132,44 +132,48 @@ export default function Edificios() {
           </thead>
 
           <tbody>
-            {edificios.map((e) => (
-              <tr
-                key={e.id}
-                className="border-b border-slate-100 hover:bg-emerald-50/50 transition-colors last:border-none"
-              >
-                <td className="px-5 py-4 font-mono text-xs text-slate-500">
-                  {e.id?.slice(-6)}
-                </td>
+            {edificios.map((e) => {
+              const eid = e._id || e.id;
 
-                <td className="px-5 py-4 font-medium text-slate-800">
-                  {e.nombre}
-                </td>
+              return (
+                <tr
+                  key={eid}
+                  className="border-b border-slate-100 hover:bg-emerald-50/50 transition-colors last:border-none"
+                >
+                  <td className="px-5 py-4 font-mono text-xs text-slate-500">
+                    {eid != null ? String(eid).slice(-6) : ""}
+                  </td>
 
-                <td className="px-5 py-4 text-slate-600">
-                  {e.direccion}
-                </td>
+                  <td className="px-5 py-4 font-medium text-slate-800">
+                    {e.nombre}
+                  </td>
 
-                <td className="px-5 py-4 text-slate-600">
-                  {e.cantidadLaboratorios}
-                </td>
+                  <td className="px-5 py-4 text-slate-600">
+                    {e.direccion}
+                  </td>
 
-                <td className="px-5 py-4">
-                  <button
-                    onClick={() =>
-                      navigate(`/edificios/${e.id}/laboratorios`)
-                    }
-                    className="
-                      px-3 py-1.5 rounded-lg text-xs border
-                      border-slate-200 bg-white text-slate-600
-                      hover:border-emerald-300 hover:text-emerald-700
-                      transition
-                    "
-                  >
-                    Ver
-                  </button>
-                </td>
-              </tr>
-            ))}
+                  <td className="px-5 py-4 text-slate-600">
+                    {e.cantidadLaboratorios}
+                  </td>
+
+                  <td className="px-5 py-4">
+                    <button
+                      onClick={() =>
+                        navigate(`/edificios/${String(eid)}/laboratorios`)
+                      }
+                      className="
+                        px-3 py-1.5 rounded-lg text-xs border
+                        border-slate-200 bg-white text-slate-600
+                        hover:border-emerald-300 hover:text-emerald-700
+                        transition
+                      "
+                    >
+                      Ver
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
 
         </table>
