@@ -40,11 +40,7 @@ export default function Edificios() {
 
   useEffect(() => {
     cargarEdificios();
-  }, []);
-
-  useEffect(() => {
-    cargarEdificios();
-  }, [location.pathname]);  
+  }, [location.pathname]);
 
   /*
     =========================
