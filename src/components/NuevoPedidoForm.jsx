@@ -29,9 +29,9 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
         // Promise.allSettled evita que si una falla, todo el form colapse
         const [labsRes, usersRes, equiposRes, itemsRes] = await Promise.allSettled([
           api.get("/laboratorio"),
-          api.get("/usuario"),
+          api.get("/usuarios"),
           api.get("/equipo"),
-          api.get("/item")
+          api.get("/items")
         ]);
 
         if (labsRes.status === "fulfilled") setLaboratorios(labsRes.value.data);
