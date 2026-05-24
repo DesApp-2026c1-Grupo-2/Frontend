@@ -4,10 +4,6 @@ import PrivateRoute from "../components/PrivateRoute";
 import { AuthProvider } from "../context/AuthContext";
 
 //import Dashboard from "../pages/Dashboard";
-//import LaboratoriosMB from "../pages/laboratoriosMB";
-//import LaboratoriosHC from "../pages/laboratoriosHC";
-//import LaboratoriosMA from "../pages/laboratoriosMA";
-//import LaboratoriosSM from "../pages/laboratoriosSM";
 import Pedidos from "../pages/pedidos";
 import Equipamiento from "../pages/equipamiento";
 import LogIn from "../pages/logIn";
