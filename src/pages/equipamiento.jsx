@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
-import { Card } from "../components/Card";
-import { Button } from "../components/Button";
+import { Card } from "../components/equipamiento/Card";
+import { Button } from "../components/equipamiento/Button";
 import { PageHeader } from "../components/SharedUi";
 import * as equipamientoService from "../services/equipamiento";
 
@@ -271,8 +271,8 @@ function AlertCard({ item }) {
     </div>
   );
 }
-
-function InventoryCard({ item, onEdit, onDelete }) {
+  /* ─── Vista Movil del Inventario ─── */
+function InventoryCard({ item, onEdit, onDelete }) { 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
@@ -298,6 +298,7 @@ function InventoryCard({ item, onEdit, onDelete }) {
       </div>
 
       <div className="mt-4 flex items-center justify-end gap-2">
+        {/* El Boton Editar */}
         <button
           type="button"
           onClick={onEdit}
@@ -307,6 +308,7 @@ function InventoryCard({ item, onEdit, onDelete }) {
           <PencilIcon />
           Editar
         </button>
+        {/* El Boton Eliminar */}
         <button
           type="button"
           onClick={onDelete}
@@ -328,6 +330,7 @@ function Equipamiento() {
   const [query, setQuery] = useState("");
   const [inventory, setInventory] = useState([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
   const [formData, setFormData] = useState({ nombre: "", cantidad: "1", estado: "Disponible", ubicacion: "", unidad: "unidad" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -365,9 +368,52 @@ function Equipamiento() {
     }
   };
 
+  const handleDeleteItem = async (item) => {  // Boton de Eliminar
+    const confirmDelete = window.confirm(`¿Seguro que quieres borrar ${item.tipo}?`);
+    if (!confirmDelete) return;
+
+    try {
+      await equipamientoService.deleteLote(item.loteId);
+      await recargarInventario();
+    } catch (err) {
+      console.error("Error al eliminar el lote:", err);
+      alert("No se pudo eliminar el registro: " + (err.response?.data?.error || err.message));
+    }
+  };
+
   const resetForm = () => setFormData({ nombre: "", cantidad: "1", estado: "Disponible", ubicacion: "", unidad: "unidad" });
-  const openForm = () => { resetForm(); setIsFormOpen(true); };
-  const closeForm = () => setIsFormOpen(false);
+  const openForm = () => {
+    setEditingItem(null);
+    resetForm();
+    setIsFormOpen(true);
+  };
+  const openEditForm = (item) => { // Boton de Editar 
+    setEditingItem(item);
+    setActiveTab(item.categoria);
+    setFormData({
+      nombre: item.tipo,
+      cantidad: String(item.cantidad),
+      estado: item.estado,
+      ubicacion: item.ubicacion,
+      unidad: item.unidad || "unidad",
+    });
+    setIsFormOpen(true);
+  };
+  const closeForm = () => {
+    setIsFormOpen(false);
+    setEditingItem(null);
+  };
+
+  const estadoToBackend = (estado) => {
+    const estadoMap = {
+      Disponible: "disponible",
+      Reservado: "reservado",
+      "En uso": "en_uso",
+      Descartado: "descartado",
+    };
+
+    return estadoMap[estado] || estado.toLowerCase().replace(/\s+/g, "_");
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -381,50 +427,71 @@ function Equipamiento() {
     }
 
     try {
-      // Determinar tipo basado en la categoría activa
-      const tipoItem = Object.keys(tipoToCategoria).find(
-        key => tipoToCategoria[key] === activeTab
-      ) || 'material';
+      if (editingItem) {
+        const tipoItem = Object.keys(tipoToCategoria).find(
+          key => tipoToCategoria[key] === editingItem.categoria
+        ) || "material";
 
-      // Generar código
-      const codePrefix = activeTab === "Materiales" ? "MT" : activeTab === "Reactivos" ? "RC" : activeTab === "Sustancias basicas" ? "SB" : "EQ";
-      const nextNumber = inventory
-        .filter((item) => item.categoria === activeTab)
-        .reduce((max, item) => {
-          const [, num = "0"] = item.codigo.split("-");
-          const n = Number.parseInt(num, 10);
-          return Number.isNaN(n) ? max : Math.max(max, n);
-        }, 0) + 1;
-      const codigo = `${codePrefix}-${String(nextNumber).padStart(3, "0")}`;
-
-      // Crear el Item
-      const nuevoItem = await equipamientoService.createItem({
-        tipo: tipoItem,
-        nombre: nombre,
-        codigo: codigo,
-        unidad: formData.unidad,
-        esConsumible: tipoItem !== 'equipo', // Equipos no deben registrarse como consumibles
-        requiereReceta: tipoItem === 'reactivo' ? false : undefined
-      });
-
-      try {
-        // Crear el Lote asociado
-        await equipamientoService.createLote({
-          itemId: nuevoItem._id,
-          cantidadDisponible: cantidad,
-          ubicacion: ubicacion,
-          estado: formData.estado.toLowerCase().replace(' ', '_')
+        await equipamientoService.updateItem(editingItem.itemId, {
+          tipo: tipoItem,
+          nombre,
+          codigo: editingItem.codigo,
+          unidad: formData.unidad,
+          esConsumible: tipoItem !== "equipo",
+          requiereReceta: tipoItem === "reactivo" ? false : undefined,
         });
-      } catch (loteError) {
-        if (nuevoItem?._id && typeof equipamientoService.deleteItem === "function") {
-          try {
-            await equipamientoService.deleteItem(nuevoItem._id);
-          } catch (rollbackError) {
-            console.error("No se pudo revertir el item creado tras fallar el lote:", rollbackError);
-          }
-        }
 
-        throw loteError;
+        await equipamientoService.updateLote(editingItem.loteId, {
+          cantidadDisponible: cantidad,
+          ubicacion,
+          estado: estadoToBackend(formData.estado),
+        });
+      } else {
+        // Determinar tipo basado en la categoría activa
+        const tipoItem = Object.keys(tipoToCategoria).find(
+          key => tipoToCategoria[key] === activeTab
+        ) || 'material';
+
+        // Generar código
+        const codePrefix = activeTab === "Materiales" ? "MT" : activeTab === "Reactivos" ? "RC" : activeTab === "Sustancias basicas" ? "SB" : "EQ";
+        const nextNumber = inventory
+          .filter((item) => item.categoria === activeTab)
+          .reduce((max, item) => {
+            const [, num = "0"] = item.codigo.split("-");
+            const n = Number.parseInt(num, 10);
+            return Number.isNaN(n) ? max : Math.max(max, n);
+          }, 0) + 1;
+        const codigo = `${codePrefix}-${String(nextNumber).padStart(3, "0")}`;
+
+        // Crear el Item
+        const nuevoItem = await equipamientoService.createItem({
+          tipo: tipoItem,
+          nombre: nombre,
+          codigo: codigo,
+          unidad: formData.unidad,
+          esConsumible: tipoItem !== 'equipo', // Equipos no deben registrarse como consumibles
+          requiereReceta: tipoItem === 'reactivo' ? false : undefined
+        });
+
+        try {
+          // Crear el Lote asociado
+          await equipamientoService.createLote({
+            itemId: nuevoItem._id,
+            cantidadDisponible: cantidad,
+            ubicacion: ubicacion,
+            estado: estadoToBackend(formData.estado)
+          });
+        } catch (loteError) {
+          if (nuevoItem?._id && typeof equipamientoService.deleteItem === "function") {
+            try {
+              await equipamientoService.deleteItem(nuevoItem._id);
+            } catch (rollbackError) {
+              console.error("No se pudo revertir el item creado tras fallar el lote:", rollbackError);
+            }
+          }
+
+          throw loteError;
+        }
       }
 
       // Recargar datos
@@ -432,8 +499,8 @@ function Equipamiento() {
       closeForm();
       resetForm();
     } catch (err) {
-      console.error("Error al crear item/lote:", err);
-      alert("Error al crear el ítem: " + (err.response?.data?.error || err.message));
+      console.error("Error al guardar item/lote:", err);
+      alert("Error al guardar el ítem: " + (err.response?.data?.error || err.message));
     }
   };
 
@@ -570,6 +637,8 @@ function Equipamiento() {
                     <InventoryCard
                       key={item.id}
                       item={item}
+                      onEdit={() => openEditForm(item)}
+                      onDelete={() => handleDeleteItem(item)}
                     />
                   ))
                 ) : (
@@ -621,15 +690,19 @@ function Equipamiento() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
-                              <button
+                               {/* Botón de Editar */}
+                              <button 
                                 type="button"
+                                onClick={() => openEditForm(item)}
                                 className="rounded-lg p-2 text-cyan-500 bg-cyan-50 hover:bg-cyan-100 transition"
                                 aria-label={`Editar ${item.tipo}`}
                               >
                                 <PencilIcon />
                               </button>
+                               {/* Botón de Eliminar */}
                               <button
                                 type="button"
+                                onClick={() => handleDeleteItem(item)}
                                 className="rounded-lg p-2 text-rose-500 bg-rose-50 hover:bg-rose-100 transition"
                                 aria-label={`Eliminar ${item.tipo}`}
                               >
@@ -687,10 +760,10 @@ function Equipamiento() {
                     Registro
                   </div>
                   <h2 className="text-lg font-bold text-slate-900 sm:text-xl">
-                    Nuevo {activeTab.slice(0, -1).toLowerCase()}
+                    {editingItem ? `Editar ${editingItem.tipo}` : `Nuevo ${activeTab.slice(0, -1).toLowerCase()}`}
                   </h2>
                   <p className="mt-1 text-sm text-slate-500">
-                    Completa el formulario para registrar el ítem.
+                    {editingItem ? "Actualiza los campos y guarda los cambios." : "Completa el formulario para registrar el ítem."}
                   </p>
                 </div>
                 <button
@@ -783,7 +856,7 @@ function Equipamiento() {
                   size="sm"
                   className="w-full sm:w-auto"
                 >
-                  Guardar
+                  {editingItem ? "Actualizar" : "Guardar"}
                 </Button>
               </div>
             </form>
