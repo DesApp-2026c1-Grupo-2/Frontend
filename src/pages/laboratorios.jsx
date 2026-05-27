@@ -121,10 +121,7 @@ export default function Laboratorios() {
 
       setLaboratorios((prev) => [
         ...prev,
-        {
-          ...nuevoLab,
-          tieneEquipos: formData.tieneEquipos,
-        },
+        nuevoLab,
       ]);
     }
 
