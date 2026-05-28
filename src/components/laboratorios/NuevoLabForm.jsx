@@ -1,4 +1,4 @@
-export default function FormularioLaboratorio({
+export default function NuevoLaboratorioForm({
   formData,
   handleChange,
   handleSubmit,
@@ -7,7 +7,7 @@ export default function FormularioLaboratorio({
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
 
-      {/* NOMBRE (solo lectura) */}
+      {/* NOMBRE */}
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1.5">
           Nombre del laboratorio
@@ -16,19 +16,27 @@ export default function FormularioLaboratorio({
         <input
           name="nombre"
           value={formData.nombre}
-          disabled
+          onChange={handleChange}
+          placeholder="Ej: Laboratorio 202"
           className="
             w-full
             rounded-xl
             border border-slate-200
-            bg-slate-100
+            bg-white
             px-4 py-2.5
-            text-sm text-slate-500
+            text-sm text-slate-700
+            placeholder:text-slate-400
+            outline-none
+            transition-colors
+            focus:border-emerald-300
+            focus:ring-4
+            focus:ring-emerald-100
           "
+          required
         />
       </div>
 
-      {/* CAPACIDAD (solo lectura) */}
+      {/* CAPACIDAD */}
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1.5">
           Capacidad
@@ -36,49 +44,37 @@ export default function FormularioLaboratorio({
 
         <input
           name="capacidad"
+          type="number"
           value={formData.capacidad}
-          disabled
+          onChange={handleChange}
+          placeholder="Ej: 30"
           className="
             w-full
             rounded-xl
             border border-slate-200
-            bg-slate-100
+            bg-white
             px-4 py-2.5
-            text-sm text-slate-500
+            text-sm text-slate-700
+            placeholder:text-slate-400
+            outline-none
+            transition-colors
+            focus:border-emerald-300
+            focus:ring-4
+            focus:ring-emerald-100
           "
+          required
         />
       </div>
 
-      {/* TIPO (solo lectura) */}
+      {/* TIPO */}
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1.5">
           Tipo de laboratorio
         </label>
 
-        <input
+        <select
           name="tipo"
           value={formData.tipo}
-          disabled
-          className="
-            w-full
-            rounded-xl
-            border border-slate-200
-            bg-slate-100
-            px-4 py-2.5
-            text-sm text-slate-500
-          "
-        />
-      </div>
-
-      {/* ESTADO (EDITABLE - ÚNICO CAMPO DEL SPRINT) */}
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1.5">
-          Estado
-        </label>
-
-        <select
-          name="estado"
-          value={formData.estado}
           onChange={handleChange}
           className="
             w-full
@@ -93,12 +89,23 @@ export default function FormularioLaboratorio({
             focus:ring-4
             focus:ring-emerald-100
           "
+          required
         >
-          <option value="disponible">Disponible</option>
-          <option value="reservado">Reservado</option>
-          <option value="en mantenimiento">En mantenimiento</option>
-          <option value="fuera de servicio">Fuera de servicio</option>
+          <option value="">Seleccionar tipo</option>
+          <option value="biologia">Biología</option>
+          <option value="quimica">Química</option>
+          <option value="mixto">Mixto</option>
         </select>
+      </div>
+
+      {/* INFO */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+        <p className="text-xs text-slate-500">
+          El laboratorio será creado automáticamente con estado
+          <span className="font-medium text-emerald-600">
+            {" "}disponible
+          </span>.
+        </p>
       </div>
 
       {/* BOTONES */}
@@ -113,7 +120,9 @@ export default function FormularioLaboratorio({
             text-slate-600
             bg-white
             border border-slate-300
+            hover:border-slate-400
             hover:bg-slate-50
+            transition-colors
           "
         >
           Cancelar
@@ -129,9 +138,11 @@ export default function FormularioLaboratorio({
             text-white
             font-semibold
             hover:bg-emerald-600
+            shadow-sm
+            transition-colors
           "
         >
-          Guardar cambios
+          Crear laboratorio
         </button>
       </div>
     </form>
