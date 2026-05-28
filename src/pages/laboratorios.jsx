@@ -83,9 +83,8 @@ export default function Laboratorios() {
 
       const data =
         await obtenerLaboratoriosPorEdificio(id);
-
       setLaboratorios(data);
-
+      
     } catch (error) {
       console.error(error);
     }
