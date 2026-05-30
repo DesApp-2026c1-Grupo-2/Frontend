@@ -28,7 +28,7 @@ function Login() {
       const data = response.data;
 
       // Guardamos al usuario de forma global a través del Contexto
-      login(data.usuario);
+      login(data.usuario, data.token);
       
       // Redirigir de manera segura a la ruta principal / protegida
       navigate("/");

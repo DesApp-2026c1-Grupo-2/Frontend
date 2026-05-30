@@ -14,12 +14,11 @@ export const useAuth = () => {
 
 // 3. Proveedor del contexto que envuelve la app
 export const AuthProvider = ({ children }) => {
+
   const [user, setUser] = useState(() => {
     const storedUser = localStorage.getItem("user");
 
-    if (!storedUser) {
-      return null;
-    }
+    if (!storedUser) return null;
 
     try {
       return JSON.parse(storedUser);
@@ -29,18 +28,28 @@ export const AuthProvider = ({ children }) => {
     }
   });
 
-  const login = (userData) => {
+  const [token, setToken] = useState(() => {
+    return localStorage.getItem("token");
+  });
+
+  const login = (userData, tokenData) => {
     setUser(userData);
+    setToken(tokenData);
+
     localStorage.setItem("user", JSON.stringify(userData));
+    localStorage.setItem("token", tokenData);
   };
 
   const logout = () => {
     setUser(null);
+    setToken(null);
+
     localStorage.removeItem("user");
+    localStorage.removeItem("token");
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, token, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

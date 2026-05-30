@@ -1,6 +1,6 @@
 export function PageHeader({ preTitle, title, description }) {
   return (
-    <div className="mb-16 animate-float-in">
+    <div className="mb-8 animate-float-in">
       <div className="flex items-center gap-3 mb-4">
         <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-green-600 to-green-400 shadow-[0_0_0_3px_#dcfce7]" />
         <span className="text-green-600 font-semibold text-[13px] tracking-[0.1em] uppercase">
