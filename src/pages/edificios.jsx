@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 import CrearEdificioModal from "../components/edificios/CrearEdificioModal";
 import { PageHeader } from "../components/SharedUi";
