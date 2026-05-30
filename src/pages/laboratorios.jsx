@@ -80,11 +80,12 @@ export default function Laboratorios() {
   const cargarLaboratorios = async () => {
 
     try {
-
       const data =
         await obtenerLaboratoriosPorEdificio(id);
-      setLaboratorios(data);
+ 
+        console.log("LABORATORIOS:", data);
       
+        setLaboratorios(data);
     } catch (error) {
       console.error(error);
     }
@@ -101,12 +102,15 @@ export default function Laboratorios() {
 
       const data = await obtenerEquipos();
 
+      console.log("EQUIPOS RAW:", data);
+
       const equiposFijos = data.filter(
         (eq) => eq.esFijo && eq.laboratorioId
       );
 
-      setEquipos(equiposFijos);
+      console.log("EQUIPOS FILTRADOS:", equiposFijos);
 
+      setEquipos(equiposFijos);
     } catch (error) {
       console.error(error);
     }
@@ -265,12 +269,12 @@ export default function Laboratorios() {
     <div className="min-h-screen bg-slate-100 px-6 py-6">
 
       {/* HEADER */}
-      <div className="flex items-center justify-between mb-10">
+      <div className="flex items-center justify-between">
 
         <PageHeader
           preTitle="Edificio"
           title={edificioActual.nombre}
-          description={`Cantidad de laboratorios: ${laboratorios.length}`}
+          description=""
         />
 
         {/* BOTON */}
@@ -298,6 +302,63 @@ export default function Laboratorios() {
         </button>
       </div>
 
+      {/* METRICAS */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-14">
+
+        <div
+          className="
+            bg-white rounded-2xl
+            border border-emerald-200
+            shadow-sm p-5
+          "
+        >
+          <p className="text-sm text-emerald-700 font-medium">
+            Laboratorios
+          </p>
+
+          <p className="text-3xl font-bold text-slate-800 mt-2">
+            {laboratorios.length}
+          </p>
+        </div>
+
+        <div
+          className="
+            bg-white rounded-2xl
+            border border-emerald-200
+            shadow-sm p-5
+          "
+        >
+          <p className="text-sm text-emerald-700 font-medium">
+            Equipos fijos
+          </p>
+
+          <p className="text-3xl font-bold text-slate-800 mt-2">
+            {equipos.length}
+          </p>
+        </div>
+
+        <div
+          className="
+            bg-white rounded-2xl
+            border border-emerald-200
+            shadow-sm p-5
+          "
+        >
+          <p className="text-sm text-emerald-700 font-medium">
+            Disponibles
+          </p>
+
+          <p className="text-3xl font-bold text-slate-800 mt-2">
+            {
+              laboratorios.filter(
+                (lab) => lab.estado === "disponible"
+              ).length
+            }
+          </p>
+        </div>
+
+      </div>
+
       {/* CONTENEDOR */}
       <div className="relative">
 
@@ -315,9 +376,9 @@ export default function Laboratorios() {
           className="
             relative z-10
             bg-white/80 backdrop-blur-sm
-            border border-emerald-100
+            border border-slate-100
             rounded-[2.5rem]
-            shadow-xl
+            shadow-lg
             p-8 md:p-10
           "
         >
@@ -359,11 +420,10 @@ export default function Laboratorios() {
                   className="
                     relative overflow-hidden
                     bg-gradient-to-br
-                    from-white to-emerald-50
-                    border border-emerald-100
+                    border border-slate-300
                     rounded-3xl
                     p-6
-                    shadow-sm
+                    shadow-lg
                     hover:shadow-xl
                     hover:-translate-y-1
                     transition-all duration-300
@@ -411,55 +471,19 @@ export default function Laboratorios() {
                       </div>
                     </div>
 
-                    {/* VISUAL */}
-                    <div className="mt-8">
-
-                      <div className="flex flex-wrap gap-3">
-
-                        {Array.from({
-                          length: Math.min(
-                            Number(
-                              lab.capacidad || 0
-                            ),
-                            24
-                          ),
-                        }).map((_, i) => (
-
-                          <div
-                            key={i}
-                            className="
-                              relative
-                              w-5 h-7
-                              flex items-end justify-center
-                            "
-                          >
-
-                            {/* CABEZA */}
-                            <div
-                              className="
-                                absolute top-0
-                                w-3 h-3 rounded-full
-                                bg-amber-600
-                              "
-                            />
-
-                            {/* CUERPO */}
-                            <div
-                              className="
-                                w-4 h-4 rounded-md
-                                bg-stone-700
-                              "
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    <div
+                      className="
+                        w-12 h-[2px]
+                        bg-emerald-500
+                        rounded-full
+                        my-4
+                      "
+                    />
 
                     {/* FOOTER */}
                     <div
                       className="
-                        mt-6 pt-4
-                        border-t border-slate-100
+                        mt-2 pt-0
                         flex items-center
                         justify-between
                       "
@@ -467,7 +491,7 @@ export default function Laboratorios() {
 
                       <div>
 
-                        <p className="text-xs text-slate-400">
+                        <p className="text-xs text-slate-500">
                           Capacidad
                         </p>
 
@@ -503,13 +527,9 @@ export default function Laboratorios() {
                       }
                       className="
                         mt-5 w-full
-                        px-4 py-2 rounded-xl
-                        border border-slate-200
-                        bg-white text-slate-600
-                        hover:border-emerald-300
-                        hover:text-emerald-700
-                        transition
-                        text-sm font-medium
+                        px-4 py-2 rounded-xl text-sm font-medium border
+                      border-emerald-200 text-emerald-700 bg-white
+                      hover:bg-emerald-50 transition shadow-sm
                       "
                     >
                       Editar estado
