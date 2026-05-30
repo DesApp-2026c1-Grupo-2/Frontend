@@ -224,6 +224,31 @@ export default function PedidoDetalle() {
         </div>
 
         {/* CONFLICTOS */}
+        {/* ALERTA GENERAL */}
+        {conflictos.length === 0 ? (
+          <div className="mb-8 border border-green-200 bg-green-50 rounded-lg p-4">
+            <p className="font-semibold text-green-700">
+              ✓ Pedido satisfacible
+            </p>
+
+            <p className="text-sm text-green-600 mt-1">
+              El laboratorio, materiales y equipos se encuentran disponibles.
+            </p>
+          </div>
+        ) : (
+          <div className="mb-8 border border-red-200 bg-red-50 rounded-lg p-4">
+            <p className="font-semibold text-red-700">
+              ⚠ Pedido con conflictos
+            </p>
+
+            <p className="text-sm text-red-600 mt-1">
+              Existen problemas que impiden satisfacer este pedido.
+            </p>
+          </div>
+        )}
+
+        {/* CONFLICTOS DETALLADOS */}
+
         {conflictos.length > 0 && (
           <div className="mb-8">
             <h2 className="font-semibold text-sm text-red-600 mb-3">
