@@ -128,12 +128,12 @@ export function Dashboard() {
       <div className="space-y-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {statsCards.map((card) => {
+              {statsCards.map((card) => {
             const IconComponent = card.icon;
             return (
               <div
                 key={card.title}
-                className={`bg-white border ${card.borderColor} rounded-2xl p-6 shadow-lg`}
+                className={`bg-white border border-gray-200 ${card.borderColor} rounded-2xl p-6 shadow-lg`}
               >
                 <div className="flex items-start justify-between mb-4">
                   <div>
@@ -183,16 +183,16 @@ export function Dashboard() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr>
-                  <th className="text-left text-xs font-semibold text-gray-700 pb-4 sticky left-0 bg-white">
-                    Laboratorio
-                  </th>
-                  {days.map((day) => (
-                    <th key={day} className="text-center text-xs font-semibold text-gray-700 pb-4 px-2">
-                      {day}
-                    </th>
-                  ))}
-                </tr>
+                      <tr>
+                        <th className="text-left text-xs font-semibold text-gray-700 pb-4 sticky left-0 bg-white">
+                          Laboratorio
+                        </th>
+                        {days.map((day) => (
+                          <th key={day} className="text-center text-xs font-semibold text-gray-700 pb-4 px-2">
+                            {day}
+                          </th>
+                        ))}
+                      </tr>
               </thead>
               <tbody>
                 {scheduleData.map((lab) => (
@@ -212,7 +212,7 @@ export function Dashboard() {
                                 ? "bg-blue-100 text-blue-700"
                                 : slot.status === "reserved-alt"
                                 ? "bg-orange-100 text-orange-700"
-                                : ""
+                                : "bg-gray-50 text-gray-700"
                             }`}
                           >
                             <p>{slot.time}</p>
@@ -231,19 +231,19 @@ export function Dashboard() {
           <div className="flex items-center gap-6 mt-6 pt-6 border-t border-gray-200 text-xs">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-blue-500 rounded-full" />
-              <span className="text-gray-700">Reservado</span>
+              <span className="text-slate-300">Reservado</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-green-500 rounded-full" />
-              <span className="text-gray-700">Disponible</span>
+              <span className="text-slate-300">Disponible</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-orange-500 rounded-full" />
-              <span className="text-gray-700">Reserva parcial</span>
+              <span className="text-slate-300">Reserva parcial</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-gray-400 rounded-full" />
-              <span className="text-gray-700">Mantenimiento</span>
+              <span className="text-slate-300">Mantenimiento</span>
             </div>
           </div>
         </div>
@@ -291,27 +291,27 @@ export function Dashboard() {
             </div>
 
             <div className="space-y-3">
-              {stockAlerts.map((item) => (
-                <div
-                  key={item.name}
-                  className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 flex items-center justify-between"
-                >
-                  <div>
-                    <p className="font-medium text-sm text-gray-900">{item.name}</p>
-                    <span className="text-xs text-gray-600">Stock actual: {item.stock}</span>
-                  </div>
-
-                  <span
-                    className={`px-3 py-1 rounded-lg text-xs font-semibold ${
-                      item.status === "Crítico"
-                        ? "bg-red-100 text-red-700"
-                        : "bg-orange-100 text-orange-700"
-                    }`}
+                {stockAlerts.map((item) => (
+                  <div
+                    key={item.name}
+                    className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 flex items-center justify-between"
                   >
-                    {item.status}
-                  </span>
-                </div>
-              ))}
+                    <div>
+                      <p className="font-medium text-sm text-gray-900">{item.name}</p>
+                      <span className="text-xs text-gray-600">Stock actual: {item.stock}</span>
+                    </div>
+
+                    <span
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold ${
+                        item.status === "Crítico"
+                          ? "bg-red-100 text-red-700"
+                          : "bg-orange-100 text-orange-700"
+                      }`}
+                    >
+                      {item.status}
+                    </span>
+                  </div>
+                ))}
             </div>
           </div>
         </div>
