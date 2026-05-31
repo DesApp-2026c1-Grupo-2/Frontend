@@ -3,11 +3,11 @@ import { Card } from "../components/equipamiento/Card";
 import { Button } from "../components/equipamiento/Button";
 import { PageHeader } from "../components/SharedUi";
 import * as equipamientoService from "../services/equipamiento";
+import FormularioEquipamiento from "../components/equipamiento/FormularioEquipamiento";
 
 
 
 const tabs = [
-  { label: "Equipos", icon: DeviceTabIcon },
   { label: "Materiales", icon: BoxTabIcon },
   { label: "Reactivos", icon: FlaskTabIcon },
   { label: "Sustancias basicas", icon: PillTabIcon },
@@ -51,7 +51,7 @@ const mapearDatosBackend = (items, lotes) => {
         ubicacion: lote.ubicacion,
         estado: mapearEstado(lote.estado),
         cantidad: lote.cantidadDisponible,
-        movilidad: "Fija", // Por defecto, se puede agregar al modelo si es necesario
+        movilidad: lote.movilidad || "Fija", // Usar movilidad del lote si existe, si no por defecto "Fija"
         unidad: item.unidad,
         esConsumible: item.esConsumible,
       });
@@ -326,12 +326,12 @@ function InventoryCard({ item, onEdit, onDelete }) {
 /* ─── Componente principal ─── */
 function Equipamiento() {
   //const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("Equipos");
+  const [activeTab, setActiveTab] = useState(tabs[0].label);
   const [query, setQuery] = useState("");
   const [inventory, setInventory] = useState([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-  const [formData, setFormData] = useState({ nombre: "", cantidad: "1", estado: "Disponible", ubicacion: "", unidad: "unidad" });
+  const [formData, setFormData] = useState({ nombre: "", cantidad: "1", estado: "Disponible", ubicacion: "", unidad: "unidad", movilidad: "Fija" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -381,7 +381,7 @@ function Equipamiento() {
     }
   };
 
-  const resetForm = () => setFormData({ nombre: "", cantidad: "1", estado: "Disponible", ubicacion: "", unidad: "unidad" });
+  const resetForm = () => setFormData({ nombre: "", cantidad: "1", estado: "Disponible", ubicacion: "", unidad: "unidad", movilidad: "Fija" });
   const openForm = () => {
     setEditingItem(null);
     resetForm();
@@ -389,19 +389,27 @@ function Equipamiento() {
   };
   const openEditForm = (item) => { // Boton de Editar 
     setEditingItem(item);
-    setActiveTab(item.categoria);
+    // Cambiar la pestaña activa solo si la categoría está visible en los tabs
+    const visibleTabLabels = tabs.map(t => t.label);
+    if (visibleTabLabels.includes(item.categoria)) setActiveTab(item.categoria);
     setFormData({
       nombre: item.tipo,
       cantidad: String(item.cantidad),
       estado: item.estado,
       ubicacion: item.ubicacion,
       unidad: item.unidad || "unidad",
+      movilidad: item.movilidad || "Fija",
     });
     setIsFormOpen(true);
   };
   const closeForm = () => {
     setIsFormOpen(false);
     setEditingItem(null);
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((c) => ({ ...c, [name]: value }));
   };
 
   const estadoToBackend = (estado) => {
@@ -445,6 +453,7 @@ function Equipamiento() {
           cantidadDisponible: cantidad,
           ubicacion,
           estado: estadoToBackend(formData.estado),
+          movilidad: formData.movilidad,
         });
       } else {
         // Determinar tipo basado en la categoría activa
@@ -479,7 +488,8 @@ function Equipamiento() {
             itemId: nuevoItem._id,
             cantidadDisponible: cantidad,
             ubicacion: ubicacion,
-            estado: estadoToBackend(formData.estado)
+            estado: estadoToBackend(formData.estado),
+            movilidad: formData.movilidad,
           });
         } catch (loteError) {
           if (nuevoItem?._id && typeof equipamientoService.deleteItem === "function") {
@@ -531,7 +541,6 @@ function Equipamiento() {
       <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
         <PageHeader
           title="Equipamiento"
-          description="Consulta equipos, materiales, reactivos y sustancias básicas con el estilo compartido del resto de la app."
         />
 
         {/* Stats Card */}
@@ -750,10 +759,10 @@ function Equipamiento() {
           onClick={closeForm}
         >
           <div
-            className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-lg sm:rounded-[28px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]"
+            className="w-full h-full flex flex-col overflow-hidden bg-white sm:h-auto sm:max-w-md sm:rounded-[20px] sm:shadow-[0_20px_60px_rgba(15,23,42,0.12)] sm:border sm:border-slate-200"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:static sm:px-6">
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-3 sm:static sm:px-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">
@@ -776,90 +785,15 @@ function Equipamiento() {
               </div>
             </div>
 
-            <form className="flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6" onSubmit={handleSubmit}>
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-semibold text-slate-700">Nombre</span>
-                <input
-                  type="text"
-                  value={formData.nombre}
-                  onChange={(e) => setFormData((c) => ({ ...c, nombre: e.target.value }))}
-                  placeholder="Ej. Micropipeta digital"
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
-                  required
-                />
-              </label>
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <label className="block">
-                  <span className="mb-1.5 block text-sm font-semibold text-slate-700">Cantidad</span>
-                  <input
-                    type="number"
-                    min="1"
-                    value={formData.cantidad}
-                    onChange={(e) => setFormData((c) => ({ ...c, cantidad: e.target.value }))}
-                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
-                    required
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="mb-1.5 block text-sm font-semibold text-slate-700">Unidad</span>
-                  <input
-                    type="text"
-                    value={formData.unidad}
-                    onChange={(e) => setFormData((c) => ({ ...c, unidad: e.target.value }))}
-                    placeholder="Ej. unidad, ml, g"
-                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
-                    required
-                  />
-                </label>
-              </div>
-
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-semibold text-slate-700">Ubicación</span>
-                <input
-                  type="text"
-                  value={formData.ubicacion}
-                  onChange={(e) => setFormData((c) => ({ ...c, ubicacion: e.target.value }))}
-                  placeholder="Ej. Lab 1 / Edif. A"
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
-                  required
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-semibold text-slate-700">Estado</span>
-                <select
-                  value={formData.estado}
-                  onChange={(e) => setFormData((c) => ({ ...c, estado: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
-                >
-                  {statusOptions.map((option) => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
-                </select>
-              </label>
-
-              <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full sm:w-auto"
-                  onClick={closeForm}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="sm"
-                  className="w-full sm:w-auto"
-                >
-                  {editingItem ? "Actualizar" : "Guardar"}
-                </Button>
-              </div>
-            </form>
+            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+              <FormularioEquipamiento
+                formData={formData}
+                handleChange={handleChange}
+                handleSubmit={handleSubmit}
+                cerrarModal={closeForm}
+                statusOptions={statusOptions}
+              />
+            </div>
           </div>
         </div>
       )}
