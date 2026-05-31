@@ -3,57 +3,7 @@ import { AppLayout } from "../components/AppLayout";
 import { Settings, Package, CheckCircle, BarChart3, AlertTriangle } from "lucide-react";
 import { LabCalendar } from "../components/LabCalendar";
 import { useCalendarReservas } from "../services/useCalendarReservas";
-
-const statsCards = [
-  {
-    title: "TOTAL DE PEDIDOS",
-    subtitle: "Esta semana",
-    value: "24",
-    change: "+15% vs semana anterior",
-    icon: Package,
-    borderColor: "border-cyan-500",
-  },
-  {
-    title: "PEDIDOS APROBADOS",
-    subtitle: "Esta semana",
-    value: "16",
-    change: "87% del total de pedidos",
-    icon: CheckCircle,
-    borderColor: "border-blue-500",
-  },
-  {
-    title: "USO DE EQUIPOS",
-    subtitle: "Esta semana",
-    value: "68%",
-    change: "Promedio de utilización",
-    icon: BarChart3,
-    borderColor: "border-orange-500",
-  },
-  {
-    title: "ALERTA DE FALTANTE DE STOCK",
-    subtitle: "Requieren atención",
-    value: "7",
-    change: "Materiales críticos",
-    icon: AlertTriangle,
-    borderColor: "border-red-500",
-  },
-];
-
-const equipmentUsage = [
-  { name: "Microscopio Binocular", value: 85, hours: "34 h" },
-  { name: "Centrífuga Refrigerada", value: 72, hours: "28 h" },
-  { name: "Espectrofotómetro UV-Vis", value: 60, hours: "24 h" },
-  { name: "Incubadora", value: 45, hours: "18 h" },
-  { name: "Agitador Magnético", value: 30, hours: "12 h" },
-];
-
-const stockAlerts = [
-  { name: "Puntas de micropipeta 200 μL", stock: "15 unts", status: "Crítico" },
-  { name: "Tubos de ensayo 15 mL", stock: "20 unts", status: "Crítico" },
-  { name: "Placas Petri 90 mm", stock: "35 unts", status: "Bajo" },
-  { name: "Agar nutritivo", stock: "250 g", status: "Bajo" },
-  { name: "Reactivo de Bradford", stock: "50 ml", status: "Bajo" },
-];
+import { usePedidos, useEquipamiento, useMateriales } from "../services/useDashboardData";
 
 export function Dashboard() {
   // Calculamos fechas iniciales por defecto (la semana actual de domingo a sábado)
@@ -71,11 +21,100 @@ export function Dashboard() {
 
   const { eventosLabCalendar, loading, handleDateRangeChange, dateRange } = useCalendarReservas(initialStart, initialEnd);
 
+  const { pedidos, loading: loadingPedidos } = usePedidos();
+  const { equipamiento, loading: loadingEquip } = useEquipamiento();
+  const { materiales, loading: loadingMat } = useMateriales();
+
+  // --- PROCESAMIENTO REACTIVO DE DATOS ---
+
+  const statsCards = useMemo(() => {
+    const aprobados = pedidos.filter(p => p.estado === "Aprobado" || p.estado === "Aceptado").length;
+    const totalPedidos = pedidos.length;
+
+    // Si no viene 'porcentajeUso', aplicamos un default de 0
+    const usoPromedio = equipamiento.length > 0
+      ? Math.round(equipamiento.reduce((acc, eq) => acc + (eq.porcentajeUso ?? eq.uso ?? 0), 0) / equipamiento.length)
+      : 0;
+
+    const alertasStockCount = materiales.filter(m => (m.stock ?? m.cantidad ?? 0) <= (m.stockMinimo ?? 20)).length;
+
+    return [
+      {
+        title: "TOTAL DE PEDIDOS",
+        subtitle: "Global",
+        value: totalPedidos.toString(),
+        change: "Total histórico",
+        icon: Package,
+        borderColor: "border-cyan-500",
+      },
+      {
+        title: "PEDIDOS APROBADOS",
+        subtitle: "Global",
+        value: aprobados.toString(),
+        change: totalPedidos ? `${Math.round((aprobados / totalPedidos) * 100)}% del total` : "0% del total",
+        icon: CheckCircle,
+        borderColor: "border-blue-500",
+      },
+      {
+        title: "USO DE EQUIPOS",
+        subtitle: "Promedio general",
+        value: `${usoPromedio}%`,
+        change: "Promedio de utilización",
+        icon: BarChart3,
+        borderColor: "border-orange-500",
+      },
+      {
+        title: "ALERTA DE STOCK",
+        subtitle: "Requieren atención",
+        value: alertasStockCount.toString(),
+        change: "Materiales críticos y bajos",
+        icon: AlertTriangle,
+        borderColor: "border-red-500",
+      },
+    ];
+  }, [pedidos, equipamiento, materiales]);
+
+  const equipmentUsage = useMemo(() => {
+    return equipamiento
+      .map((eq) => {
+        const value = eq.porcentajeUso ?? eq.uso ?? 0;
+        // Criterio: si no hay horasUso, estimamos basado en el % sobre una semana estandar de 40h
+        const hours = eq.horasUso ?? Math.round((value / 100) * 40);
+        return {
+          name: eq.nombre || eq.tipo || "Equipo Desconocido",
+          value,
+          hours: `${hours} h`,
+        };
+      })
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5); // Tomamos el top 5
+  }, [equipamiento]);
+
+  const stockAlerts = useMemo(() => {
+    return materiales
+      .filter((m) => (m.stock ?? m.cantidad ?? 0) <= (m.stockMinimo ?? 20))
+      .map((m) => {
+        const qty = m.stock ?? m.cantidad ?? 0;
+        return {
+          name: m.nombre || m.tipo || "Material Desconocido",
+          stock: `${qty} ${m.unidad || 'unts'}`,
+          status: qty <= (m.stockCritico ?? 5) ? "Crítico" : "Bajo",
+        };
+      })
+      .sort((a) => (a.status === "Crítico" ? -1 : 1))
+      .slice(0, 5); // Tomamos el top 5
+  }, [materiales]);
+
   return (
     <AppLayout>
       <div className="space-y-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 relative">
+          {(loadingPedidos || loadingEquip || loadingMat) && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/50 backdrop-blur-sm rounded-2xl">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent"></div>
+            </div>
+          )}
               {statsCards.map((card) => {
             const IconComponent = card.icon;
             return (
@@ -122,17 +161,23 @@ export function Dashboard() {
         {/* Bottom sections */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
           {/* Equipment usage */}
-          <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-lg">
+          <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-lg relative min-h-[200px]">
+            {loadingEquip && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-sm rounded-3xl">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent"></div>
+              </div>
+            )}
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-semibold text-gray-900">Uso de equipos - Esta semana</h2>
+              <h2 className="text-2xl font-semibold text-gray-900">Uso de equipos (Top 5)</h2>
               <a href="#" className="text-blue-600 text-sm hover:text-blue-800">
                 Ver todos los equipos →
               </a>
             </div>
 
             <div className="space-y-6">
-              {equipmentUsage.map((item) => (
-                <div key={item.name}>
+              {equipmentUsage.length > 0 ? (
+                equipmentUsage.map((item, idx) => (
+                <div key={`${item.name}-${idx}`}>
                   <div className="flex justify-between mb-2 text-sm">
                     <span className="text-gray-900">{item.name}</span>
                     <div className="flex gap-4 text-gray-600 text-xs">
@@ -148,12 +193,20 @@ export function Dashboard() {
                     />
                   </div>
                 </div>
-              ))}
+                ))
+              ) : (
+                !loadingEquip && <p className="text-sm text-gray-500 text-center py-4">No hay datos de equipos registrados.</p>
+              )}
             </div>
           </div>
 
           {/* Stock alerts */}
-          <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-lg">
+          <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-lg relative min-h-[200px]">
+            {loadingMat && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-sm rounded-3xl">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent"></div>
+              </div>
+            )}
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-semibold text-gray-900">Alerta de faltante de stock</h2>
               <a href="#" className="text-blue-600 text-sm hover:text-blue-800">
@@ -162,9 +215,10 @@ export function Dashboard() {
             </div>
 
             <div className="space-y-3">
-                {stockAlerts.map((item) => (
+              {stockAlerts.length > 0 ? (
+                stockAlerts.map((item, idx) => (
                   <div
-                    key={item.name}
+                    key={`${item.name}-${idx}`}
                     className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 flex items-center justify-between"
                   >
                     <div>
@@ -182,7 +236,10 @@ export function Dashboard() {
                       {item.status}
                     </span>
                   </div>
-                ))}
+                ))
+              ) : (
+                !loadingMat && <p className="text-sm text-gray-500 text-center py-4">Inventario saludable, sin alertas.</p>
+              )}
             </div>
           </div>
         </div>
