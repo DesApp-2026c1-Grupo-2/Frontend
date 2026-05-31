@@ -12,7 +12,7 @@ function Navbar() {
       <div className="mx-auto flex h-[78px] w-full max-w-[1440px] items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
         <button
           type="button"
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/dashboard")} /*PRUEBA */
           className="flex items-center gap-3 rounded-2xl px-2 py-1 transition hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-700/40"
           aria-label="Ir al inicio"
         >
@@ -26,10 +26,18 @@ function Navbar() {
         {/* DESKTOP NAV */}
         <nav className="hidden md:flex items-center gap-2 sm:gap-4">
           <button
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/dashboard")} /*PRUEBA */
             className="rounded-xl px-4 py-2 text-base font-semibold text-slate-900 transition hover:bg-white/35 hover:text-green-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-700/40"
           >
-            Inicio
+            Dashboard 
+          </button>
+
+          
+          <button
+            onClick={() => navigate("/edificios")}
+            className="rounded-xl px-4 py-2 text-base font-semibold text-slate-900 transition hover:bg-white/35 hover:text-green-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-700/40"
+          >
+            Edificios
           </button>
 
           <button

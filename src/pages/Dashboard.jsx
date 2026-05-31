@@ -1,152 +1,322 @@
-//import { Routes, Route, useNavigate, useParams } from "react-router-dom";
 import { AppLayout } from "../components/AppLayout";
-import { useNavigate } from "react-router-dom";
-import imagenEdificios from "../assets/imagenEdificios.png";
-import { edificios } from "../data/edificios";
+import { Settings, Package, CheckCircle, BarChart3, AlertTriangle, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 
-//import { LabIcon, InventoryIcon, EquipmentIcon, OrdersIcon } from "../components/icons";
-
-/*
-const modulesData = [
-  { id: "laboratorios", label: "Laboratorio", description: "Laboratorios Universitarios", stats: "5 Laboratorios Disponibles", icon: <LabIcon /> },
-  { id: "inventario", label: "Inventario", description: "Control de stock y materiales del laboratorio", stats: "50 productos en stock", icon: <InventoryIcon /> },
-  { id: "equipamiento", label: "Equipamiento", description: "Gestión y mantenimiento de equipo", stats: "24 equipos registrados", icon: <EquipmentIcon /> },
-  { id: "pedidos", label: "Pedidos", description: "Solicitudes de reserva de laboratorios", stats: "2 pedidos pendientes", icon: <OrdersIcon /> },
+const statsCards = [
+  {
+    title: "TOTAL DE PEDIDOS",
+    subtitle: "Esta semana",
+    value: "24",
+    change: "+15% vs semana anterior",
+    icon: Package,
+    borderColor: "border-cyan-500",
+  },
+  {
+    title: "PEDIDOS APROBADOS",
+    subtitle: "Esta semana",
+    value: "16",
+    change: "87% del total de pedidos",
+    icon: CheckCircle,
+    borderColor: "border-blue-500",
+  },
+  {
+    title: "USO DE EQUIPOS",
+    subtitle: "Esta semana",
+    value: "68%",
+    change: "Promedio de utilización",
+    icon: BarChart3,
+    borderColor: "border-orange-500",
+  },
+  {
+    title: "ALERTA DE FALTANTE DE STOCK",
+    subtitle: "Requieren atención",
+    value: "7",
+    change: "Materiales críticos",
+    icon: AlertTriangle,
+    borderColor: "border-red-500",
+  },
 ];
-const moduleColors = {
-  laboratorio: { title: "Laboratorio", color: "from-green-600 to-green-800" },
-  inventario: { title: "Inventario", color: "from-green-700 to-green-900" },
-  equipamiento: { title: "Equipamiento", color: "from-emerald-600 to-green-800" },
-  pedidos: { title: "Pedidos", color: "from-teal-600 to-green-800" },
-};*/
 
-/*
-function DashboardGrid() {
-  const navigate = useNavigate();
+const scheduleData = [
+  {
+    lab: "Lab. Biología 1",
+    capacity: "Cap. 30 personas",
+    schedule: [
+      { time: "08:00 - 12:00", subject: "Disponible", status: "available" },
+      { time: "09:00 - 13:00", subject: "Genética Molecular", status: "reserved" },
+      { time: "14:00 - 18:00", subject: "Microbiología", status: "reserved-alt" },
+      { time: "05:00 - 12:00", subject: "Disponible", status: "available" },
+      { time: "10:00 - 17:00", subject: "Biología Celular", status: "reserved-alt" },
+      { time: "", subject: "", status: "" },
+      { time: "", subject: "", status: "" },
+    ],
+  },
+  {
+    lab: "Lab. Biología 2",
+    capacity: "Cap. 25 personas",
+    schedule: [
+      { time: "13:00 - 17:00", subject: "Ecología", status: "reserved" },
+      { time: "08:00 - 12:00", subject: "Disponible", status: "available" },
+      { time: "08:00 - 12:00", subject: "Disponible", status: "available" },
+      { time: "14:00 - 16:00", subject: "Ecología", status: "reserved" },
+      { time: "08:00 - 13:00", subject: "Disponible", status: "available" },
+      { time: "", subject: "", status: "" },
+      { time: "", subject: "", status: "" },
+    ],
+  },
+  {
+    lab: "Lab. Química 1",
+    capacity: "Cap. 30 personas",
+    schedule: [
+      { time: "08:00 - 13:00", subject: "Química Orgánica", status: "reserved" },
+      { time: "14:00 - 18:00", subject: "Análisis Químico", status: "reserved" },
+      { time: "13:00 - 17:00", subject: "Fisicoquímica", status: "reserved-alt" },
+      { time: "08:00 - 13:00", subject: "Disponible", status: "available" },
+      { time: "08:00 - 13:00", subject: "Química Analítica", status: "reserved" },
+      { time: "", subject: "", status: "" },
+      { time: "", subject: "", status: "" },
+    ],
+  },
+  {
+    lab: "Lab. Química 2",
+    capacity: "Cap. 20 personas",
+    schedule: [
+      { time: "08:00 - 12:00", subject: "Disponible", status: "available" },
+      { time: "13:00 - 17:00", subject: "Química Inorgánica", status: "reserved" },
+      { time: "08:00 - 12:00", subject: "Disponible", status: "available" },
+      { time: "14:00 - 16:00", subject: "Termodinámica", status: "reserved" },
+      { time: "08:00 - 13:00", subject: "Disponible", status: "available" },
+      { time: "", subject: "", status: "" },
+      { time: "", subject: "", status: "" },
+    ],
+  },
+  {
+    lab: "Lab. Instrumental",
+    capacity: "Cap. 15 personas",
+    schedule: [
+      { time: "14:00 - 18:00", subject: "Espectroscopía", status: "reserved" },
+      { time: "08:00 - 12:00", subject: "Disponible", status: "available" },
+      { time: "09:00 - 13:00", subject: "Cromatografía", status: "reserved" },
+      { time: "08:00 - 16:00", subject: "Disponible", status: "available" },
+      { time: "13:00 - 17:00", subject: "Microscopía", status: "reserved-alt" },
+      { time: "", subject: "", status: "" },
+      { time: "", subject: "", status: "" },
+    ],
+  },
+];
 
+const equipmentUsage = [
+  { name: "Microscopio Binocular", value: 85, hours: "34 h" },
+  { name: "Centrífuga Refrigerada", value: 72, hours: "28 h" },
+  { name: "Espectrofotómetro UV-Vis", value: 60, hours: "24 h" },
+  { name: "Incubadora", value: 45, hours: "18 h" },
+  { name: "Agitador Magnético", value: 30, hours: "12 h" },
+];
+
+const stockAlerts = [
+  { name: "Puntas de micropipeta 200 μL", stock: "15 unts", status: "Crítico" },
+  { name: "Tubos de ensayo 15 mL", stock: "20 unts", status: "Crítico" },
+  { name: "Placas Petri 90 mm", stock: "35 unts", status: "Bajo" },
+  { name: "Agar nutritivo", stock: "250 g", status: "Bajo" },
+  { name: "Reactivo de Bradford", stock: "50 ml", status: "Bajo" },
+];
+
+const days = ["LUN 19", "MAR 20", "MIÉ 21", "JUE 22", "VIE 23", "SÁB 24", "DOM 25"];
+
+export function Dashboard() {
   return (
     <AppLayout>
-      <PageHeader 
-        preTitle="Sistema de Gestión"
-        title="Panel de Control"
-        description="Seleccioná un módulo para acceder a su gestión completa."
-      />
-
-      //{/* Grid refactorizado a Tailwind }*/
-      /*
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-6">
-        {modulesData.map((mod, i) => (
-          <ModuleCard 
-            key={mod.id}
-            title={mod.label}
-            description={mod.description}
-            stats={mod.stats}
-            icon={mod.icon}
-            delayIndex={i + 1}
-            onClick={() => navigate(`/${mod.id}`)}
-          />
-        ))}
-      </div>*/
-      //{/* Footer refactorizado a Tailwind */}
-      /*
-      <div className="mt-[72px] pt-8 border-t border-green-100 flex justify-between items-center">
-        <span className="text-green-600 text-[13px]">© 2026 Sistema de Gestión Clínica</span>
-      </div>
-    </AppLayout>
-  )
-}
-
-
-function ModulePage() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const pageInfo = moduleColors[id];
-
-  if (!pageInfo) return <div>Módulo no encontrado</div>;
-
-  return (
-    <AppLayout>
-      <div className={`w-full max-w-lg mx-auto mt-20 rounded-3xl bg-gradient-to-br ${pageInfo.color} p-12 text-white text-center shadow-2xl`}>
-        <p className="text-green-200 text-sm font-medium uppercase tracking-widest mb-4">Módulo</p>
-        <h1 className="text-5xl font-bold mb-4 font-['Playfair_Display']">
-          {pageInfo.title}
-        </h1>
-        <p className="text-green-100 mb-10 text-base leading-relaxed">
-          Este módulo está en construcción.<br />Próximamente disponible.
-        </p>
-        <button
-          onClick={() => navigate("/")}
-          className="inline-flex items-center gap-2 bg-white/20 hover:bg-white/30 transition-all duration-200 text-white font-semibold px-6 py-3 rounded-xl backdrop-blur-sm"
-        >
-          Volver al Dashboard
-        </button>
-      </div>
-    </AppLayout>
-  );
-}
-
-export default function Dashboard() {
-  return (
-    <Routes>
-      <Route path="/" element={<DashboardGrid />} />
-      <Route path="/:id" element={<ModulePage />} />
-    </Routes>
-  );
-}*/
-
-function Dashboard() {
-  const navigate = useNavigate();
-
-  return (
-    <>
-      <div className="w-screen h-[calc(100vh-70px)] overflow-hidden relative">
-
-        {/* Fondo */}
-        <img
-          src={imagenEdificios}
-          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-        />
-
-        {/* Edificios */}
-        {edificios.map((ed, i) => {
-          const deshabilitado = ed.disponibles === 0;
-
-          return (
-            <div
-              key={i}
-              onClick={() => {
-                if (!deshabilitado) {
-                  navigate(ed.ruta);
-                }
-              }}
-              className={`
-                absolute ${ed.position} w-[28%] h-[18%]
-                rounded-xl border-2 p-3 flex flex-col justify-between
-                transition duration-200 backdrop-blur-sm
-
-                ${
-                  deshabilitado
-                    ? "bg-gray-400/75 border-gray-400 cursor-not-allowed"
-                    : "bg-green-500/75 border-green-500 hover:bg-green-500/40 cursor-pointer"
-                }
-              `}
-            >
-              {/* Nombre */}
-              <p className="text-sm font-semibold text-white [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">
-                {ed.nombre}
-              </p>
-
-              {/* Info */}
-              <div className="text-xs text-white/90 [text-shadow:0_1px_4px_rgba(0,0,0,0.7)]">
-                <p>Total: {ed.total}</p>
-                <p>Disponibles: {ed.disponibles}</p>
+      <div className="space-y-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {statsCards.map((card) => {
+            const IconComponent = card.icon;
+            return (
+              <div
+                key={card.title}
+                className={`bg-white border border-gray-200 ${card.borderColor} rounded-2xl p-6 shadow-lg`}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <p className="text-xs text-gray-600 font-semibold">{card.title}</p>
+                    <p className="text-xs text-gray-500">{card.subtitle}</p>
+                  </div>
+                  <IconComponent className="w-6 h-6 text-gray-400" />
+                </div>
+                <div className="mb-3">
+                  <p className="text-4xl font-bold text-gray-900">{card.value}</p>
+                </div>
+                <p className="text-xs text-gray-600">
+                  {card.change.startsWith("+") ? (
+                    <span className="text-green-600">📈 {card.change}</span>
+                  ) : (
+                    card.change
+                  )}
+                </p>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
 
+        {/* Calendar Section */}
+        <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-lg">
+          <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+            <h2 className="text-2xl font-semibold text-gray-900">Calendario de laboratorios - Vista semanal</h2>
+            <div className="flex items-center gap-4">
+              <span className="text-gray-600 text-sm">Hoy</span>
+              <button className="p-2 hover:bg-gray-100 rounded-lg">
+                <ChevronLeft className="w-5 h-5 text-gray-700" />
+              </button>
+              <button className="p-2 hover:bg-gray-100 rounded-lg">
+                <ChevronRight className="w-5 h-5 text-gray-700" />
+              </button>
+              <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
+                <Calendar className="w-4 h-4 text-gray-600" />
+                <span className="text-sm text-gray-700">19 - 25 de mayo de 2025</span>
+              </div>
+              <select className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700">
+                <option>Todos los laboratorios</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Schedule Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                      <tr>
+                        <th className="text-left text-xs font-semibold text-gray-700 pb-4 sticky left-0 bg-white">
+                          Laboratorio
+                        </th>
+                        {days.map((day) => (
+                          <th key={day} className="text-center text-xs font-semibold text-gray-700 pb-4 px-2">
+                            {day}
+                          </th>
+                        ))}
+                      </tr>
+              </thead>
+              <tbody>
+                {scheduleData.map((lab) => (
+                  <tr key={lab.lab} className="border-t border-gray-200">
+                    <td className="py-4 sticky left-0 bg-white">
+                      <p className="font-medium text-sm text-gray-900">{lab.lab}</p>
+                      <p className="text-xs text-gray-600">{lab.capacity}</p>
+                    </td>
+                    {lab.schedule.map((slot, idx) => (
+                      <td key={idx} className="px-2 py-4">
+                        {slot.time && (
+                          <div
+                            className={`text-xs p-2 rounded text-center font-semibold ${
+                              slot.status === "available"
+                                ? "bg-green-100 text-green-700"
+                                : slot.status === "reserved"
+                                ? "bg-blue-100 text-blue-700"
+                                : slot.status === "reserved-alt"
+                                ? "bg-orange-100 text-orange-700"
+                                : "bg-gray-50 text-gray-700"
+                            }`}
+                          >
+                            <p>{slot.time}</p>
+                            <p>{slot.subject}</p>
+                          </div>
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Legend */}
+          <div className="flex items-center gap-6 mt-6 pt-6 border-t border-gray-200 text-xs">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-blue-500 rounded-full" />
+              <span className="text-slate-300">Reservado</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-green-500 rounded-full" />
+              <span className="text-slate-300">Disponible</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-orange-500 rounded-full" />
+              <span className="text-slate-300">Reserva parcial</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-gray-400 rounded-full" />
+              <span className="text-slate-300">Mantenimiento</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom sections */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+          {/* Equipment usage */}
+          <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-lg">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-semibold text-gray-900">Uso de equipos - Esta semana</h2>
+              <a href="#" className="text-blue-600 text-sm hover:text-blue-800">
+                Ver todos los equipos →
+              </a>
+            </div>
+
+            <div className="space-y-6">
+              {equipmentUsage.map((item) => (
+                <div key={item.name}>
+                  <div className="flex justify-between mb-2 text-sm">
+                    <span className="text-gray-900">{item.name}</span>
+                    <div className="flex gap-4 text-gray-600 text-xs">
+                      <span>{item.value}%</span>
+                      <span>{item.hours}</span>
+                    </div>
+                  </div>
+
+                  <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-full"
+                      style={{ width: `${item.value}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Stock alerts */}
+          <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-lg">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-semibold text-gray-900">Alerta de faltante de stock</h2>
+              <a href="#" className="text-blue-600 text-sm hover:text-blue-800">
+                Ver todos los faltantes →
+              </a>
+            </div>
+
+            <div className="space-y-3">
+                {stockAlerts.map((item) => (
+                  <div
+                    key={item.name}
+                    className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 flex items-center justify-between"
+                  >
+                    <div>
+                      <p className="font-medium text-sm text-gray-900">{item.name}</p>
+                      <span className="text-xs text-gray-600">Stock actual: {item.stock}</span>
+                    </div>
+
+                    <span
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold ${
+                        item.status === "Crítico"
+                          ? "bg-red-100 text-red-700"
+                          : "bg-orange-100 text-orange-700"
+                      }`}
+                    >
+                      {item.status}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </div>
       </div>
-    </>
+    </AppLayout>
   );
 }
 
