@@ -1,5 +1,8 @@
+import { useMemo } from "react";
 import { AppLayout } from "../components/AppLayout";
-import { Settings, Package, CheckCircle, BarChart3, AlertTriangle, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { Settings, Package, CheckCircle, BarChart3, AlertTriangle } from "lucide-react";
+import { LabCalendar } from "../components/LabCalendar";
+import { useCalendarReservas } from "../services/useCalendarReservas";
 
 const statsCards = [
   {
@@ -36,74 +39,6 @@ const statsCards = [
   },
 ];
 
-const scheduleData = [
-  {
-    lab: "Lab. Biología 1",
-    capacity: "Cap. 30 personas",
-    schedule: [
-      { time: "08:00 - 12:00", subject: "Disponible", status: "available" },
-      { time: "09:00 - 13:00", subject: "Genética Molecular", status: "reserved" },
-      { time: "14:00 - 18:00", subject: "Microbiología", status: "reserved-alt" },
-      { time: "05:00 - 12:00", subject: "Disponible", status: "available" },
-      { time: "10:00 - 17:00", subject: "Biología Celular", status: "reserved-alt" },
-      { time: "", subject: "", status: "" },
-      { time: "", subject: "", status: "" },
-    ],
-  },
-  {
-    lab: "Lab. Biología 2",
-    capacity: "Cap. 25 personas",
-    schedule: [
-      { time: "13:00 - 17:00", subject: "Ecología", status: "reserved" },
-      { time: "08:00 - 12:00", subject: "Disponible", status: "available" },
-      { time: "08:00 - 12:00", subject: "Disponible", status: "available" },
-      { time: "14:00 - 16:00", subject: "Ecología", status: "reserved" },
-      { time: "08:00 - 13:00", subject: "Disponible", status: "available" },
-      { time: "", subject: "", status: "" },
-      { time: "", subject: "", status: "" },
-    ],
-  },
-  {
-    lab: "Lab. Química 1",
-    capacity: "Cap. 30 personas",
-    schedule: [
-      { time: "08:00 - 13:00", subject: "Química Orgánica", status: "reserved" },
-      { time: "14:00 - 18:00", subject: "Análisis Químico", status: "reserved" },
-      { time: "13:00 - 17:00", subject: "Fisicoquímica", status: "reserved-alt" },
-      { time: "08:00 - 13:00", subject: "Disponible", status: "available" },
-      { time: "08:00 - 13:00", subject: "Química Analítica", status: "reserved" },
-      { time: "", subject: "", status: "" },
-      { time: "", subject: "", status: "" },
-    ],
-  },
-  {
-    lab: "Lab. Química 2",
-    capacity: "Cap. 20 personas",
-    schedule: [
-      { time: "08:00 - 12:00", subject: "Disponible", status: "available" },
-      { time: "13:00 - 17:00", subject: "Química Inorgánica", status: "reserved" },
-      { time: "08:00 - 12:00", subject: "Disponible", status: "available" },
-      { time: "14:00 - 16:00", subject: "Termodinámica", status: "reserved" },
-      { time: "08:00 - 13:00", subject: "Disponible", status: "available" },
-      { time: "", subject: "", status: "" },
-      { time: "", subject: "", status: "" },
-    ],
-  },
-  {
-    lab: "Lab. Instrumental",
-    capacity: "Cap. 15 personas",
-    schedule: [
-      { time: "14:00 - 18:00", subject: "Espectroscopía", status: "reserved" },
-      { time: "08:00 - 12:00", subject: "Disponible", status: "available" },
-      { time: "09:00 - 13:00", subject: "Cromatografía", status: "reserved" },
-      { time: "08:00 - 16:00", subject: "Disponible", status: "available" },
-      { time: "13:00 - 17:00", subject: "Microscopía", status: "reserved-alt" },
-      { time: "", subject: "", status: "" },
-      { time: "", subject: "", status: "" },
-    ],
-  },
-];
-
 const equipmentUsage = [
   { name: "Microscopio Binocular", value: 85, hours: "34 h" },
   { name: "Centrífuga Refrigerada", value: 72, hours: "28 h" },
@@ -120,9 +55,22 @@ const stockAlerts = [
   { name: "Reactivo de Bradford", stock: "50 ml", status: "Bajo" },
 ];
 
-const days = ["LUN 19", "MAR 20", "MIÉ 21", "JUE 22", "VIE 23", "SÁB 24", "DOM 25"];
-
 export function Dashboard() {
+  // Calculamos fechas iniciales por defecto (la semana actual de domingo a sábado)
+  const { initialStart, initialEnd } = useMemo(() => {
+    const today = new Date();
+    const start = new Date(today);
+    start.setDate(today.getDate() - today.getDay()); 
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return {
+      initialStart: start.toISOString().split("T")[0],
+      initialEnd: end.toISOString().split("T")[0]
+    };
+  }, []);
+
+  const { eventosLabCalendar, loading, handleDateRangeChange, dateRange } = useCalendarReservas(initialStart, initialEnd);
+
   return (
     <AppLayout>
       <div className="space-y-8">
@@ -158,94 +106,17 @@ export function Dashboard() {
         </div>
 
         {/* Calendar Section */}
-        <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-lg">
-          <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-            <h2 className="text-2xl font-semibold text-gray-900">Calendario de laboratorios - Vista semanal</h2>
-            <div className="flex items-center gap-4">
-              <span className="text-gray-600 text-sm">Hoy</span>
-              <button className="p-2 hover:bg-gray-100 rounded-lg">
-                <ChevronLeft className="w-5 h-5 text-gray-700" />
-              </button>
-              <button className="p-2 hover:bg-gray-100 rounded-lg">
-                <ChevronRight className="w-5 h-5 text-gray-700" />
-              </button>
-              <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
-                <Calendar className="w-4 h-4 text-gray-600" />
-                <span className="text-sm text-gray-700">19 - 25 de mayo de 2025</span>
-              </div>
-              <select className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700">
-                <option>Todos los laboratorios</option>
-              </select>
+        <div className="relative min-h-[200px]">
+          {loading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-sm rounded-3xl">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent"></div>
             </div>
-          </div>
-
-          {/* Schedule Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                      <tr>
-                        <th className="text-left text-xs font-semibold text-gray-700 pb-4 sticky left-0 bg-white">
-                          Laboratorio
-                        </th>
-                        {days.map((day) => (
-                          <th key={day} className="text-center text-xs font-semibold text-gray-700 pb-4 px-2">
-                            {day}
-                          </th>
-                        ))}
-                      </tr>
-              </thead>
-              <tbody>
-                {scheduleData.map((lab) => (
-                  <tr key={lab.lab} className="border-t border-gray-200">
-                    <td className="py-4 sticky left-0 bg-white">
-                      <p className="font-medium text-sm text-gray-900">{lab.lab}</p>
-                      <p className="text-xs text-gray-600">{lab.capacity}</p>
-                    </td>
-                    {lab.schedule.map((slot, idx) => (
-                      <td key={idx} className="px-2 py-4">
-                        {slot.time && (
-                          <div
-                            className={`text-xs p-2 rounded text-center font-semibold ${
-                              slot.status === "available"
-                                ? "bg-green-100 text-green-700"
-                                : slot.status === "reserved"
-                                ? "bg-blue-100 text-blue-700"
-                                : slot.status === "reserved-alt"
-                                ? "bg-orange-100 text-orange-700"
-                                : "bg-gray-50 text-gray-700"
-                            }`}
-                          >
-                            <p>{slot.time}</p>
-                            <p>{slot.subject}</p>
-                          </div>
-                        )}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Legend */}
-          <div className="flex items-center gap-6 mt-6 pt-6 border-t border-gray-200 text-xs">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-blue-500 rounded-full" />
-              <span className="text-slate-300">Reservado</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-green-500 rounded-full" />
-              <span className="text-slate-300">Disponible</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-orange-500 rounded-full" />
-              <span className="text-slate-300">Reserva parcial</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-gray-400 rounded-full" />
-              <span className="text-slate-300">Mantenimiento</span>
-            </div>
-          </div>
+          )}
+          <LabCalendar 
+            scheduleData={eventosLabCalendar} 
+            dateRange={dateRange}
+            onDateChange={handleDateRangeChange}
+          />
         </div>
 
         {/* Bottom sections */}
