@@ -5,6 +5,7 @@ import {
   obtenerLaboratoriosPorEdificio,
   crearLaboratorio,
   actualizarEstadoLaboratorio,
+  eliminarLaboratorio,
 } from "../services/laboratorioService";
 
 import { obtenerEquipos } from "../services/equipoFijoService";
@@ -15,6 +16,13 @@ import {
 
 import LaboratorioModal from "../components/laboratorios/LaboratorioModal";
 import { PageHeader } from "../components/SharedUi";
+
+import {
+  FiEdit2,
+  FiTrash2,
+} from "react-icons/fi";
+
+import { FiMonitor } from "react-icons/fi";
 
 export default function Laboratorios() {
 
@@ -84,6 +92,8 @@ export default function Laboratorios() {
         await obtenerLaboratoriosPorEdificio(id);
  
         console.log("LABORATORIOS:", data);
+
+        console.log("PRIMER LAB EQUIPOS:", data[0].equiposFijos);
       
         setLaboratorios(data);
     } catch (error) {
@@ -109,6 +119,15 @@ export default function Laboratorios() {
       );
 
       console.log("EQUIPOS FILTRADOS:", equiposFijos);
+
+      equiposFijos.forEach((eq) => {
+        console.log(
+          "Equipo:",
+          eq.nombre,
+          "-> Laboratorio:",
+          eq.laboratorioId?.nombre
+        );
+      });
 
       setEquipos(equiposFijos);
     } catch (error) {
@@ -265,6 +284,27 @@ export default function Laboratorios() {
     );
   }
 
+  /*
+    =========================
+    ELIMINAR
+    =========================
+  */
+  const handleEliminar = async (id) => {
+    try {
+      await eliminarLaboratorio(id);
+
+      // opcional: refrescar lista
+      setLaboratorios((prev) =>
+        prev.filter(
+          (lab) => (lab._id || lab.id) !== id
+        )
+      );
+
+    } catch (error) {
+      console.error("Error eliminando laboratorio:", error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-100 px-6 py-6">
 
@@ -407,10 +447,22 @@ export default function Laboratorios() {
               const lid =
                 lab._id || lab.id;
 
+              const equiposDelLab = equipos.filter(
+                (eq) =>
+                  String(eq.laboratorioId?.id) ===
+                  String(lid)
+              );
+
+              const equiposVisibles = equiposDelLab.slice(0, 3);
+
+              const equiposRestantes =
+                equiposDelLab.length - equiposVisibles.length;
+
+
               const tieneEquipos =
                 equipos.some(
                   (eq) =>
-                    String(eq.laboratorioId) ===
+                    String(eq.laboratorioId?.id) ===
                     String(lid)
                 );
 
@@ -445,29 +497,42 @@ export default function Laboratorios() {
                         >
                           {lab.nombre}
                         </h2>
+                        
 
                         <p className="text-sm text-slate-500 mt-1">
-                          {tieneEquipos
-                            ? "Laboratorio con equipos fijos"
-                            : "Laboratorio sin equipos fijos"}
+                          {equiposDelLab.length > 0
+                            ? `Laboratorio con ${equiposDelLab.length} equipos fijos`
+                            : "Laboratorio sin equipos fijos"
+                          }
                         </p>
                       </div>
 
-                      <div
-                        className={`
-                          px-3 py-1 rounded-full
-                          text-xs font-medium
-                          whitespace-nowrap
-                          ${
-                            lab.estado === "disponible"
-                              ? "bg-emerald-100 text-emerald-700"
-                              : lab.estado === "ocupado"
-                              ? "bg-red-100 text-red-700"
-                              : "bg-yellow-100 text-yellow-700"
-                          }
-                        `}
-                      >
-                        {lab.estado}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleEditar(lab)}
+                          className="
+                            p-1 rounded-lg
+                          hover:bg-emerald-50
+                          text-emerald-700
+                          transition
+                          "
+                        >
+                          <FiEdit2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (!confirm("¿Seguro que querés eliminar este laboratorio?")) return;
+                            handleEliminar(lab._id || lab.id);
+                          }}
+                          className="
+                            p-1 rounded-lg
+                         hover:bg-red-50
+                        text-red-600
+                      transition
+                          "
+                        >
+                          <FiTrash2 size={16} />
+                        </button>
                       </div>
                     </div>
 
@@ -480,61 +545,85 @@ export default function Laboratorios() {
                       "
                     />
 
-                    {/* FOOTER */}
-                    <div
-                      className="
-                        mt-2 pt-0
-                        flex items-center
-                        justify-between
-                      "
-                    >
+                    {/* EQUIPOS */}
+                    <div className="mb-5">
 
-                      <div>
+                      {equiposDelLab.length === 0 ? (
+                        <span className="text-xs text-slate-400">
+                          Sin equipos registrados
+                        </span>
+                      ) : (
+                        <div className="flex-wrap">
+                          <p className="text-xs font-semibold text-slate-500 mb-2">
+                            Equipo fijo instalado: 
+                          </p>
+                          {equiposVisibles.map((eq) => (
+                            <span
+                              key={eq.id}
+                              className="
+                                px-2 py-1
+                                rounded-lg
+                                bg-emerald-100
+                                text-emerald-700
+                                text-xs
+                              "
+                            >
+                              {eq.nombre}
+                            </span>
+                          ))}
 
-                        <p className="text-xs text-slate-500">
-                          Capacidad
-                        </p>
-
-                        <p
-                          className="
-                            text-lg font-bold
-                            text-slate-700
-                          "
-                        >
-                          {lab.capacidad}
-                        </p>
-                      </div>
-
-                      <div
-                        className="
-                          px-3 py-2 rounded-2xl
-                          bg-emerald-100
-                          text-emerald-700
-                          text-xs font-semibold
-                          capitalize
-                          text-center
-                          min-w-[70px]
-                        "
-                      >
-                        {lab.tipo}
-                      </div>
+                          {equiposRestantes > 0 && (
+                            <span
+                              className="
+                                px-2 py-1
+                                rounded-lg
+                                bg-emerald-100
+                                text-emerald-700
+                                text-xs
+                                font-medium
+                              "
+                            >
+                              +{equiposRestantes} más...
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
 
-                    {/* BOTON EDITAR */}
-                    <button
-                      onClick={() =>
-                        handleEditar(lab)
-                      }
-                      className="
-                        mt-5 w-full
-                        px-4 py-2 rounded-xl text-sm font-medium border
-                      border-emerald-200 text-emerald-700 bg-white
-                      hover:bg-emerald-50 transition shadow-sm
-                      "
-                    >
-                      Editar estado
-                    </button>
+                    {/* FOOTER */}
+                    <div className="mt-4 flex justify-between">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-slate-500">Capacidad:</p>
+                          <p className="text-lg font-semibold text-slate-700">{lab.capacidad}</p>
+                        </div>
 
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-slate-500">Tipo:</p>
+                          <p className="font-semibold text-slate-700 capitalize">{lab.tipo}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-end">
+                        <span
+                          className={`
+                            px-3 py-1 rounded-full
+                            text-xs font-medium capitalize
+                            ${
+                              lab.estado === "disponible"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : lab.estado === "ocupado"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-yellow-100 text-yellow-700"
+                            }
+                          `}
+                        >
+                          {lab.estado}
+                        </span>
+                      </div>
+                    </div>
+                        
+                    
                   </div>
                 </div>
               );
