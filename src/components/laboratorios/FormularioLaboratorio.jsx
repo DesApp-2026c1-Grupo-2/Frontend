@@ -95,7 +95,6 @@ export default function FormularioLaboratorio({
           "
         >
           <option value="disponible">Disponible</option>
-          <option value="reservado">Reservado</option>
           <option value="en mantenimiento">En mantenimiento</option>
           <option value="fuera de servicio">Fuera de servicio</option>
         </select>
@@ -131,7 +130,7 @@ export default function FormularioLaboratorio({
             hover:bg-emerald-600
           "
         >
-          Guardar cambios
+          Guardar
         </button>
       </div>
     </form>
