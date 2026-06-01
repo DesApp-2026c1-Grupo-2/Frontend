@@ -1,13 +1,13 @@
 import { useMemo, useState, useEffect } from "react";
-import { Card } from "../components/Card";
-import { Button } from "../components/Button";
+import { Card } from "../components/equipamiento/Card";
+import { Button } from "../components/equipamiento/Button";
 import { PageHeader } from "../components/SharedUi";
 import * as equipamientoService from "../services/equipamiento";
+import FormularioEquipamiento from "../components/equipamiento/FormularioEquipamiento";
 
 
 
 const tabs = [
-  { label: "Equipos", icon: DeviceTabIcon },
   { label: "Materiales", icon: BoxTabIcon },
   { label: "Reactivos", icon: FlaskTabIcon },
   { label: "Sustancias basicas", icon: PillTabIcon },
@@ -51,7 +51,7 @@ const mapearDatosBackend = (items, lotes) => {
         ubicacion: lote.ubicacion,
         estado: mapearEstado(lote.estado),
         cantidad: lote.cantidadDisponible,
-        movilidad: "Fija", // Por defecto, se puede agregar al modelo si es necesario
+        movilidad: lote.movilidad || "Fija", // Usar movilidad del lote si existe, si no por defecto "Fija"
         unidad: item.unidad,
         esConsumible: item.esConsumible,
       });
@@ -271,8 +271,8 @@ function AlertCard({ item }) {
     </div>
   );
 }
-
-function InventoryCard({ item, onEdit, onDelete }) {
+  /* ─── Vista Movil del Inventario ─── */
+function InventoryCard({ item, onEdit, onDelete }) { 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
@@ -298,6 +298,7 @@ function InventoryCard({ item, onEdit, onDelete }) {
       </div>
 
       <div className="mt-4 flex items-center justify-end gap-2">
+        {/* El Boton Editar */}
         <button
           type="button"
           onClick={onEdit}
@@ -307,6 +308,7 @@ function InventoryCard({ item, onEdit, onDelete }) {
           <PencilIcon />
           Editar
         </button>
+        {/* El Boton Eliminar */}
         <button
           type="button"
           onClick={onDelete}
@@ -324,11 +326,12 @@ function InventoryCard({ item, onEdit, onDelete }) {
 /* ─── Componente principal ─── */
 function Equipamiento() {
   //const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("Equipos");
+  const [activeTab, setActiveTab] = useState(tabs[0].label);
   const [query, setQuery] = useState("");
   const [inventory, setInventory] = useState([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [formData, setFormData] = useState({ nombre: "", cantidad: "1", estado: "Disponible", ubicacion: "", unidad: "unidad" });
+  const [editingItem, setEditingItem] = useState(null);
+  const [formData, setFormData] = useState({ nombre: "", cantidad: "1", estado: "Disponible", ubicacion: "", unidad: "unidad", movilidad: "Fija" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -365,9 +368,60 @@ function Equipamiento() {
     }
   };
 
-  const resetForm = () => setFormData({ nombre: "", cantidad: "1", estado: "Disponible", ubicacion: "", unidad: "unidad" });
-  const openForm = () => { resetForm(); setIsFormOpen(true); };
-  const closeForm = () => setIsFormOpen(false);
+  const handleDeleteItem = async (item) => {  // Boton de Eliminar
+    const confirmDelete = window.confirm(`¿Seguro que quieres borrar ${item.tipo}?`);
+    if (!confirmDelete) return;
+
+    try {
+      await equipamientoService.deleteLote(item.loteId);
+      await recargarInventario();
+    } catch (err) {
+      console.error("Error al eliminar el lote:", err);
+      alert("No se pudo eliminar el registro: " + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const resetForm = () => setFormData({ nombre: "", cantidad: "1", estado: "Disponible", ubicacion: "", unidad: "unidad", movilidad: "Fija" });
+  const openForm = () => {
+    setEditingItem(null);
+    resetForm();
+    setIsFormOpen(true);
+  };
+  const openEditForm = (item) => { // Boton de Editar 
+    setEditingItem(item);
+    // Cambiar la pestaña activa solo si la categoría está visible en los tabs
+    const visibleTabLabels = tabs.map(t => t.label);
+    if (visibleTabLabels.includes(item.categoria)) setActiveTab(item.categoria);
+    setFormData({
+      nombre: item.tipo,
+      cantidad: String(item.cantidad),
+      estado: item.estado,
+      ubicacion: item.ubicacion,
+      unidad: item.unidad || "unidad",
+      movilidad: item.movilidad || "Fija",
+    });
+    setIsFormOpen(true);
+  };
+  const closeForm = () => {
+    setIsFormOpen(false);
+    setEditingItem(null);
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((c) => ({ ...c, [name]: value }));
+  };
+
+  const estadoToBackend = (estado) => {
+    const estadoMap = {
+      Disponible: "disponible",
+      Reservado: "reservado",
+      "En uso": "en_uso",
+      Descartado: "descartado",
+    };
+
+    return estadoMap[estado] || estado.toLowerCase().replace(/\s+/g, "_");
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -381,50 +435,73 @@ function Equipamiento() {
     }
 
     try {
-      // Determinar tipo basado en la categoría activa
-      const tipoItem = Object.keys(tipoToCategoria).find(
-        key => tipoToCategoria[key] === activeTab
-      ) || 'material';
+      if (editingItem) {
+        const tipoItem = Object.keys(tipoToCategoria).find(
+          key => tipoToCategoria[key] === editingItem.categoria
+        ) || "material";
 
-      // Generar código
-      const codePrefix = activeTab === "Materiales" ? "MT" : activeTab === "Reactivos" ? "RC" : activeTab === "Sustancias basicas" ? "SB" : "EQ";
-      const nextNumber = inventory
-        .filter((item) => item.categoria === activeTab)
-        .reduce((max, item) => {
-          const [, num = "0"] = item.codigo.split("-");
-          const n = Number.parseInt(num, 10);
-          return Number.isNaN(n) ? max : Math.max(max, n);
-        }, 0) + 1;
-      const codigo = `${codePrefix}-${String(nextNumber).padStart(3, "0")}`;
-
-      // Crear el Item
-      const nuevoItem = await equipamientoService.createItem({
-        tipo: tipoItem,
-        nombre: nombre,
-        codigo: codigo,
-        unidad: formData.unidad,
-        esConsumible: tipoItem !== 'equipo', // Equipos no deben registrarse como consumibles
-        requiereReceta: tipoItem === 'reactivo' ? false : undefined
-      });
-
-      try {
-        // Crear el Lote asociado
-        await equipamientoService.createLote({
-          itemId: nuevoItem._id,
-          cantidadDisponible: cantidad,
-          ubicacion: ubicacion,
-          estado: formData.estado.toLowerCase().replace(' ', '_')
+        await equipamientoService.updateItem(editingItem.itemId, {
+          tipo: tipoItem,
+          nombre,
+          codigo: editingItem.codigo,
+          unidad: formData.unidad,
+          esConsumible: tipoItem !== "equipo",
+          requiereReceta: tipoItem === "reactivo" ? false : undefined,
         });
-      } catch (loteError) {
-        if (nuevoItem?._id && typeof equipamientoService.deleteItem === "function") {
-          try {
-            await equipamientoService.deleteItem(nuevoItem._id);
-          } catch (rollbackError) {
-            console.error("No se pudo revertir el item creado tras fallar el lote:", rollbackError);
-          }
-        }
 
-        throw loteError;
+        await equipamientoService.updateLote(editingItem.loteId, {
+          cantidadDisponible: cantidad,
+          ubicacion,
+          estado: estadoToBackend(formData.estado),
+          movilidad: formData.movilidad,
+        });
+      } else {
+        // Determinar tipo basado en la categoría activa
+        const tipoItem = Object.keys(tipoToCategoria).find(
+          key => tipoToCategoria[key] === activeTab
+        ) || 'material';
+
+        // Generar código
+        const codePrefix = activeTab === "Materiales" ? "MT" : activeTab === "Reactivos" ? "RC" : activeTab === "Sustancias basicas" ? "SB" : "EQ";
+        const nextNumber = inventory
+          .filter((item) => item.categoria === activeTab)
+          .reduce((max, item) => {
+            const [, num = "0"] = item.codigo.split("-");
+            const n = Number.parseInt(num, 10);
+            return Number.isNaN(n) ? max : Math.max(max, n);
+          }, 0) + 1;
+        const codigo = `${codePrefix}-${String(nextNumber).padStart(3, "0")}`;
+
+        // Crear el Item
+        const nuevoItem = await equipamientoService.createItem({
+          tipo: tipoItem,
+          nombre: nombre,
+          codigo: codigo,
+          unidad: formData.unidad,
+          esConsumible: tipoItem !== 'equipo', // Equipos no deben registrarse como consumibles
+          requiereReceta: tipoItem === 'reactivo' ? false : undefined
+        });
+
+        try {
+          // Crear el Lote asociado
+          await equipamientoService.createLote({
+            itemId: nuevoItem._id,
+            cantidadDisponible: cantidad,
+            ubicacion: ubicacion,
+            estado: estadoToBackend(formData.estado),
+            movilidad: formData.movilidad,
+          });
+        } catch (loteError) {
+          if (nuevoItem?._id && typeof equipamientoService.deleteItem === "function") {
+            try {
+              await equipamientoService.deleteItem(nuevoItem._id);
+            } catch (rollbackError) {
+              console.error("No se pudo revertir el item creado tras fallar el lote:", rollbackError);
+            }
+          }
+
+          throw loteError;
+        }
       }
 
       // Recargar datos
@@ -432,8 +509,8 @@ function Equipamiento() {
       closeForm();
       resetForm();
     } catch (err) {
-      console.error("Error al crear item/lote:", err);
-      alert("Error al crear el ítem: " + (err.response?.data?.error || err.message));
+      console.error("Error al guardar item/lote:", err);
+      alert("Error al guardar el ítem: " + (err.response?.data?.error || err.message));
     }
   };
 
@@ -464,7 +541,6 @@ function Equipamiento() {
       <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
         <PageHeader
           title="Equipamiento"
-          description="Consulta equipos, materiales, reactivos y sustancias básicas con el estilo compartido del resto de la app."
         />
 
         {/* Stats Card */}
@@ -570,6 +646,8 @@ function Equipamiento() {
                     <InventoryCard
                       key={item.id}
                       item={item}
+                      onEdit={() => openEditForm(item)}
+                      onDelete={() => handleDeleteItem(item)}
                     />
                   ))
                 ) : (
@@ -621,15 +699,19 @@ function Equipamiento() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
-                              <button
+                               {/* Botón de Editar */}
+                              <button 
                                 type="button"
+                                onClick={() => openEditForm(item)}
                                 className="rounded-lg p-2 text-cyan-500 bg-cyan-50 hover:bg-cyan-100 transition"
                                 aria-label={`Editar ${item.tipo}`}
                               >
                                 <PencilIcon />
                               </button>
+                               {/* Botón de Eliminar */}
                               <button
                                 type="button"
+                                onClick={() => handleDeleteItem(item)}
                                 className="rounded-lg p-2 text-rose-500 bg-rose-50 hover:bg-rose-100 transition"
                                 aria-label={`Eliminar ${item.tipo}`}
                               >
@@ -677,20 +759,20 @@ function Equipamiento() {
           onClick={closeForm}
         >
           <div
-            className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-lg sm:rounded-[28px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]"
+            className="w-full h-full flex flex-col overflow-hidden bg-white sm:h-auto sm:max-w-md sm:rounded-[20px] sm:shadow-[0_20px_60px_rgba(15,23,42,0.12)] sm:border sm:border-slate-200"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:static sm:px-6">
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-3 sm:static sm:px-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">
                     Registro
                   </div>
                   <h2 className="text-lg font-bold text-slate-900 sm:text-xl">
-                    Nuevo {activeTab.slice(0, -1).toLowerCase()}
+                    {editingItem ? `Editar ${editingItem.tipo}` : `Nuevo ${activeTab.slice(0, -1).toLowerCase()}`}
                   </h2>
                   <p className="mt-1 text-sm text-slate-500">
-                    Completa el formulario para registrar el ítem.
+                    {editingItem ? "Actualiza los campos y guarda los cambios." : "Completa el formulario para registrar el ítem."}
                   </p>
                 </div>
                 <button
@@ -703,90 +785,15 @@ function Equipamiento() {
               </div>
             </div>
 
-            <form className="flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6" onSubmit={handleSubmit}>
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-semibold text-slate-700">Nombre</span>
-                <input
-                  type="text"
-                  value={formData.nombre}
-                  onChange={(e) => setFormData((c) => ({ ...c, nombre: e.target.value }))}
-                  placeholder="Ej. Micropipeta digital"
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
-                  required
-                />
-              </label>
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <label className="block">
-                  <span className="mb-1.5 block text-sm font-semibold text-slate-700">Cantidad</span>
-                  <input
-                    type="number"
-                    min="1"
-                    value={formData.cantidad}
-                    onChange={(e) => setFormData((c) => ({ ...c, cantidad: e.target.value }))}
-                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
-                    required
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="mb-1.5 block text-sm font-semibold text-slate-700">Unidad</span>
-                  <input
-                    type="text"
-                    value={formData.unidad}
-                    onChange={(e) => setFormData((c) => ({ ...c, unidad: e.target.value }))}
-                    placeholder="Ej. unidad, ml, g"
-                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
-                    required
-                  />
-                </label>
-              </div>
-
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-semibold text-slate-700">Ubicación</span>
-                <input
-                  type="text"
-                  value={formData.ubicacion}
-                  onChange={(e) => setFormData((c) => ({ ...c, ubicacion: e.target.value }))}
-                  placeholder="Ej. Lab 1 / Edif. A"
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
-                  required
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-semibold text-slate-700">Estado</span>
-                <select
-                  value={formData.estado}
-                  onChange={(e) => setFormData((c) => ({ ...c, estado: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
-                >
-                  {statusOptions.map((option) => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
-                </select>
-              </label>
-
-              <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full sm:w-auto"
-                  onClick={closeForm}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="sm"
-                  className="w-full sm:w-auto"
-                >
-                  Guardar
-                </Button>
-              </div>
-            </form>
+            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+              <FormularioEquipamiento
+                formData={formData}
+                handleChange={handleChange}
+                handleSubmit={handleSubmit}
+                cerrarModal={closeForm}
+                statusOptions={statusOptions}
+              />
+            </div>
           </div>
         </div>
       )}
