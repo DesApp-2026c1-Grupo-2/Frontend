@@ -4,8 +4,11 @@ import { Settings, Package, CheckCircle, BarChart3, AlertTriangle } from "lucide
 import { LabCalendar } from "../components/LabCalendar";
 import { useCalendarReservas } from "../services/useCalendarReservas";
 import { usePedidos, useEquipamiento, useMateriales } from "../services/useDashboardData";
+import { useAuth } from "../context/AuthContext";
 
 export function Dashboard() {
+  const { user } = useAuth();
+
   // Calculamos fechas iniciales por defecto (la semana actual de domingo a sábado)
   const { initialStart, initialEnd } = useMemo(() => {
     const today = new Date();
@@ -105,9 +108,18 @@ export function Dashboard() {
       .slice(0, 5); // Tomamos el top 5
   }, [materiales]);
 
+  // Verificamos si el usuario tiene un rol válido para ver el Dashboard
+  const canViewDashboard = user?.rol?.toUpperCase() === "PERSONAL" || user?.rol?.toUpperCase() === "ADMIN";
+
   return (
     <AppLayout>
-      <div className="space-y-8">
+      {!canViewDashboard ? (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] bg-white border border-gray-200 rounded-3xl p-8 shadow-sm text-center">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">¡Bienvenido, {user?.nombre || user?.email || "Usuario"}!</h1>
+          <p className="text-lg text-gray-600">Desde el menú podés acceder a todas tus opciones operativas.</p>
+        </div>
+      ) : (
+        <div className="space-y-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 relative">
           {(loadingPedidos || loadingEquip || loadingMat) && (
@@ -169,7 +181,7 @@ export function Dashboard() {
             )}
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-semibold text-gray-900">Uso de equipos (Top 5)</h2>
-              <a href="#" className="text-blue-600 text-sm hover:text-blue-800">
+              <a href="/equipamiento" className="text-blue-600 text-sm hover:text-blue-800">
                 Ver todos los equipos →
               </a>
             </div>
@@ -209,7 +221,7 @@ export function Dashboard() {
             )}
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-semibold text-gray-900">Alerta de faltante de stock</h2>
-              <a href="#" className="text-blue-600 text-sm hover:text-blue-800">
+              <a href="/equipamiento" className="text-blue-600 text-sm hover:text-blue-800">
                 Ver todos los faltantes →
               </a>
             </div>
@@ -243,7 +255,8 @@ export function Dashboard() {
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      )}
     </AppLayout>
   );
 }
