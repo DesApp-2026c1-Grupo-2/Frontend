@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "../components/Layout";
 import PrivateRoute from "../components/PrivateRoute";
+import RoleProtectedRoute from "../components/RoleProtectedRoute";
 import { AuthProvider } from "../context/AuthContext";
 
 import Dashboard from "../pages/Dashboard"; /*PRUEBA */
@@ -23,12 +24,16 @@ function AppRouter() {
           <Route element={<PrivateRoute />}>
             <Route element={<Layout />}>
               <Route path="/*" element={<Dashboard />} /> {/*PRUEBA: dashboard  */}
-              <Route path="/" element={<Edificios />} /> {/* primer vista del administrador?????? */}
-              <Route path="/edificios/:id/laboratorios" element={<Laboratorios />} /> {/* laboratorios de un edificio específico */}
-              <Route path="/edificios" element={<Edificios />} />
-              <Route path="/equipamiento" element={<Equipamiento />} />
               <Route path="/pedidos" element={<Pedidos />} />
               <Route path="/pedidos/:id" element={<PedidoDetalle />} />
+
+              {/* RUTAS PROTEGIDAS POR ROL */}
+              <Route element={<RoleProtectedRoute allowedRoles={["ADMIN", "PERSONAL"]} />}>
+                <Route path="/" element={<Edificios />} />
+                <Route path="/edificios/:id/laboratorios" element={<Laboratorios />} />
+                <Route path="/edificios" element={<Edificios />} />
+                <Route path="/equipamiento" element={<Equipamiento />} />
+              </Route>
             </Route>
           </Route>
         </Routes>

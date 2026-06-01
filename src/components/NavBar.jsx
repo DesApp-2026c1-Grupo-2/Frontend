@@ -1,11 +1,15 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { useAuth } from "../context/AuthContext";
 
 import logo from "../assets/Logo.png";
 
 function Navbar() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user } = useAuth();
+
+  const canViewAdminSections = user?.rol?.toUpperCase() === "ADMIN" || user?.rol?.toUpperCase() === "PERSONAL";
 
   return (
     <header className="fixed top-0 left-0 z-50 w-full border-b border-lime-200/80 bg-[#b9d89b]/95 backdrop-blur-md shadow-[0_6px_24px_rgba(50,80,20,0.08)]">
@@ -32,20 +36,23 @@ function Navbar() {
             Dashboard 
           </button>
 
-          
-          <button
-            onClick={() => navigate("/edificios")}
-            className="rounded-xl px-4 py-2 text-base font-semibold text-slate-900 transition hover:bg-white/35 hover:text-green-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-700/40"
-          >
-            Edificios
-          </button>
+          {canViewAdminSections && (
+            <>
+              <button
+                onClick={() => navigate("/edificios")}
+                className="rounded-xl px-4 py-2 text-base font-semibold text-slate-900 transition hover:bg-white/35 hover:text-green-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-700/40"
+              >
+                Edificios
+              </button>
 
-          <button
-            onClick={() => navigate("/equipamiento")}
-            className="rounded-xl px-4 py-2 text-base font-semibold text-slate-900 transition hover:bg-white/35 hover:text-green-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-700/40"
-          >
-            Equipamiento
-          </button>
+              <button
+                onClick={() => navigate("/equipamiento")}
+                className="rounded-xl px-4 py-2 text-base font-semibold text-slate-900 transition hover:bg-white/35 hover:text-green-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-700/40"
+              >
+                Equipamiento
+              </button>
+            </>
+          )}
 
           <button
             onClick={() => navigate("/pedidos")}
@@ -87,15 +94,17 @@ function Navbar() {
               Inicio
             </button>
 
-            <button
-              onClick={() => {
-                navigate("/equipamiento");
-                setMenuOpen(false);
-              }}
-              className="rounded-xl px-4 py-3 text-left text-base font-semibold text-slate-900 hover:bg-white/30 transition"
-            >
-              Equipamiento
-            </button>
+            {canViewAdminSections && (
+              <button
+                onClick={() => {
+                  navigate("/equipamiento");
+                  setMenuOpen(false);
+                }}
+                className="rounded-xl px-4 py-3 text-left text-base font-semibold text-slate-900 hover:bg-white/30 transition"
+              >
+                Equipamiento
+              </button>
+            )}
 
             <button
               onClick={() => {
