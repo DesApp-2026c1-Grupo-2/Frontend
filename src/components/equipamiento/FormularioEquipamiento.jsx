@@ -82,9 +82,10 @@ export default function FormularioEquipamiento({
         </label>
         <select
           name="movilidad"
-          value={formData.movilidad}
+          value={formData.movilidad || "Fija"}
           onChange={handleChange}
-          className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
+          disabled
+          className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed"
         >
           <option value="Fija">Fija</option>
           <option value="Movible">Movible</option>
