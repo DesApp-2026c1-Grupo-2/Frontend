@@ -460,6 +460,7 @@ function Equipamiento() {
     movilidad: item.movilidad || "Fija",
   });
 }
+  setIsFormOpen(true);
   };
 
   const closeForm = () => {
@@ -469,7 +470,13 @@ function Equipamiento() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((c) => ({ ...c, [name]: value }));
+    setFormData((prev) => ({
+    ...prev,
+    [name]:
+      name === "esFijo"
+        ? value === "true"
+        : value,
+    }));
   };
 
   const estadoToBackend = (estado) => {
@@ -845,6 +852,14 @@ function Equipamiento() {
             </div>
 
             <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+              {activeTab === "Equipos" ? (
+              <FormularioEquipo
+                formData={formData}
+                handleChange={handleChange}
+                handleSubmit={handleSubmit}
+                cerrarModal={closeForm}
+              />
+            ) : (
               <FormularioEquipamiento
                 formData={formData}
                 handleChange={handleChange}
@@ -852,7 +867,8 @@ function Equipamiento() {
                 cerrarModal={closeForm}
                 statusOptions={statusOptions}
               />
-            </div>
+            )}
+          </div>
           </div>
         </div>
       )}
