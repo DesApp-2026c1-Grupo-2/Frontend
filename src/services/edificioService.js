@@ -21,3 +21,30 @@ export const crearEdificio = async (data) => {
 
   return response.data;
 };
+
+/*
+  =========================
+  ACTUALIZAR EDIFICIO
+  =========================
+*/
+export const actualizarEdificio = async (id, data) => {
+  const response = await api.put(
+    `/edificio/${id}`,
+    data
+  );
+
+  return response.data;
+};
+
+/*
+  =========================
+  ELIMINAR EDIFICIO
+  =========================
+*/
+export const eliminarEdificio = async (id) => {
+  const response = await api.delete(
+    `/edificio/${id}`
+  );
+
+  return response.data;
+};
