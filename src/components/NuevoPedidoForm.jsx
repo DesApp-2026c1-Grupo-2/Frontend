@@ -32,9 +32,9 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
         // Promise.allSettled evita que si una falla, todo el form colapse
         const [labsRes, usersRes, equiposRes, itemsRes] = await Promise.allSettled([
           api.get("/laboratorio"),
-          api.get("/usuario"),
+          api.get("/usuarios"),
           api.get("/equipo"),
-          api.get("/item")
+          api.get("/items")
         ]);
 
         if (labsRes.status === "fulfilled") setLaboratorios(labsRes.value.data);
@@ -303,7 +303,7 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
           {step === 1 && (
             <div className="space-y-4">
               <p className="text-zinc-500 text-sm italic">Seleccionar recursos requeridos e indicar cantidad:</p>
-              <div className="grid grid-cols-1 gap-2">
+              <div className="max-h-[40vh] overflow-y-auto grid grid-cols-1 gap-2 pr-2">
                 {recursosDB.map((r, i) => {
                   const seleccionado = form.recursos.find(rec => (rec._id || rec.id) === (r._id || r.id));
                   

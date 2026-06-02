@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import NuevoPedidoForm from "../components/NuevoPedidoForm";
-import EstadoBadge from "../components/EstadoBadge";
 import { PageHeader } from "../components/SharedUi";
 
 import {
@@ -11,7 +11,6 @@ import {
   FiCalendar,
 } from "react-icons/fi";
 
-export default function PedidosLaboratorio() {
 const PENDING_STATES = ["Pendiente", "En Revisión"];
 
 const formatDocente = (doc) => {
@@ -29,11 +28,17 @@ const formatLaboratorio = (lab) => {
 const formatFechaHora = (fechaHoraStr) => {
   if (!fechaHoraStr) return "—";
   const d = new Date(fechaHoraStr);
-  if (isNaN(d.getTime())) return fechaHoraStr; // Fallback
-  return `${d.toLocaleDateString()} a las ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  if (isNaN(d.getTime())) return fechaHoraStr;
+  return `${d.toLocaleDateString()} a las ${d.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  })}`;
 };
 
-  //const [pedidos, setPedidos] = useState([]);
+export default function PedidosLaboratorio() {
+  const navigate = useNavigate();
+
+   //const [pedidos, setPedidos] = useState([]);
   const [pedidos, setPedidos] = useState([
     {
       _id: "1",
@@ -56,16 +61,19 @@ const formatFechaHora = (fechaHoraStr) => {
       estado: "Aprobado"
     }
   ]);
+  
   const [isLoading, setIsLoading] = useState(true);
   const [tab, setTab] = useState("todos");
-  const [modalPedido, setModalPedido] = useState(null);
   const [showNuevo, setShowNuevo] = useState(false);
   const [labsDisponibles, setLabsDisponibles] = useState([]);
 
-  const pendientes = pedidos.filter((p) => PENDING_STATES.includes(p.estado));
+  const pendientes = pedidos.filter((p) =>
+    PENDING_STATES.includes(p.estado)
+  );
+
   const lista = tab === "pendientes" ? pendientes : pedidos;
 
-  // 1. Obtener pedidos usando la instancia
+  // GET pedidos + labs
   useEffect(() => {
     const fetchPedidos = async () => {
       try {
@@ -77,39 +85,14 @@ const formatFechaHora = (fechaHoraStr) => {
         setPedidos(resPedidos.data);
         setLabsDisponibles(resLabs.data || []);
       } catch (error) {
-        console.error("Error al cargar pedidos o laboratorios:", error.message);
+        console.error("Error al cargar pedidos:", error.message);
       } finally {
         setIsLoading(false);
       }
     };
+
     fetchPedidos();
   }, []);
-
-  const aprobar = async (id) => {
-    try {
-      const res = await api.patch(`/pedido/${id}/aprobar`);
-      setPedidos((ps) =>
-        ps.map((p) => ((p._id || p.id) === id ? res.data.pedido : p))
-      );
-      setModalPedido(null);
-    } catch (error) {
-      console.error("Error al aprobar:", error.response?.data || error.message);
-      alert(`Error al aprobar el pedido: ${error.response?.data?.error || "Error interno del servidor"}`);
-    }
-  };
-
-  const rechazar = async (id) => {
-    try {
-      const res = await api.patch(`/pedido/${id}/estado`, { estado: "Rechazado" });
-      setPedidos((ps) =>
-        ps.map((p) => ((p._id || p.id) === id ? res.data : p))
-      );
-      setModalPedido(null);
-    } catch (error) {
-      console.error("Error al rechazar:", error.response?.data || error.message);
-      alert(`Error al rechazar el pedido: ${error.response?.data?.error || "Error interno del servidor"}`);
-    }
-  };
 
   const crearPedido = async (datosFormulario) => {
     try {
