@@ -21,3 +21,8 @@ export const actualizarEstadoLaboratorio = async (
 
   return res.data;
 };
+
+export const eliminarLaboratorio = async (idLaboratorio) => {
+  const res = await api.delete(`/laboratorio/${idLaboratorio}`);
+  return res.data;
+};
