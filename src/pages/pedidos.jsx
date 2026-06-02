@@ -4,6 +4,14 @@ import NuevoPedidoForm from "../components/NuevoPedidoForm";
 import EstadoBadge from "../components/EstadoBadge";
 import { PageHeader } from "../components/SharedUi";
 
+import {
+  FiUser,
+  FiHome,
+  FiUsers,
+  FiCalendar,
+} from "react-icons/fi";
+
+export default function PedidosLaboratorio() {
 const PENDING_STATES = ["Pendiente", "En Revisión"];
 
 const formatDocente = (doc) => {
@@ -25,102 +33,29 @@ const formatFechaHora = (fechaHoraStr) => {
   return `${d.toLocaleDateString()} a las ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 };
 
-// 1. Reconstruimos el Modal adaptado a Mongoose
-function Modal({ pedido, onClose, onAprobar, onRechazar }) {
-  const pedidoId = pedido._id || pedido.id || "";
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-slate-100 bg-slate-50">
-          <h2 className="text-slate-800 font-semibold text-lg flex items-center gap-2">
-            <span className="text-slate-400 font-mono text-sm">
-              #{pedidoId.slice(-6)}
-            </span>
-            {pedido.materia}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-xl leading-none transition-colors"
-          >
-            ×
-          </button>
-        </div>
-
-        <div className="px-6 py-5 grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6 text-sm">
-          {[
-            ["Docente", formatDocente(pedido.docente)],
-            ["Fecha y Hora", formatFechaHora(pedido.fechaHora || pedido.fecha)],
-            ["Laboratorio", formatLaboratorio(pedido.laboratorio)],
-            ["Alumnos", pedido.alumnos],
-          ].map(([label, val]) => (
-            <div key={label}>
-              <span className="text-slate-500 block text-xs uppercase tracking-wider mb-1">
-                {label}
-              </span>
-              <span className="text-slate-800 font-medium">{val}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Sección de Recursos pedidos */}
-        {pedido.recursos?.length > 0 && (
-          <div className="px-6 pb-5">
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-              Recursos Solicitados
-            </p>
-            <div className="grid grid-cols-1 gap-2">
-              {pedido.recursos.map((r, i) => (
-                <div
-                  key={i}
-                  className="flex justify-between items-center bg-slate-50 border border-slate-100 rounded-lg p-2.5"
-                >
-                  <div>
-                    <p className="text-slate-800 text-sm font-medium">
-                      {r.nombre || (r.recursoId && r.recursoId.nombre) || "Recurso no identificado"}
-                    </p>
-                    <p className="text-slate-400 text-xs">{r.tipo || r.tipoRecurso || "—"}</p>
-                  </div>
-                  <span className="bg-white border border-slate-200 text-slate-600 text-xs font-bold px-2 py-1 rounded-md">
-                    x{r.cantidad}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Botones de acción del modal */}
-        <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/50">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-xl text-sm text-slate-600 bg-white border border-slate-300 hover:border-slate-400 hover:bg-slate-50 transition-colors"
-          >
-            Cerrar
-          </button>
-          {PENDING_STATES.includes(pedido.estado) && (
-            <>
-              <button
-                onClick={() => onRechazar(pedidoId)}
-                className="px-4 py-2 rounded-xl text-sm text-red-600 bg-white border border-red-200 hover:border-red-300 hover:bg-red-50 transition-colors"
-              >
-                Rechazar
-              </button>
-              <button
-                onClick={() => onAprobar(pedidoId)}
-                className="px-4 py-2 rounded-xl text-sm bg-emerald-500 text-white font-semibold hover:bg-emerald-600 shadow-sm transition-colors"
-              >
-                Aprobar pedido
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default function PedidosLaboratorio() {
-  const [pedidos, setPedidos] = useState([]);
+  //const [pedidos, setPedidos] = useState([]);
+  const [pedidos, setPedidos] = useState([
+    {
+      _id: "1",
+      materia: "Biología",
+      docente: "Juan Pérez",
+      alumnos: 25,
+      fecha: "2026-06-10",
+      hora: "10:00",
+      laboratorio: "Lab 1",
+      estado: "Pendiente"
+    },
+    {
+      _id: "2",
+      materia: "Química",
+      docente: "Ana López",
+      alumnos: 20,
+      fecha: "2026-06-11",
+      hora: "14:00",
+      laboratorio: "Lab 2",
+      estado: "Aprobado"
+    }
+  ]);
   const [isLoading, setIsLoading] = useState(true);
   const [tab, setTab] = useState("todos");
   const [modalPedido, setModalPedido] = useState(null);
@@ -186,8 +121,9 @@ export default function PedidosLaboratorio() {
       setPedidos((prev) => [...prev, res.data]);
       setShowNuevo(false);
     } catch (error) {
-      console.error("Error al crear:", error.response?.data || error.message);
-      alert(`Error al guardar el pedido: ${error.response?.data?.error || "Error interno del servidor"}`);
+      console.error("Error al crear:", error.message);
+      alert("Error al crear el pedido");
+      throw error; 
     }
   };
 
@@ -200,139 +136,175 @@ export default function PedidosLaboratorio() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 px-4 sm:px-6 lg:px-8 py-6">
+  <div className="min-h-screen text-slate-800 px-4 sm:px-6 lg:px-8 py-6">
+
+    {/* HEADER */}
+    <div className="flex items-center justify-between">
       <PageHeader title="Pedidos" />
 
-      {/* Tabs */}
-      <div className="flex flex-wrap items-center gap-2 mb-6">
-        {["todos", "pendientes"].map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-              tab === t
-                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                : "text-slate-500 bg-white border border-slate-200 hover:text-emerald-600 hover:border-emerald-200"
-            }`}
-          >
-            {t === "todos" ? (
-              "Todos"
-            ) : (
-              <span className="flex items-center gap-2">
-                Pendientes
-                <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[20px] text-center leading-none">
-                  {pendientes.length}
-                </span>
-              </span>
-            )}
-          </button>
-        ))}
-        <button
-          onClick={() => setShowNuevo(true)}
-          className="px-4 py-2 rounded-xl text-sm font-medium border border-emerald-200 text-emerald-600 bg-white hover:bg-emerald-50 hover:text-emerald-700 transition-colors ml-1 shadow-sm"
-        >
-          + Nuevo pedido
-        </button>
-      </div>
-
-      {/* Table */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm min-w-[950px]">
-          <thead>
-            <tr className="border-b border-slate-200 bg-slate-50">
-              {[
-                "ID",
-                "MATERIA",
-                "DOCENTE",
-                "FECHA/HORA",
-                "LAB",
-                "ALUMNOS",
-                "ESTADO",
-                "ACCIONES",
-              ].map((col) => (
-                <th
-                  key={col}
-                  className="text-left text-xs font-semibold text-slate-500 tracking-wider px-5 py-3"
-                >
-                  {col}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {lista.map((p, i) => {
-              const pId = p._id || p.id || "";
-              return (
-                <tr
-                  key={pId || i}
-                  className={`border-b border-slate-100 last:border-none hover:bg-emerald-50/50 transition-colors ${i % 2 === 1 ? "bg-slate-50/30" : ""}`}
-                >
-                  <td className="px-5 py-4 text-slate-500 font-mono text-xs">
-                    {pId.slice(-6)}
-                  </td>
-                  <td className="px-5 py-4 text-slate-800 font-medium">
-                    {p.materia}
-                  </td>
-                  <td className="px-5 py-4 text-slate-600">{formatDocente(p.docente)}</td>
-                  <td className="px-5 py-4 text-slate-600">
-                    {formatFechaHora(p.fechaHora || p.fecha)}
-                  </td>
-                  <td className="px-5 py-4 text-slate-600">{formatLaboratorio(p.laboratorio)}</td>
-                  <td className="px-5 py-4 text-slate-600">{p.alumnos}</td>
-                <td className="px-5 py-4">
-                  <EstadoBadge estado={p.estado} />
-                </td>
-                <td className="px-5 py-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      onClick={() => setModalPedido(p)}
-                      className="px-3 py-1.5 rounded-lg text-xs border border-slate-200 bg-white text-slate-600 hover:border-emerald-300 hover:text-emerald-700 transition-colors shadow-sm"
-                    >
-                      Ver
-                    </button>
-                    {PENDING_STATES.includes(p.estado) && (
-                      <>
-                        <button
-                        onClick={() => aprobar(pId)}
-                          className="px-3 py-1.5 rounded-lg text-xs bg-emerald-500 text-white font-semibold hover:bg-emerald-600 shadow-sm transition-colors"
-                        >
-                          Aprobar
-                        </button>
-                        <button
-                        onClick={() => rechazar(pId)}
-                          className="px-3 py-1.5 rounded-lg text-xs bg-white text-red-600 border border-red-200 hover:bg-red-50 hover:border-red-300 shadow-sm transition-colors"
-                        >
-                          Rechazar
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </td>
-            </tr>
-          );
-        })}
-          </tbody>
-        </table>
-      </div>
-      </div>
-
-      {modalPedido && (
-        <Modal
-          pedido={modalPedido}
-          onClose={() => setModalPedido(null)}
-          onAprobar={aprobar}
-          onRechazar={rechazar}
-        />
-      )}
-
-      {showNuevo && (
-        <NuevoPedidoForm
-          onClose={() => setShowNuevo(false)}
-          onCrear={crearPedido}
-          labs={labsDisponibles}
-        />
-      )}
+      <button
+        onClick={() => setShowNuevo(true)}
+        className="px-4 py-2 rounded-xl text-sm font-medium border border-emerald-200 text-emerald-600 bg-white hover:bg-emerald-50 hover:text-emerald-700 transition-colors shadow-sm"
+      >
+        + Nuevo pedido
+      </button>
     </div>
-  );
-}
+
+    {/* MÉTRICAS */}
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <p className="text-sm text-emerald-700 font-medium">Pedidos</p>
+        <p className="text-2xl font-bold">{pedidos.length}</p>
+      </div>
+
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <p className="text-sm text-emerald-700 font-medium">Pendientes</p>
+        <p className="text-2xl font-bold text-amber-600">{pendientes.length}</p>
+      </div>
+
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <p className="text-sm text-emerald-700 font-medium">Aprobados</p>
+        <p className="text-2xl font-bold text-emerald-600">
+          {pedidos.filter(p => p.estado === "Aprobado").length}
+        </p>
+      </div>
+    </div>
+
+    {/* TABS */}
+    <div className="flex gap-2 mb-10">
+      {["todos", "pendientes"].map((t) => (
+        <button
+          key={t}
+          onClick={() => setTab(t)}
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+            tab === t
+              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+              : "text-slate-500 bg-white border border-slate-200 hover:text-emerald-600 hover:border-emerald-200"
+          }`}
+        >
+          {t === "todos" ? "Todos" : `Pendientes (${pendientes.length})`}
+        </button>
+      ))}
+    </div>
+
+   {/* CONTENEDOR ESTILO LABORATORIOS */}
+    <div className="relative">
+
+      {/* BASE */}
+      <div className="absolute bottom-0 left-0 w-full h-40 bg-emerald-100 opacity-30 rounded-[2rem]" />
+
+      {/* CONTENIDO */}
+      <div className="relative z-10 bg-white/80 backdrop-blur-sm border border-slate-100 rounded-[2.5rem] shadow-lg p-8 md:p-10">
+
+        {/* TECHO */}
+        <div className="absolute -top-5 left-10 right-10 h-6 rounded-t-[2rem] bg-stone-700 rounded-sm"/>
+
+        {/* GRID */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+
+          {lista.map((p) => {
+            const id = p._id || p.id;
+
+            return (
+              <div
+                key={id}
+                className="
+                  relative bg-white border border-slate-200
+                  rounded-3xl p-5 shadow-md
+                  hover:shadow-lg hover:-translate-y-1
+                  transition-all
+                "
+              >
+
+                {/* ESTADO BADGE (COLORES LAB STYLE) */}
+                <div className="absolute top-4 right-4">
+                  <span
+                    className={`
+                      px-3 py-1 rounded-full text-xs font-medium capitalize
+                      ${
+                        p.estado === "Aprobado"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : p.estado === "Rechazado"
+                          ? "bg-red-100 text-red-700"
+                          : "bg-yellow-100 text-yellow-700"
+                      }
+                    `}
+                  >
+                    {p.estado}
+                  </span>
+                </div>
+
+                {/* TITULO */}
+                <h2 className="text-lg font-bold text-slate-800">
+                  Pedido: {id?.slice(-6)}
+                </h2>
+
+                {/* SUBTITULO */}
+                <p className="text-sm text-emerald-700 mt-1 font-medium">
+                  {p.materia}
+                </p>
+
+                {/* INFO */}
+                <div className="mt-3 space-y-1 text-sm text-slate-600">
+
+                  <p className="flex items-center gap-2">
+                    <FiUser className="text-slate-500" />
+                    {formatDocente(p.docente)}
+                  </p>
+
+                  <p className="flex items-center gap-2">
+                    <FiHome className="text-slate-500" />
+                    {formatLaboratorio(p.laboratorio)}
+                  </p>
+
+                  <p className="flex items-center gap-2">
+                    <FiUsers className="text-slate-500" />
+                    {p.alumnos} alumnos
+                  </p>
+
+                  <p className="flex items-center gap-2">
+                    <FiCalendar className="text-slate-500" />
+                    {formatFechaHora(p.fechaHora || p.fecha)}
+                  </p>
+
+                </div>
+
+                {/* FOOTER */}
+                <div className="flex justify-end">
+
+                  <button
+                    onClick={() => navigate(`/pedidos/${id}`)}
+                    className="
+                      px-4 py-2 text-xs rounded-xl
+                      bg-emerald-50 text-emerald-700
+                      border border-emerald-200
+                      hover:bg-emerald-100
+                      transition
+                    "
+                  >
+                    Inspeccionar
+                  </button>
+
+                </div>
+
+              </div>
+            );
+          })}
+
+        </div>
+      </div>
+    </div>
+
+    {/* MODAL NUEVO PEDIDO */}
+    {showNuevo && (
+      <NuevoPedidoForm
+        onClose={() => setShowNuevo(false)}
+        onCrear={crearPedido}
+        labs={labsDisponibles}
+      />
+    )}
+
+  </div>
+);
+} 

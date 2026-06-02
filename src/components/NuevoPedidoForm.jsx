@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
+import { FiX } from "react-icons/fi";
 
 const STEPS = ["Datos Básicos", "Recursos", "Resumen", "Enviado"];
 
@@ -21,6 +22,8 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
     laboratorio: "", 
     recursos: [], 
   });
+
+  const alumnos = Number(form.alumnos || 0);
 
   // Recuperar información real del backend
   useEffect(() => {
@@ -109,15 +112,49 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
   };
 
   const handleSiguiente = () => {
-    // Validaciones del Paso 0: Datos Básicos
     if (step === 0) {
-      if (!form.materia || !form.docente || !form.alumnos || !form.fecha || !form.hora || !form.laboratorio) {
-        alert("Error: Faltan completar datos obligatorios en el formulario.");
+      if (
+        !form.materia ||
+        !form.docente ||
+        !form.alumnos ||
+        !form.fecha ||
+        !form.hora ||
+        !form.laboratorio
+      ) {
+        alert("Error: Faltan completar datos obligatorios.");
+        return;
+      }
+
+      const alumnos = Number(form.alumnos);
+
+      //validar alumnos negativos o 0
+      if (alumnos <= 0) {
+        alert("Error: La cantidad de alumnos debe ser mayor a 0.");
+        return;
+      }
+
+      // validar fecha
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+
+      const fechaSeleccionada = new Date(form.fecha);
+
+      if (fechaSeleccionada < hoy) {
+        alert("Error: La fecha no puede ser anterior a hoy.");
+        return;
+      }
+
+      // validar capacidad laboratorio
+      const labSeleccionado = laboratorios.find(
+        (l) => (l._id || l.id) === form.laboratorio
+      );
+
+      if (labSeleccionado && alumnos > labSeleccionado.capacidad) {
+        alert("Error: El laboratorio no tiene capacidad suficiente.");
         return;
       }
     }
 
-    // Validaciones del Paso 1: Recursos y Equipos
     if (step === 1) {
       if (form.recursos.length === 0) {
         alert("Error: Debes seleccionar al menos un recurso.");
@@ -128,8 +165,7 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
     setStep((s) => s + 1);
   };
 
-  const handleCrear = () => {
-    // Damos formato requerido por el Schema Joi del backend
+  const handleCrear = async () => {
     const payload = {
       materia: form.materia,
       docente: form.docente,
@@ -140,14 +176,26 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
       recursos: form.recursos.map((r) => ({
         recursoId: r._id || r.id,
         tipoRecurso: r.tipoRecurso,
-        modeloRef: r.tipoRecurso, // Validado por Joi
-        tipo: r.tipoDetalle,      // Validado por Joi
+        modeloRef: r.tipoRecurso,
+        tipo: r.tipoDetalle,
         cantidad: Number(r.cantidad)
       }))
     };
 
-    onCrear(payload);
-    setStep(3); // Avanzamos a pantalla de éxito temporalmente hasta que el componente padre cierre el modal
+    try {
+      await onCrear(payload);
+
+      // SOLO si sale bien
+      setStep(3);
+
+    } catch (err) {
+      console.error("Error al crear pedido:", err);
+
+      alert("❌ Error al crear el pedido");
+
+      // 🔥 IMPORTANTE: cortar flujo
+      return;
+    }
   };
 
   if (loading) {
@@ -156,11 +204,19 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/40 backdrop-blur-sm p-4">
-      <div className="bg-white border border-zinc-200 rounded-2xl w-full max-w-2xl shadow-xl">
+      <div className="bg-white border border-zinc-200 rounded-2xl w-full max-w-2xl shadow-xl relative">
+        {/* CRUZ */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 text-zinc-400 hover:text-zinc-700 text-xl"
+        >
+          <FiX size={20} />
+        </button>
+
         <div className="px-8 pt-6 pb-4">
-          
+           
           {/* Stepper */}
-          <div className="flex items-center mb-8">
+          <div className="flex items-center mb-6">
             {STEPS.map((label, i) => (
               <div key={i} className="flex items-center flex-1 last:flex-none">
                 <div className="flex flex-col items-center gap-1">
@@ -202,8 +258,13 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
 
               <div>
                 <label className="block text-sm font-medium text-zinc-600 mb-1">Fecha</label>
-                <input type="date" value={form.fecha} onChange={set("fecha")}
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all" />
+                <input
+                  type="date"
+                  value={form.fecha}
+                  onChange={set("fecha")}
+                  min={new Date().toISOString().split("T")[0]}
+                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-zinc-600 mb-1">Hora de inicio</label>
@@ -213,10 +274,27 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
               
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-zinc-600 mb-1">Laboratorio</label>
-                <select value={form.laboratorio} onChange={set("laboratorio")}
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all">
+                <select
+                  value={form.laboratorio}
+                  onChange={set("laboratorio")}
+                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm"
+                >
                   <option value="">Seleccionar laboratorio...</option>
-                  {laboratorios.map(l => <option key={l._id || l.id} value={l._id || l.id}>{l.nombre} (Cap: {l.capacidad})</option>)}
+
+                  {laboratorios.map((l) => {
+                    const noDisponible = alumnos > l.capacidad;
+
+                    return (
+                      <option
+                        key={l._id || l.id}
+                        value={l._id || l.id}
+                        disabled={noDisponible}
+                      >
+                        {l.nombre} (Cap: {l.capacidad})
+                        {noDisponible ? " - NO DISPONIBLE" : ""}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
             </div>
@@ -322,7 +400,7 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
           ) : step === 2 ? (
             <button onClick={handleCrear}
               className="px-6 py-2 rounded-xl text-sm bg-emerald-500 text-white font-bold hover:bg-emerald-600 transition-all shadow-md shadow-emerald-200">
-              Cerrar y Finalizar
+              Finalizar
             </button>
           ) : null}
         </div>
