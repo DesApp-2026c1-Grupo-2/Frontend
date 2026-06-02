@@ -288,7 +288,7 @@ export default function Edificios() {
           "
         >
 
-          {edificios.map((e) => {
+          {edificios?.map((e) => {
 
             const eid = e._id || e.id;
 
