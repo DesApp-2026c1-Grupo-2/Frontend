@@ -1,6 +1,6 @@
 export function AppLayout({children, fullWidth = false }) {
   return (
-    <div className="min-h-screen font-['DM_Sans',sans-serif] relative overflow-hidden bg-white">
+    <div className="min-h-screen font-['DM_Sans',sans-serif] relative overflow-hidden ">
       {/* Background blobs: suaves, tonos mint claros */}
       <div className="fixed rounded-full blur-[120px] opacity-[0.08] pointer-events-none w-[680px] h-[680px] bg-emerald-200 -top-[200px] right-[6%]" />
       <div className="fixed rounded-full blur-[120px] opacity-[0.06] pointer-events-none w-[520px] h-[520px] bg-cyan-100 -bottom-[120px] left-[6%]" />
@@ -14,7 +14,7 @@ export function AppLayout({children, fullWidth = false }) {
         className={`relative z-10 ${
           fullWidth
             ? "w-full h-screen"
-            : "py-8 px-4 sm:px-6 lg:px-10 max-w-[1320px] mx-auto"
+            : "max-w-7xl mx-auto px-6 py-8 h-screen"
         }`}
       >
         {children}
