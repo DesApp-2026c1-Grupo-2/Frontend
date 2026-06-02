@@ -1,13 +1,15 @@
 import { useMemo, useState, useEffect } from "react";
 import { Card } from "../components/equipamiento/Card";
-import { Button } from "../components/equipamiento/Button";
 import { PageHeader } from "../components/SharedUi";
 import * as equipamientoService from "../services/equipamiento";
 import FormularioEquipamiento from "../components/equipamiento/FormularioEquipamiento";
+import FormularioEquipo from "../components/equipamiento/FormularioEquipo";
+
 
 
 
 const tabs = [
+  { label: "Equipos", icon: DeviceTabIcon },
   { label: "Materiales", icon: BoxTabIcon },
   { label: "Reactivos", icon: FlaskTabIcon },
   { label: "Sustancias basicas", icon: PillTabIcon },
@@ -51,7 +53,7 @@ const mapearDatosBackend = (items, lotes) => {
         ubicacion: lote.ubicacion,
         estado: mapearEstado(lote.estado),
         cantidad: lote.cantidadDisponible,
-        movilidad: lote.movilidad || "Fija", // Usar movilidad del lote si existe, si no por defecto "Fija"
+        movilidad: lote.movilidad || "Fija",
         unidad: item.unidad,
         esConsumible: item.esConsumible,
       });
@@ -67,7 +69,10 @@ const mapearEstado = (estadoBackend) => {
     'disponible': 'Disponible',
     'reservado': 'Reservado',
     'en_uso': 'En uso',
-    'descartado': 'Descartado'
+    'descartado': 'Descartado',
+    'mantenimiento': 'Mantenimiento',
+    'fuera_de_servicio': 'Fuera de servicio',
+    'fuera de servicio': 'Fuera de servicio',
   };
   return estadoMap[estadoBackend] || 'Disponible';
 };
@@ -93,6 +98,29 @@ const statusConfig = {
 };
 
 const statusOptions = Object.keys(statusConfig);
+
+const DEFAULT_FORM_DATA = {
+  nombre: "",
+  cantidad: "1",
+  estado: "Disponible",
+  ubicacion: "",
+  unidad: "unidad",
+  movilidad: "Fija",
+};
+
+const DEFAULT_EQUIPOS_FORM_DATA = {
+  nombre: "",
+  codigo: "",
+  tipo: "",
+  esFijo: "",
+  estado: "disponible",
+  edificioId: "",
+  laboratorioId: "",
+  cantidad: "1",
+  ubicacion: "",
+  unidad: "unidad",
+  movilidad: "Fija",
+};
 
 /* ─── Iconos generales ─── */
 function SearchIcon() {
@@ -271,8 +299,8 @@ function AlertCard({ item }) {
     </div>
   );
 }
-  /* ─── Vista Movil del Inventario ─── */
-function InventoryCard({ item, onEdit, onDelete }) { 
+
+function InventoryCard({ item, onEdit, onDelete }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
@@ -298,7 +326,6 @@ function InventoryCard({ item, onEdit, onDelete }) {
       </div>
 
       <div className="mt-4 flex items-center justify-end gap-2">
-        {/* El Boton Editar */}
         <button
           type="button"
           onClick={onEdit}
@@ -308,7 +335,6 @@ function InventoryCard({ item, onEdit, onDelete }) {
           <PencilIcon />
           Editar
         </button>
-        {/* El Boton Eliminar */}
         <button
           type="button"
           onClick={onDelete}
@@ -368,7 +394,7 @@ function Equipamiento() {
     }
   };
 
-  const handleDeleteItem = async (item) => {  // Boton de Eliminar
+  const handleDeleteItem = async (item) => {
     const confirmDelete = window.confirm(`¿Seguro que quieres borrar ${item.tipo}?`);
     if (!confirmDelete) return;
 
@@ -383,25 +409,59 @@ function Equipamiento() {
 
   const resetForm = () => setFormData({ nombre: "", cantidad: "1", estado: "Disponible", ubicacion: "", unidad: "unidad", movilidad: "Fija" });
   const openForm = () => {
-    setEditingItem(null);
-    resetForm();
-    setIsFormOpen(true);
-  };
-  const openEditForm = (item) => { // Boton de Editar 
-    setEditingItem(item);
-    // Cambiar la pestaña activa solo si la categoría está visible en los tabs
-    const visibleTabLabels = tabs.map(t => t.label);
-    if (visibleTabLabels.includes(item.categoria)) setActiveTab(item.categoria);
+  setEditingItem(null);
+
+  if (activeTab === "Equipos") {
     setFormData({
-      nombre: item.tipo,
-      cantidad: String(item.cantidad),
-      estado: item.estado,
-      ubicacion: item.ubicacion,
-      unidad: item.unidad || "unidad",
-      movilidad: item.movilidad || "Fija",
+      nombre: "",
+      codigo: "",
+      tipo: "",
+      esFijo: "",
+      estado: "disponible",
+      edificioId: "",
+      laboratorioId: "",
+      cantidad: "1",
+      ubicacion: "",
+      unidad: "unidad",
+      movilidad: "Fija",
     });
-    setIsFormOpen(true);
+  } else {
+    resetForm();
+  }
+
+  setIsFormOpen(true);
+};
+
+  const openEditForm = (item) => {
+    setEditingItem(item);
+    const visibleTabLabels = tabs.map((t) => t.label);
+    if (visibleTabLabels.includes(item.categoria)) setActiveTab(item.categoria);
+ if (item.categoria === "Equipos") {
+  setFormData({
+    nombre: item.tipo,
+    codigo: item.codigo,
+    tipo: item.tipo,
+    esFijo: item.movilidad === "Fija",
+    estado: estadoToBackend(item.estado),
+    edificioId: "",
+    laboratorioId: "",
+    cantidad: String(item.cantidad),
+    ubicacion: item.ubicacion,
+    unidad: item.unidad || "unidad",
+    movilidad: item.movilidad || "Fija",
+  });
+} else {
+  setFormData({
+    nombre: item.tipo,
+    cantidad: String(item.cantidad),
+    estado: item.estado,
+    ubicacion: item.ubicacion,
+    unidad: item.unidad || "unidad",
+    movilidad: item.movilidad || "Fija",
+  });
+}
   };
+
   const closeForm = () => {
     setIsFormOpen(false);
     setEditingItem(null);
@@ -437,7 +497,7 @@ function Equipamiento() {
     try {
       if (editingItem) {
         const tipoItem = Object.keys(tipoToCategoria).find(
-          key => tipoToCategoria[key] === editingItem.categoria
+          (key) => tipoToCategoria[key] === editingItem.categoria
         ) || "material";
 
         await equipamientoService.updateItem(editingItem.itemId, {
@@ -458,8 +518,8 @@ function Equipamiento() {
       } else {
         // Determinar tipo basado en la categoría activa
         const tipoItem = Object.keys(tipoToCategoria).find(
-          key => tipoToCategoria[key] === activeTab
-        ) || 'material';
+          (key) => tipoToCategoria[key] === activeTab
+        ) || "material";
 
         // Generar código
         const codePrefix = activeTab === "Materiales" ? "MT" : activeTab === "Reactivos" ? "RC" : activeTab === "Sustancias basicas" ? "SB" : "EQ";
@@ -475,11 +535,11 @@ function Equipamiento() {
         // Crear el Item
         const nuevoItem = await equipamientoService.createItem({
           tipo: tipoItem,
-          nombre: nombre,
-          codigo: codigo,
+          nombre,
+          codigo,
           unidad: formData.unidad,
-          esConsumible: tipoItem !== 'equipo', // Equipos no deben registrarse como consumibles
-          requiereReceta: tipoItem === 'reactivo' ? false : undefined
+          esConsumible: tipoItem !== "equipo",
+          requiereReceta: tipoItem === "reactivo" ? false : undefined,
         });
 
         try {
@@ -487,7 +547,7 @@ function Equipamiento() {
           await equipamientoService.createLote({
             itemId: nuevoItem._id,
             cantidadDisponible: cantidad,
-            ubicacion: ubicacion,
+            ubicacion,
             estado: estadoToBackend(formData.estado),
             movilidad: formData.movilidad,
           });
@@ -541,6 +601,7 @@ function Equipamiento() {
       <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
         <PageHeader
           title="Equipamiento"
+          description="Consulta equipos, materiales, reactivos y sustancias básicas con el estilo compartido del resto de la app."
         />
 
         {/* Stats Card */}
@@ -699,8 +760,7 @@ function Equipamiento() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
-                               {/* Botón de Editar */}
-                              <button 
+                              <button
                                 type="button"
                                 onClick={() => openEditForm(item)}
                                 className="rounded-lg p-2 text-cyan-500 bg-cyan-50 hover:bg-cyan-100 transition"
@@ -708,7 +768,6 @@ function Equipamiento() {
                               >
                                 <PencilIcon />
                               </button>
-                               {/* Botón de Eliminar */}
                               <button
                                 type="button"
                                 onClick={() => handleDeleteItem(item)}
@@ -759,10 +818,10 @@ function Equipamiento() {
           onClick={closeForm}
         >
           <div
-            className="w-full h-full flex flex-col overflow-hidden bg-white sm:h-auto sm:max-w-md sm:rounded-[20px] sm:shadow-[0_20px_60px_rgba(15,23,42,0.12)] sm:border sm:border-slate-200"
+            className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-lg sm:rounded-[28px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-3 sm:static sm:px-6">
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:static sm:px-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">

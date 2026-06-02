@@ -78,7 +78,11 @@ export const createItem = async (itemData) => {
 // Crear un nuevo Lote
 export const createLote = async (loteData) => {
   try {
-    const response = await api.post("/lotes", loteData);
+    const payload = {
+      ...loteData,
+      movilidad: loteData?.movilidad || "Fija",
+    };
+    const response = await api.post("/lotes", payload);
     return response.data;
   } catch (error) {
     console.error("Error al crear lote:", error);
@@ -100,7 +104,11 @@ export const updateItem = async (itemId, itemData) => {
 // Actualizar un Lote
 export const updateLote = async (loteId, loteData) => {
   try {
-    const response = await api.put(`/lotes/${loteId}`, loteData);
+    const payload = {
+      ...loteData,
+      movilidad: loteData?.movilidad || "Fija",
+    };
+    const response = await api.put(`/lotes/${loteId}`, payload);
     return response.data;
   } catch (error) {
     console.error(`Error al actualizar lote ${loteId}:`, error);
@@ -148,3 +156,10 @@ export const getInventarioCompleto = async () => {
     throw error;
   }
 };
+
+// Compatibilidad con nombres en español usados por el componente
+export const getEquipos = getItems;
+export const getEquipoById = getItemById;
+export const createEquipo = createItem;
+export const updateEquipo = updateItem;
+export const deleteEquipo = deleteItem;
