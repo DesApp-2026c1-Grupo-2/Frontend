@@ -1,3 +1,6 @@
+import { useState, useEffect } from "react";
+import api from "../../api/axios";
+
 export default function FormularioEquipo({
   formData,
   handleChange,
@@ -7,6 +10,39 @@ export default function FormularioEquipo({
   // Verificamos si el equipo es fijo. Esto ayuda a manejar la regla condicional del laboratorioId.
   // Dependiendo de cómo manejes el state, el valor podría ser el booleano literal o un string.
   const isFijo = formData.esFijo === true || String(formData.esFijo) === "true";
+
+  const [edificios, setEdificios] = useState([]);
+  const [laboratorios, setLaboratorios] = useState([]);
+
+  // Cargar lista de edificios al inicializar
+  useEffect(() => {
+    const fetchEdificios = async () => {
+      try {
+        const res = await api.get("/edificio");
+        setEdificios(res.data);
+      } catch (error) {
+        console.error("Error al cargar los edificios:", error);
+      }
+    };
+    fetchEdificios();
+  }, []);
+
+  // Cargar laboratorios cuando cambia el edificio seleccionado (y el equipo es fijo)
+  useEffect(() => {
+    if (isFijo && formData.edificioId && formData.edificioId !== "") {
+      const fetchLaboratorios = async () => {
+        try {
+          const res = await api.get(`/laboratorio/edificio/${formData.edificioId}`);
+          setLaboratorios(res.data);
+        } catch (error) {
+          console.error("Error al cargar los laboratorios:", error);
+        }
+      };
+      fetchLaboratorios();
+    } else {
+      setLaboratorios([]);
+    }
+  }, [formData.edificioId, isFijo]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 px-3 py-3">
@@ -101,44 +137,59 @@ export default function FormularioEquipo({
       {/* EDIFICIO Y LABORATORIO */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-            Edificio (ID)
-          </label>
-          {/* NOTA: Idealmente esto sería un <select> si tienes los datos de los edificios */}
-          <input
-            type="text"
-            name="edificioId"
-            value={formData.edificioId || ""}
-            onChange={handleChange}
-            placeholder="Ingrese el ObjectId válido"
-            required
-            minLength={24}
-            maxLength={24}
-            className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
-          />
-        </div>
-
-        <div>
           <label className={`block text-xs font-semibold uppercase tracking-wider mb-2 ${!isFijo ? 'text-slate-400' : 'text-slate-500'}`}>
-            Laboratorio (ID)
+            Edificio
           </label>
-          {/* Si no es fijo, el campo se deshabilita para cumplir con el esquema Joi */}
-          <input
-            type="text"
-            name="laboratorioId"
-            value={formData.laboratorioId || ""}
+          <select
+            name="edificioId"
+            value={!isFijo ? "" : (formData.edificioId || "")}
             onChange={handleChange}
-            placeholder={!isFijo ? "No aplica a equipos móviles" : "Ingrese el ObjectId válido"}
-            required={isFijo}
             disabled={!isFijo}
-            minLength={24}
-            maxLength={24}
+            required={isFijo}
             className={`w-full px-3 py-2 rounded-lg border transition ${
               !isFijo
                 ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed"
                 : "border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300"
             }`}
-          />
+          >
+            <option value="">{!isFijo ? "No aplica a equipos móviles" : "Seleccione un edificio"}</option>
+            {edificios.map((edif) => (
+              <option key={edif.id || edif._id} value={edif.id || edif._id}>
+                {edif.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className={`block text-xs font-semibold uppercase tracking-wider mb-2 ${!isFijo ? 'text-slate-400' : 'text-slate-500'}`}>
+            Laboratorio
+          </label>
+          <select
+            name="laboratorioId"
+            value={!isFijo ? "" : (formData.laboratorioId || "")}
+            onChange={handleChange}
+            required={isFijo}
+            disabled={!isFijo || !formData.edificioId}
+            className={`w-full px-3 py-2 rounded-lg border transition ${
+              !isFijo || !formData.edificioId
+                ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed"
+                : "border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300"
+            }`}
+          >
+            <option value="">
+              {!isFijo
+                ? "No aplica a equipos móviles"
+                : !formData.edificioId
+                ? "Seleccione un edificio primero"
+                : "Seleccione un laboratorio"}
+            </option>
+            {laboratorios.map((lab) => (
+              <option key={lab.id || lab._id} value={lab.id || lab._id}>
+                {lab.nombre}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 

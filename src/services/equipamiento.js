@@ -157,9 +157,59 @@ export const getInventarioCompleto = async () => {
   }
 };
 
-// Compatibilidad con nombres en español usados por el componente
-export const getEquipos = getItems;
-export const getEquipoById = getItemById;
-export const createEquipo = createItem;
-export const updateEquipo = updateItem;
-export const deleteEquipo = deleteItem;
+// --- Servicios para la colección Equipos ---
+
+export const getEquipos = async (filtros = {}) => {
+  try {
+    const params = new URLSearchParams();
+    if (filtros.estado) params.append("estado", filtros.estado);
+    if (filtros.edificioId) params.append("edificioId", filtros.edificioId);
+    if (filtros.laboratorioId) params.append("laboratorioId", filtros.laboratorioId);
+    
+    const response = await api.get(`/equipo${params.toString() ? "?" + params.toString() : ""}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error al obtener equipos:", error);
+    throw error;
+  }
+};
+
+export const getEquipoById = async (equipoId) => {
+  try {
+    const response = await api.get(`/equipo/${equipoId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error al obtener equipo ${equipoId}:`, error);
+    throw error;
+  }
+};
+
+export const createEquipo = async (equipoData) => {
+  try {
+    const response = await api.post("/equipo", equipoData);
+    return response.data;
+  } catch (error) {
+    console.error("Error al crear equipo:", error);
+    throw error;
+  }
+};
+
+export const updateEquipo = async (equipoId, equipoData) => {
+  try {
+    const response = await api.put(`/equipo/${equipoId}`, equipoData);
+    return response.data;
+  } catch (error) {
+    console.error(`Error al actualizar equipo ${equipoId}:`, error);
+    throw error;
+  }
+};
+
+export const deleteEquipo = async (equipoId) => {
+  try {
+    const response = await api.delete(`/equipo/${equipoId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error al eliminar equipo ${equipoId}:`, error);
+    throw error;
+  }
+};

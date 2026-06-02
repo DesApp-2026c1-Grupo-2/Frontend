@@ -63,6 +63,32 @@ const mapearDatosBackend = (items, lotes) => {
   return inventario;
 };
 
+// Función para mapear los equipos desde el backend a la estructura del frontend
+const mapearEquiposBackend = (equipos) => {
+  return equipos.map(equipo => {
+    let ubicacion = "Sin asignar";
+    if (equipo.laboratorioId) {
+      ubicacion = typeof equipo.laboratorioId === 'object' ? equipo.laboratorioId.nombre : "Laboratorio asignado";
+    } else if (equipo.edificioId) {
+      ubicacion = typeof equipo.edificioId === 'object' ? equipo.edificioId.nombre : "Edificio asignado";
+    }
+
+    return {
+      id: equipo.id || equipo._id,
+      itemId: equipo.id || equipo._id,
+      categoria: 'Equipos',
+      tipo: equipo.nombre, // Usamos el nombre del equipo como "tipo" en la UI compartida
+      codigo: equipo.codigo,
+      ubicacion: ubicacion,
+      estado: mapearEstado(equipo.estado),
+      cantidad: 1, // Cada equipo es una unidad física única
+      movilidad: equipo.esFijo ? "Fija" : "Movible",
+      esConsumible: false,
+      equipoOriginal: equipo // Guardamos el objeto original en memoria para la edición
+    };
+  });
+};
+
 // Mapear estados del backend al frontend
 const mapearEstado = (estadoBackend) => {
   const estadoMap = {
@@ -367,10 +393,14 @@ function Equipamiento() {
       try {
         setLoading(true);
         setError(null);
-        const items = await equipamientoService.getItems();
-        const lotes = await equipamientoService.getLotes();
+        const [items, lotes, equipos] = await Promise.all([
+          equipamientoService.getItems(),
+          equipamientoService.getLotes(),
+          equipamientoService.getEquipos()
+        ]);
         const inventarioMapeado = mapearDatosBackend(items, lotes);
-        setInventory(inventarioMapeado);
+        const equiposMapeados = mapearEquiposBackend(equipos);
+        setInventory([...inventarioMapeado, ...equiposMapeados]);
       } catch (err) {
         console.error("Error al cargar datos:", err);
         setError("No se pudieron cargar los datos del inventario");
@@ -384,10 +414,14 @@ function Equipamiento() {
   // Funcion helper para recargar datos
   const recargarInventario = async () => {
     try {
-      const items = await equipamientoService.getItems();
-      const lotes = await equipamientoService.getLotes();
+      const [items, lotes, equipos] = await Promise.all([
+        equipamientoService.getItems(),
+        equipamientoService.getLotes(),
+        equipamientoService.getEquipos()
+      ]);
       const inventarioMapeado = mapearDatosBackend(items, lotes);
-      setInventory(inventarioMapeado);
+      const equiposMapeados = mapearEquiposBackend(equipos);
+      setInventory([...inventarioMapeado, ...equiposMapeados]);
     } catch (err) {
       console.error("Error al recargar datos:", err);
       setError("No se pudieron recargar los datos");
@@ -399,10 +433,14 @@ function Equipamiento() {
     if (!confirmDelete) return;
 
     try {
-      await equipamientoService.deleteLote(item.loteId);
+      if (item.categoria === "Equipos") {
+        await equipamientoService.deleteEquipo(item.id);
+      } else {
+        await equipamientoService.deleteLote(item.loteId);
+      }
       await recargarInventario();
     } catch (err) {
-      console.error("Error al eliminar el lote:", err);
+      console.error("Error al eliminar el registro:", err);
       alert("No se pudo eliminar el registro: " + (err.response?.data?.error || err.message));
     }
   };
@@ -437,14 +475,15 @@ function Equipamiento() {
     const visibleTabLabels = tabs.map((t) => t.label);
     if (visibleTabLabels.includes(item.categoria)) setActiveTab(item.categoria);
  if (item.categoria === "Equipos") {
+  const original = item.equipoOriginal || {};
   setFormData({
     nombre: item.tipo,
     codigo: item.codigo,
-    tipo: item.tipo,
+    tipo: original.tipo || "",
     esFijo: item.movilidad === "Fija",
     estado: estadoToBackend(item.estado),
-    edificioId: "",
-    laboratorioId: "",
+    edificioId: original.edificioId?._id || original.edificioId?.id || original.edificioId || "",
+    laboratorioId: original.laboratorioId?._id || original.laboratorioId?.id || original.laboratorioId || "",
     cantidad: String(item.cantidad),
     ubicacion: item.ubicacion,
     unidad: item.unidad || "unidad",
@@ -492,6 +531,47 @@ function Equipamiento() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    // --- 1. MANEJO ESPECÍFICO PARA EQUIPOS ---
+    if (activeTab === "Equipos") {
+      const isFijo = formData.esFijo === true || String(formData.esFijo) === "true";
+      
+      // Interceptamos los IDs: si es móvil, forzamos null en edificioId y laboratorioId
+      const payloadEquipo = {
+        nombre: formData.nombre.trim(),
+        codigo: formData.codigo.trim(),
+        tipo: formData.tipo.trim(),
+        esFijo: isFijo,
+        estado: formData.estado,
+        edificioId: isFijo && formData.edificioId ? formData.edificioId : null,
+        laboratorioId: isFijo && formData.laboratorioId ? formData.laboratorioId : null,
+      };
+
+      if (!payloadEquipo.nombre || !payloadEquipo.codigo || !payloadEquipo.tipo) {
+        alert("Por favor completa Nombre, Código y Tipo para el equipo.");
+        return;
+      }
+
+      try {
+        if (editingItem) {
+          // Extraemos el ID del registro seleccionado para editar
+          const equipoId = editingItem.itemId || editingItem.id;
+          await equipamientoService.updateEquipo(equipoId, payloadEquipo);
+        } else {
+          await equipamientoService.createEquipo(payloadEquipo);
+        }
+        
+        await recargarInventario();
+        closeForm();
+        resetForm();
+      } catch (err) {
+        console.error("Error al guardar equipo:", err);
+        alert("Error al guardar el equipo: " + (err.response?.data?.error || err.message));
+      }
+      return; // Fin de la ejecución para Equipos (Evita que pase a la lógica de Lotes/Items)
+    }
+
+    // --- 2. MANEJO PARA ITEMS Y LOTES (Materiales, Reactivos, Sustancias) ---
     const nombre = formData.nombre.trim();
     const cantidad = Number.parseInt(formData.cantidad, 10);
     const ubicacion = formData.ubicacion.trim();
