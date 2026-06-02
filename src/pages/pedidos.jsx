@@ -2,8 +2,14 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import NuevoPedidoForm from "../components/NuevoPedidoForm";
-import EstadoBadge from "../components/EstadoBadge";
 import { PageHeader } from "../components/SharedUi";
+
+import {
+  FiUser,
+  FiHome,
+  FiUsers,
+  FiCalendar,
+} from "react-icons/fi";
 
 const PENDING_STATES = ["Pendiente", "En Revisión"];
 
@@ -32,7 +38,30 @@ const formatFechaHora = (fechaHoraStr) => {
 export default function PedidosLaboratorio() {
   const navigate = useNavigate();
 
-  const [pedidos, setPedidos] = useState([]);
+   //const [pedidos, setPedidos] = useState([]);
+  const [pedidos, setPedidos] = useState([
+    {
+      _id: "1",
+      materia: "Biología",
+      docente: "Juan Pérez",
+      alumnos: 25,
+      fecha: "2026-06-10",
+      hora: "10:00",
+      laboratorio: "Lab 1",
+      estado: "Pendiente"
+    },
+    {
+      _id: "2",
+      materia: "Química",
+      docente: "Ana López",
+      alumnos: 20,
+      fecha: "2026-06-11",
+      hora: "14:00",
+      laboratorio: "Lab 2",
+      estado: "Aprobado"
+    }
+  ]);
+  
   const [isLoading, setIsLoading] = useState(true);
   const [tab, setTab] = useState("todos");
   const [showNuevo, setShowNuevo] = useState(false);
@@ -65,38 +94,6 @@ export default function PedidosLaboratorio() {
     fetchPedidos();
   }, []);
 
-  const aprobar = async (id) => {
-    try {
-      const res = await api.patch(`/pedido/${id}/aprobar`);
-
-      setPedidos((ps) =>
-        ps.map((p) =>
-          (p._id || p.id) === id ? res.data.pedido : p
-        )
-      );
-    } catch (error) {
-      console.error("Error al aprobar:", error.message);
-      alert("Error al aprobar el pedido");
-    }
-  };
-
-  const rechazar = async (id) => {
-    try {
-      const res = await api.patch(`/pedido/${id}/estado`, {
-        estado: "Rechazado",
-      });
-
-      setPedidos((ps) =>
-        ps.map((p) =>
-          (p._id || p.id) === id ? res.data : p
-        )
-      );
-    } catch (error) {
-      console.error("Error al rechazar:", error.message);
-      alert("Error al rechazar el pedido");
-    }
-  };
-
   const crearPedido = async (datosFormulario) => {
     try {
       const res = await api.post("/pedido", {
@@ -109,6 +106,7 @@ export default function PedidosLaboratorio() {
     } catch (error) {
       console.error("Error al crear:", error.message);
       alert("Error al crear el pedido");
+      throw error; 
     }
   };
 
@@ -121,153 +119,175 @@ export default function PedidosLaboratorio() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 px-4 sm:px-6 lg:px-8 py-6">
+  <div className="min-h-screen text-slate-800 px-4 sm:px-6 lg:px-8 py-6">
+
+    {/* HEADER */}
+    <div className="flex items-center justify-between">
       <PageHeader title="Pedidos" />
 
-      {/* TABS */}
-      <div className="flex flex-wrap items-center gap-2 mb-6">
-        {["todos", "pendientes"].map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-              tab === t
-                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                : "text-slate-500 bg-white border border-slate-200 hover:text-emerald-600 hover:border-emerald-200"
-            }`}
-          >
-            {t === "todos" ? (
-              "Todos"
-            ) : (
-              <span className="flex items-center gap-2">
-                Pendientes
-                <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[20px] text-center">
-                  {pendientes.length}
-                </span>
-              </span>
-            )}
-          </button>
-        ))}
+      <button
+        onClick={() => setShowNuevo(true)}
+        className="px-4 py-2 rounded-xl text-sm font-medium border border-emerald-200 text-emerald-600 bg-white hover:bg-emerald-50 hover:text-emerald-700 transition-colors shadow-sm"
+      >
+        + Nuevo pedido
+      </button>
+    </div>
 
-        <button
-          onClick={() => setShowNuevo(true)}
-          className="px-4 py-2 rounded-xl text-sm font-medium border border-emerald-200 text-emerald-600 bg-white hover:bg-emerald-50 hover:text-emerald-700 transition-colors ml-1 shadow-sm"
-        >
-          + Nuevo pedido
-        </button>
+    {/* MÉTRICAS */}
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <p className="text-sm text-emerald-700 font-medium">Pedidos</p>
+        <p className="text-2xl font-bold">{pedidos.length}</p>
       </div>
 
-      {/* TABLE */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[950px]">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50">
-                {[
-                  "ID",
-                  "MATERIA",
-                  "DOCENTE",
-                  "FECHA/HORA",
-                  "LAB",
-                  "ALUMNOS",
-                  "ESTADO",
-                  "ACCIONES",
-                ].map((col) => (
-                  <th
-                    key={col}
-                    className="text-left text-xs font-semibold text-slate-500 px-5 py-3"
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <p className="text-sm text-emerald-700 font-medium">Pendientes</p>
+        <p className="text-2xl font-bold text-amber-600">{pendientes.length}</p>
+      </div>
+
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <p className="text-sm text-emerald-700 font-medium">Aprobados</p>
+        <p className="text-2xl font-bold text-emerald-600">
+          {pedidos.filter(p => p.estado === "Aprobado").length}
+        </p>
+      </div>
+    </div>
+
+    {/* TABS */}
+    <div className="flex gap-2 mb-10">
+      {["todos", "pendientes"].map((t) => (
+        <button
+          key={t}
+          onClick={() => setTab(t)}
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+            tab === t
+              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+              : "text-slate-500 bg-white border border-slate-200 hover:text-emerald-600 hover:border-emerald-200"
+          }`}
+        >
+          {t === "todos" ? "Todos" : `Pendientes (${pendientes.length})`}
+        </button>
+      ))}
+    </div>
+
+   {/* CONTENEDOR ESTILO LABORATORIOS */}
+    <div className="relative">
+
+      {/* BASE */}
+      <div className="absolute bottom-0 left-0 w-full h-40 bg-emerald-100 opacity-30 rounded-[2rem]" />
+
+      {/* CONTENIDO */}
+      <div className="relative z-10 bg-white/80 backdrop-blur-sm border border-slate-100 rounded-[2.5rem] shadow-lg p-8 md:p-10">
+
+        {/* TECHO */}
+        <div className="absolute -top-5 left-10 right-10 h-6 rounded-t-[2rem] bg-stone-700 rounded-sm"/>
+
+        {/* GRID */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+
+          {lista.map((p) => {
+            const id = p._id || p.id;
+
+            return (
+              <div
+                key={id}
+                className="
+                  relative bg-white border border-slate-200
+                  rounded-3xl p-5 shadow-md
+                  hover:shadow-lg hover:-translate-y-1
+                  transition-all
+                "
+              >
+
+                {/* ESTADO BADGE (COLORES LAB STYLE) */}
+                <div className="absolute top-4 right-4">
+                  <span
+                    className={`
+                      px-3 py-1 rounded-full text-xs font-medium capitalize
+                      ${
+                        p.estado === "Aprobado"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : p.estado === "Rechazado"
+                          ? "bg-red-100 text-red-700"
+                          : "bg-yellow-100 text-yellow-700"
+                      }
+                    `}
                   >
-                    {col}
-                  </th>
-                ))}
-              </tr>
-            </thead>
+                    {p.estado}
+                  </span>
+                </div>
 
-            <tbody>
-              {lista.map((p, i) => {
-                const id = p._id || p.id;
+                {/* TITULO */}
+                <h2 className="text-lg font-bold text-slate-800">
+                  Pedido: {id?.slice(-6)}
+                </h2>
 
-                return (
-                  <tr
-                    key={id || i}
-                    className={`border-b border-slate-100 hover:bg-emerald-50/40 transition-colors ${
-                      i % 2 ? "bg-slate-50/30" : ""
-                    }`}
+                {/* SUBTITULO */}
+                <p className="text-sm text-emerald-700 mt-1 font-medium">
+                  {p.materia}
+                </p>
+
+                {/* INFO */}
+                <div className="mt-3 space-y-1 text-sm text-slate-600">
+
+                  <p className="flex items-center gap-2">
+                    <FiUser className="text-slate-500" />
+                    {formatDocente(p.docente)}
+                  </p>
+
+                  <p className="flex items-center gap-2">
+                    <FiHome className="text-slate-500" />
+                    {formatLaboratorio(p.laboratorio)}
+                  </p>
+
+                  <p className="flex items-center gap-2">
+                    <FiUsers className="text-slate-500" />
+                    {p.alumnos} alumnos
+                  </p>
+
+                  <p className="flex items-center gap-2">
+                    <FiCalendar className="text-slate-500" />
+                    {formatFechaHora(p.fechaHora || p.fecha)}
+                  </p>
+
+                </div>
+
+                {/* FOOTER */}
+                <div className="flex justify-end">
+
+                  <button
+                    onClick={() => navigate(`/pedidos/${id}`)}
+                    className="
+                      px-4 py-2 text-xs rounded-xl
+                      bg-emerald-50 text-emerald-700
+                      border border-emerald-200
+                      hover:bg-emerald-100
+                      transition
+                    "
                   >
-                    <td className="px-5 py-4 font-mono text-xs text-slate-500">
-                      {id?.slice(-6)}
-                    </td>
+                    Inspeccionar
+                  </button>
 
-                    <td className="px-5 py-4 font-medium">
-                      {p.materia}
-                    </td>
+                </div>
 
-                    <td className="px-5 py-4 text-slate-600">
-                      {formatDocente(p.docente)}
-                    </td>
+              </div>
+            );
+          })}
 
-                    <td className="px-5 py-4 text-slate-600">
-                      {formatFechaHora(p.fechaHora || p.fecha)}
-                    </td>
-
-                    <td className="px-5 py-4 text-slate-600">
-                      {formatLaboratorio(p.laboratorio)}
-                    </td>
-
-                    <td className="px-5 py-4 text-slate-600">
-                      {p.alumnos}
-                    </td>
-
-                    <td className="px-5 py-4">
-                      <EstadoBadge estado={p.estado} />
-                    </td>
-
-                    <td className="px-5 py-4">
-                      <div className="flex flex-wrap gap-2">
-                        {/* VER DETALLE (PÁGINA) */}
-                        <button
-                          onClick={() => navigate(`/pedidos/${id}`)}
-                          className="px-3 py-1.5 text-xs border rounded-lg bg-white text-slate-600 hover:border-emerald-300 hover:text-emerald-700"
-                        >
-                          Ver
-                        </button>
-
-                        {/* ACCIONES */}
-                        {PENDING_STATES.includes(p.estado) && (
-                          <>
-                            <button
-                              onClick={() => aprobar(id)}
-                              className="px-3 py-1.5 text-xs bg-emerald-500 text-white rounded-lg hover:bg-emerald-600"
-                            >
-                              Aprobar
-                            </button>
-
-                            <button
-                              onClick={() => rechazar(id)}
-                              className="px-3 py-1.5 text-xs border border-red-200 text-red-600 rounded-lg hover:bg-red-50"
-                            >
-                              Rechazar
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
         </div>
       </div>
-
-      {/* NUEVO PEDIDO */}
-      {showNuevo && (
-        <NuevoPedidoForm
-          onClose={() => setShowNuevo(false)}
-          onCrear={crearPedido}
-          labs={labsDisponibles}
-        />
-      )}
     </div>
-  );
-}
+
+    {/* MODAL NUEVO PEDIDO */}
+    {showNuevo && (
+      <NuevoPedidoForm
+        onClose={() => setShowNuevo(false)}
+        onCrear={crearPedido}
+        labs={labsDisponibles}
+      />
+    )}
+
+  </div>
+);
+} 
