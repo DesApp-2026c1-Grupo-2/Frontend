@@ -38,34 +38,10 @@ const formatFechaHora = (fechaHoraStr) => {
 export default function PedidosLaboratorio() {
   const navigate = useNavigate();
 
-   //const [pedidos, setPedidos] = useState([]);
-  const [pedidos, setPedidos] = useState([
-    {
-      _id: "1",
-      materia: "Biología",
-      docente: "Juan Pérez",
-      alumnos: 25,
-      fecha: "2026-06-10",
-      hora: "10:00",
-      laboratorio: "Lab 1",
-      estado: "Pendiente"
-    },
-    {
-      _id: "2",
-      materia: "Química",
-      docente: "Ana López",
-      alumnos: 20,
-      fecha: "2026-06-11",
-      hora: "14:00",
-      laboratorio: "Lab 2",
-      estado: "Aprobado"
-    }
-  ]);
-  
+  const [pedidos, setPedidos] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [tab, setTab] = useState("todos");
   const [showNuevo, setShowNuevo] = useState(false);
-  const [labsDisponibles, setLabsDisponibles] = useState([]);
 
   const pendientes = pedidos.filter((p) =>
     PENDING_STATES.includes(p.estado)
@@ -73,17 +49,12 @@ export default function PedidosLaboratorio() {
 
   const lista = tab === "pendientes" ? pendientes : pedidos;
 
-  // GET pedidos + labs
+  // GET pedidos
   useEffect(() => {
     const fetchPedidos = async () => {
       try {
-        const [resPedidos, resLabs] = await Promise.all([
-          api.get("/pedido"),
-          api.get("/laboratorio/disponibles"),
-        ]);
-
+        const resPedidos = await api.get("/pedido");
         setPedidos(resPedidos.data);
-        setLabsDisponibles(resLabs.data || []);
       } catch (error) {
         console.error("Error al cargar pedidos:", error.message);
       } finally {
@@ -284,7 +255,6 @@ export default function PedidosLaboratorio() {
       <NuevoPedidoForm
         onClose={() => setShowNuevo(false)}
         onCrear={crearPedido}
-        labs={labsDisponibles}
       />
     )}
 
