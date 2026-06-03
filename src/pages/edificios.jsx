@@ -14,6 +14,9 @@ import {
 import { obtenerEquipos } from "../services/equipoFijoService";
 
 import { FiEdit2, FiTrash2 } from "react-icons/fi";
+import api from "../api/axios";
+
+import { FiEdit2, FiTrash2, FiHome, FiMapPin } from "react-icons/fi";
 
 export default function Edificios() {
 
@@ -30,6 +33,8 @@ export default function Edificios() {
   const [cantidadEquiposFijos, setCantidadEquiposFijos] =
   useState(0);
 
+  const [cantidadPedidos, setCantidadPedidos] = useState(0);
+
   const [mostrarModal, setMostrarModal] = useState(false);
 
   const [edificioEditando, setEdificioEditando] =
@@ -43,6 +48,7 @@ export default function Edificios() {
   /*
     =========================
     OBTENER EDIFICIOS y equipos fijos
+    OBTENER EDIFICIOS, equipos fijos y pedidos
     =========================
   */
   const cargarEdificios = async () => {
@@ -77,18 +83,23 @@ export default function Edificios() {
     }
   };
 
-  useEffect(() => {
-    const cargar = async () => {
-      try {
-        const data = await obtenerEdificios();
-        setEdificios(data);
-      } catch (error) {
-        console.error(error);
-      }
-    };
+  const cargarPedidos = async () => {
+    try {
+      const res = await api.get("/pedido");
 
-    cargar();
-  }, [location.pathname]);
+      setCantidadPedidos(res.data.length);
+
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    cargarEdificios();
+    cargarEquiposFijos();
+    cargarPedidos();
+  }, []);
+
 
   /*
     =========================
@@ -225,7 +236,7 @@ export default function Edificios() {
             hover:bg-emerald-50 transition shadow-sm
           "
         >
-          + Crear edificio
+          + Nuevo edificio
         </button>
 
       </div>
@@ -243,11 +254,15 @@ export default function Edificios() {
             shadow-sm p-5
           "
         >
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
           <p className="text-sm text-emerald-700 font-medium">
             Edificios
           </p>
 
           <p className="text-3xl font-bold text-slate-800 mt-2">
+          <p className="text-2xl font-bold text-slate-800">
             {edificios.length}
           </p>
         </div>
@@ -259,11 +274,13 @@ export default function Edificios() {
             shadow-sm p-5
           "
         >
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
           <p className="text-sm text-emerald-700 font-medium">
             Equipos fijos
           </p>
 
           <p className="text-3xl font-bold text-slate-800 mt-2">
+          <p className="text-2xl font-bold text-slate-800">
             {cantidadEquiposFijos}
           </p>
         </div>
@@ -275,12 +292,15 @@ export default function Edificios() {
             shadow-sm p-5
           "
         >
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
           <p className="text-sm text-emerald-700 font-medium">
             Pedidos
           </p>
 
           <p className="text-3xl font-bold text-slate-800 mt-2">
             0
+          <p className="text-2xl font-bold text-slate-800">
+            {cantidadPedidos}
           </p>
         </div>
 
@@ -296,7 +316,7 @@ export default function Edificios() {
           "
         >
 
-          {edificios?.map((e) => {
+          {edificios.map((e) => {
 
             const eid = e._id || e.id;
 
@@ -439,6 +459,16 @@ export default function Edificios() {
                   <p className="text-xs text-slate-400 mt-2 max-w-[220px]">
                     {e.direccion}
                   </p>
+                  <div className="mt-2 flex items-center justify-center gap-1 text-sm text-emerald-700 font-medium">
+                    <FiHome size={16} />
+                    <span>{cantidadLabs} laboratorios</span>
+                  </div>
+
+                  <div className="mt-2 flex items-center justify-center gap-1 text-xs text-slate-400 max-w-[220px] mx-auto capitalize">
+                    <FiMapPin size={14} className="shrink-0" />
+                    <span>{e.direccion}</span>
+                  </div>
+                  
                   <div
                     className="
                       w-10 h-[2px]

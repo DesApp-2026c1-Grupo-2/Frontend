@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, test, expect, vi, beforeEach } from 'vitest';
 import Edificios from '../../pages/edificios';
@@ -8,6 +8,19 @@ import { obtenerEdificios, crearEdificio } from '../../services/edificioService'
 vi.mock('../../services/edificioService', () => ({
   obtenerEdificios: vi.fn(),
   crearEdificio: vi.fn(),
+}));
+
+vi.mock('../../api/axios', () => ({
+  default: {
+    get: vi.fn(() => Promise.resolve({ data: [] })),
+  },
+}));
+
+vi.mock('react-icons/fi', () => ({
+  FiEdit2: () => <span data-testid="FiEdit2" />,
+  FiTrash2: () => <span data-testid="FiTrash2" />,
+  FiHome: () => <span data-testid="FiHome" />,
+  FiMapPin: () => <span data-testid="FiMapPin" />
 }));
 
 // Mocking child components to simplify the test
@@ -58,13 +71,15 @@ describe('Edificios Component', () => {
     ]);
     
     // Act: Render component wrapped in a router (needed because of useNavigate and useLocation)
-    render(
-      <MemoryRouter>
-        <Edificios />
-      </MemoryRouter>
-    );
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <Edificios />
+        </MemoryRouter>
+      );
+    });
 
-    expect(screen.getByText('+ Crear edificio')).toBeDefined();
+    expect(screen.getByText('+ Nuevo edificio')).toBeDefined();
     
     // Assert: Verify that fetched items are rendered
     await waitFor(() => {
@@ -74,17 +89,19 @@ describe('Edificios Component', () => {
     });
   });
 
-  test('opens and closes the "Crear Edificio" modal properly', () => {
+  test('opens and closes the "Crear Edificio" modal properly', async () => {
     obtenerEdificios.mockResolvedValueOnce([]);
     
-    render(
-      <MemoryRouter>
-        <Edificios />
-      </MemoryRouter>
-    );
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <Edificios />
+        </MemoryRouter>
+      );
+    });
 
     // Click to open the modal
-    const btnAbrirModal = screen.getByText('+ Crear edificio');
+    const btnAbrirModal = screen.getByText('+ Nuevo edificio');
     fireEvent.click(btnAbrirModal);
     expect(screen.getByTestId('crear-edificio-modal')).toBeDefined();
 
@@ -98,19 +115,23 @@ describe('Edificios Component', () => {
     obtenerEdificios.mockResolvedValue([]); // Permite múltiples llamadas (fetch inicial y recarga)
     crearEdificio.mockResolvedValueOnce({}); // Form submission
     
-    render(
-      <MemoryRouter>
-        <Edificios />
-      </MemoryRouter>
-    );
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <Edificios />
+        </MemoryRouter>
+      );
+    });
 
     // Open modal and fill in data
-    fireEvent.click(screen.getByText('+ Crear edificio'));
+    fireEvent.click(screen.getByText('+ Nuevo edificio'));
     fireEvent.change(screen.getByTestId('input-nombre'), { target: { name: 'nombre', value: 'Edificio B' } });
     fireEvent.change(screen.getByTestId('input-direccion'), { target: { name: 'direccion', value: 'Dirección B' } });
 
     // Submit the form
-    fireEvent.click(screen.getByTestId('btn-submit'));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('btn-submit'));
+    });
 
     // Assert that our mocked submit endpoint was hit with correct data
     await waitFor(() => {
