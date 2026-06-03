@@ -18,7 +18,9 @@ vi.mock('react-icons/fi', () => ({
   FiUser: () => <span data-testid="FiUser" />,
   FiHome: () => <span data-testid="FiHome" />,
   FiUsers: () => <span data-testid="FiUsers" />,
-  FiCalendar: () => <span data-testid="FiCalendar" />
+  FiCalendar: () => <span data-testid="FiCalendar" />,
+  FiEdit2: () => <span data-testid="FiEdit2" />,
+  FiTrash2: () => <span data-testid="FiTrash2" />
 }));
 
 vi.mock('../../api/axios', () => ({

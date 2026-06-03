@@ -25,7 +25,7 @@ describe('LaboratorioModal Component', () => {
     
     // Texto específico del componente NuevoLabForm
     expect(screen.getByText(/El laboratorio será creado automáticamente con estado/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Crear laboratorio/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Guardar/i })).toBeInTheDocument();
   });
 
   test('renderiza FormularioLaboratorio cuando esEdicion es true', () => {

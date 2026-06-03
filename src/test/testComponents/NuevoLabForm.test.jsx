@@ -42,7 +42,7 @@ describe('NuevoLaboratorioForm Component', () => {
   test('ejecuta handleSubmit al enviar el formulario', () => {
     render(<NuevoLaboratorioForm {...defaultProps} />);
     
-    const btnSubmit = screen.getByRole('button', { name: /Crear laboratorio/i });
+    const btnSubmit = screen.getByRole('button', { name: /Guardar/i });
     const form = btnSubmit.closest('form');
     fireEvent.submit(form);
     
