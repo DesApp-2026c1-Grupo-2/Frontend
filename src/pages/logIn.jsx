@@ -56,7 +56,7 @@ function Login() {
         onSubmit={handleLogin}
         className="bg-white p-8 rounded-xl shadow-md w-[320px] flex flex-col gap-4"
       >
-        <h2 className="text-xl font-bold text-center">
+        <h2 className="text-xl font-bold text-center text-gray-600">
           Iniciar sesión
         </h2>
 
@@ -69,7 +69,7 @@ function Login() {
         <input
           type="email"
           placeholder="Correo electrónico"
-          className="border p-2 rounded"
+          className="border p-2 rounded text-slate-900"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -77,7 +77,7 @@ function Login() {
         <input
           type="password"
           placeholder="Contraseña"
-          className="border p-2 rounded"
+          className="border p-2 rounded text-slate-900"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />

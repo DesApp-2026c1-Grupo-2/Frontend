@@ -94,7 +94,7 @@ function RegistroForm({ onVolverLogin }) {
       onSubmit={handleSubmit}
       className="bg-white p-8 rounded-xl shadow-md w-[350px] flex flex-col gap-3"
     >
-      <h2 className="text-xl font-bold text-center">
+      <h2 className="text-xl font-bold text-center text-gray-600">
         Crear cuenta
       </h2>
 
@@ -115,7 +115,7 @@ function RegistroForm({ onVolverLogin }) {
         placeholder="Nombre"
         value={form.nombre}
         onChange={handleChange}
-        className={`border p-2 rounded ${
+        className={`border p-2 rounded text-slate-900 ${
             errores.nombre ? "border-red-500" : ""
         }`}
       />
@@ -131,7 +131,7 @@ function RegistroForm({ onVolverLogin }) {
         placeholder="Apellido"
         value={form.apellido}
         onChange={handleChange}
-        className={`border p-2 rounded ${
+        className={`border p-2 rounded text-slate-900 ${
             errores.apellido ? "border-red-500" : ""
         }`}
       />
@@ -148,7 +148,7 @@ function RegistroForm({ onVolverLogin }) {
         placeholder="Email"
         value={form.email}
         onChange={handleChange}
-        className={`border p-2 rounded ${
+        className={`border p-2 rounded text-slate-900 ${
             errores.email ? "border-red-500" : ""
         }`}
       />
@@ -165,7 +165,7 @@ function RegistroForm({ onVolverLogin }) {
         placeholder="Contraseña"
         value={form.password}
         onChange={handleChange}
-        className={`border p-2 rounded ${
+        className={`border p-2 rounded text-slate-900 ${
             errores.password ? "border-red-500" : ""
         }`}
       />
@@ -179,7 +179,7 @@ function RegistroForm({ onVolverLogin }) {
       <input
         name="legajo"
         placeholder="Legajo (opcional)"
-        className={`border p-2 rounded ${
+        className={`border p-2 rounded text-slate-900 ${
             errores.legajo ? "border-red-500" : ""
         }`}
         value={form.legajo}
@@ -190,7 +190,7 @@ function RegistroForm({ onVolverLogin }) {
         name="rol"
         value={form.rol}
         onChange={handleChange}
-        className={`border p-2 rounded ${
+        className={`border p-2 rounded text-slate-900 ${
             errores.rol ? "border-red-500" : ""
         }`}
       >
