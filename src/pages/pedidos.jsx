@@ -4,8 +4,6 @@ import api from "../api/axios";
 import NuevoPedidoForm from "../components/NuevoPedidoForm";
 import { PageHeader } from "../components/SharedUi";
 
-import { useAuth } from "../context/AuthContext";
-
 import {
   FiUser,
   FiHome,
@@ -55,12 +53,12 @@ const normalizarEstado = (estado) => {
 
 export default function PedidosLaboratorio() {
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   const [pedidos, setPedidos] = useState([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [tab, setTab] = useState("todos");
+  const [showNuevo, setShowNuevo] = useState(false);
 
   const pendientes = pedidos.filter((p) =>
     PENDING_STATES.includes(p.estado)
@@ -77,10 +75,6 @@ export default function PedidosLaboratorio() {
     const fetchPedidos = async () => {
       try {
         const resPedidos = await api.get("/pedido");
-        
-        console.log("PEDIDOS:");
-        console.log(resPedidos.data);
-
         setPedidos(resPedidos.data);
       } catch (error) {
         console.error("Error al cargar pedidos:", error.message);
@@ -116,38 +110,6 @@ export default function PedidosLaboratorio() {
     );
   }
 
-  const actualizarPedido = async (datosFormulario) => {
-    try {
-      const id = pedidoEditando._id || pedidoEditando.id;
-
-      console.log("PAYLOAD EDITAR");
-      console.log({
-        ...datosFormulario,
-        estado: pedidoEditando.estado,
-      });
-
-      await api.put(`/pedido/${id}`, {
-        ...datosFormulario,
-        estado: pedidoEditando.estado,
-      });
-
-      const res = await api.get("/pedido");
-      setPedidos(res.data);
-
-      setShowForm(false);
-      setPedidoEditando(null);
-
-    } catch (error) {
-        console.error("ERROR COMPLETO:", error);
-        console.log("RESPUESTA COMPLETA");
-        console.dir(error.response?.data);
-
-        alert(JSON.stringify(error.response?.data));
-
-        throw error;
-      }
-};
-
   const handleEditar = (pedido) => {
     setPedidoEditando(pedido);
     setShowForm(true);
@@ -169,6 +131,25 @@ export default function PedidosLaboratorio() {
       }
   };
 
+  const handleGuardar = async (e) => {
+    e.preventDefault();
+
+    try {
+      await api.put(`/pedido/${pedidoEditando._id || pedidoEditando.id}`, {
+        ...pedidoEditando,
+        ...formData
+      });
+
+      const res = await api.get("/pedido");
+      setPedidos(res.data);
+
+      setShowForm(false);
+      setPedidoEditando(null);
+    } catch (error) {
+      console.error("Error al actualizar pedido:", error);
+    }
+  };
+
   return (
   <div className="min-h-screen text-slate-800 px-4 sm:px-6 lg:px-8 py-6">
 
@@ -177,10 +158,7 @@ export default function PedidosLaboratorio() {
       <PageHeader title="Pedidos" />
 
       <button
-        onClick={() => {
-          setPedidoEditando(null);
-          setShowForm(true);
-        }}
+        onClick={() => setShowNuevo(true)}
         className="px-4 py-2 rounded-xl text-sm font-medium border border-emerald-200 text-emerald-600 bg-white hover:bg-emerald-50 hover:text-emerald-700 transition-colors shadow-sm"
       >
         + Nuevo pedido
@@ -244,13 +222,6 @@ export default function PedidosLaboratorio() {
             const id = p._id || p.id;
             const estado = normalizarEstado(p.estado);
 
-            const puedeEditar =
-              (user?.rol === "ADMIN" || user?.rol === "PERSONAL") &&
-              (estado === "Pendiente" || estado === "Rechazado");
-
-            const puedeEliminar =
-              user?.rol === "ADMIN";
-
             return (
               <div
                 key={id}
@@ -270,36 +241,18 @@ export default function PedidosLaboratorio() {
 
                   <div className="flex gap-2 text-slate-500">
 
-                   <button
-                      title={
-                        puedeEditar
-                          ? "Editar pedido"
-                          : "Solo personal y admin pueden editar pedidos pendientes o rechazados"
-                      }
-                      onClick={() => puedeEditar && handleEditar(p)}
-                      disabled={!puedeEditar}
-                      className={`p-1 rounded-lg transition ${
-                        puedeEditar
-                          ? "hover:bg-emerald-50 text-emerald-700"
-                          : "text-slate-300 cursor-not-allowed"
-                      }`}
+                    <button
+                      title="Editar pedido"
+                      onClick={() => handleEditar(p)}
+                      className="p-1 rounded-lg hover:bg-emerald-50 text-emerald-700 transition"
                     >
                       <FiEdit2 size={16} />
                     </button>
 
                     <button
-                      title={
-                        puedeEliminar
-                          ? "Eliminar pedido"
-                          : "Solo un administrador puede eliminar pedidos"
-                      }
-                      onClick={() => puedeEliminar && handleEliminar(id)}
-                      disabled={!puedeEliminar}
-                      className={`p-1 rounded-lg transition ${
-                        puedeEliminar
-                          ? "hover:bg-red-50 text-red-600"
-                          : "text-slate-300 cursor-not-allowed"
-                      }`}
+                      title="Eliminar pedido"
+                      onClick={() => handleEliminar(id)}
+                      className="p-1 rounded-lg hover:bg-red-50 text-red-600 transition"
                     >
                       <FiTrash2 size={16} />
                     </button>
@@ -379,15 +332,10 @@ export default function PedidosLaboratorio() {
     </div>
 
     {/* MODAL NUEVO PEDIDO */}
-    {showForm && (
+    {showNuevo && (
       <NuevoPedidoForm
-        onClose={() => {
-          setShowForm(false);
-          setPedidoEditando(null);
-        }}
-        onCrear={actualizarPedido}
-        pedidoInicial={pedidoEditando}
-        modo="editar"
+        onClose={() => setShowNuevo(false)}
+        onCrear={crearPedido}
       />
     )}
   </div>
