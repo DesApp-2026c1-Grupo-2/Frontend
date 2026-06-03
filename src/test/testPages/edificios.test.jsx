@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, test, expect, vi, beforeEach } from 'vitest';
 import Edificios from '../../pages/edificios';
@@ -58,11 +58,13 @@ describe('Edificios Component', () => {
     ]);
     
     // Act: Render component wrapped in a router (needed because of useNavigate and useLocation)
-    render(
-      <MemoryRouter>
-        <Edificios />
-      </MemoryRouter>
-    );
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <Edificios />
+        </MemoryRouter>
+      );
+    });
 
     expect(screen.getByText('+ Crear edificio')).toBeDefined();
     
@@ -74,14 +76,16 @@ describe('Edificios Component', () => {
     });
   });
 
-  test('opens and closes the "Crear Edificio" modal properly', () => {
+  test('opens and closes the "Crear Edificio" modal properly', async () => {
     obtenerEdificios.mockResolvedValueOnce([]);
     
-    render(
-      <MemoryRouter>
-        <Edificios />
-      </MemoryRouter>
-    );
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <Edificios />
+        </MemoryRouter>
+      );
+    });
 
     // Click to open the modal
     const btnAbrirModal = screen.getByText('+ Crear edificio');
@@ -98,11 +102,13 @@ describe('Edificios Component', () => {
     obtenerEdificios.mockResolvedValue([]); // Permite múltiples llamadas (fetch inicial y recarga)
     crearEdificio.mockResolvedValueOnce({}); // Form submission
     
-    render(
-      <MemoryRouter>
-        <Edificios />
-      </MemoryRouter>
-    );
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <Edificios />
+        </MemoryRouter>
+      );
+    });
 
     // Open modal and fill in data
     fireEvent.click(screen.getByText('+ Crear edificio'));
@@ -110,7 +116,9 @@ describe('Edificios Component', () => {
     fireEvent.change(screen.getByTestId('input-direccion'), { target: { name: 'direccion', value: 'Dirección B' } });
 
     // Submit the form
-    fireEvent.click(screen.getByTestId('btn-submit'));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('btn-submit'));
+    });
 
     // Assert that our mocked submit endpoint was hit with correct data
     await waitFor(() => {
