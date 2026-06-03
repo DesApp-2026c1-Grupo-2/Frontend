@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, test, expect } from 'vitest';
-import { PageHeader } from '../../components/SharedUi';
+import { PageHeader, StatBadge } from '../../components/SharedUi';
 
 describe('SharedUi - PageHeader Component', () => {
   test('renderiza el título y la descripción correctamente', () => {
@@ -28,5 +28,23 @@ describe('SharedUi - PageHeader Component', () => {
     expect(screen.getByText('Gestión')).toBeInTheDocument();
     expect(screen.getByText('Edificios')).toBeInTheDocument();
     expect(screen.getByText('Visualización dinámica')).toBeInTheDocument();
+  });
+
+  test('renderiza correctamente sin descripción', () => {
+    render(
+      <PageHeader 
+        title="Solo Título" 
+      />
+    );
+
+    expect(screen.getByText('Solo Título')).toBeInTheDocument();
+    expect(screen.queryByText('Descripción de prueba')).not.toBeInTheDocument();
+  });
+});
+
+describe('SharedUi - StatBadge Component', () => {
+  test('renderiza correctamente el texto proporcionado', () => {
+    render(<StatBadge text="150 Activos" />);
+    expect(screen.getByText('150 Activos')).toBeInTheDocument();
   });
 });
