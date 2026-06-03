@@ -280,24 +280,59 @@ export default function PedidoDetalle() {
             Checklist de seguimiento
           </h2>
 
-          <div className="space-y-3 text-sm text-slate-600">
+          {pedido.checklist?.length > 0 ? (
+            <div className="space-y-3">
+              {pedido.checklist.map((tarea, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between border border-slate-200 rounded-lg p-3 bg-slate-50"
+                >
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={tarea.estado === "Completada"}
+                      readOnly
+                      className="h-4 w-4 accent-emerald-600"
+                    />
 
-            <label className="flex items-center gap-2">
-              <input type="checkbox" />
-              Preparación del laboratorio
-            </label>
+                    <div>
+                      <p
+                        className={`text-sm font-medium ${
+                          tarea.estado === "Completada"
+                            ? "text-slate-500 line-through"
+                            : "text-slate-700"
+                        }`}
+                      >
+                        {tarea.descripcion}
+                      </p>
 
-            <label className="flex items-center gap-2">
-              <input type="checkbox" />
-              Materiales entregados
-            </label>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Tipo: {tarea.tipo}
+                      </p>
+                    </div>
+                  </div>
 
-            <label className="flex items-center gap-2">
-              <input type="checkbox" />
-              Pedido finalizado
-            </label>
-
-          </div>
+                  <span
+                    className={`text-xs font-semibold px-2 py-1 rounded-md ${
+                      tarea.estado === "Completada"
+                        ? "bg-green-100 text-green-700"
+                        : tarea.estado === "En Proceso"
+                        ? "bg-yellow-100 text-yellow-700"
+                        : "bg-slate-200 text-slate-700"
+                    }`}
+                  >
+                    {tarea.estado}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
+              <p className="text-sm text-slate-500">
+                No hay tareas generadas para este pedido.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* ACCIONES */}
