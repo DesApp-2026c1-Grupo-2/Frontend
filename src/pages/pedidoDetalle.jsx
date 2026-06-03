@@ -44,6 +44,8 @@ export default function PedidoDetalle() {
   const [conflictos, setConflictos] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const tieneConflictos = conflictos.length > 0;
+
   useEffect(() => {
     const fetchPedido = async () => {
       try {
@@ -62,6 +64,8 @@ export default function PedidoDetalle() {
   }, [id]);
 
   const aprobar = async () => {
+    if (tieneConflictos) return;
+
     try {
       const res = await api.patch(`/pedido/${id}/aprobar`);
 
@@ -76,7 +80,7 @@ export default function PedidoDetalle() {
 
       alert(
         err.response?.data?.error ||
-          "No se pudo aprobar el pedido"
+        "No se pudo aprobar el pedido"
       );
     }
   };
@@ -225,7 +229,7 @@ export default function PedidoDetalle() {
 
         {/* CONFLICTOS */}
         {/* ALERTA GENERAL */}
-        {conflictos.length === 0 ? (
+        {!tieneConflictos ? (
           <div className="mb-8 border border-green-200 bg-green-50 rounded-lg p-4">
             <p className="font-semibold text-green-700">
               ✓ Pedido satisfacible
@@ -249,7 +253,7 @@ export default function PedidoDetalle() {
 
         {/* CONFLICTOS DETALLADOS */}
 
-        {conflictos.length > 0 && (
+        {tieneConflictos && (
           <div className="mb-8">
             <h2 className="font-semibold text-sm text-red-600 mb-3">
               Conflictos detectados
@@ -302,7 +306,17 @@ export default function PedidoDetalle() {
 
             <button
               onClick={aprobar}
-              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors"
+              disabled={tieneConflictos}
+              title={
+                tieneConflictos
+                  ? "No se puede aprobar mientras existan conflictos"
+                  : "Aprobar pedido"
+              }
+              className={`px-4 py-2 text-white rounded-lg transition-colors ${
+                tieneConflictos
+                  ? "bg-gray-400 cursor-not-allowed opacity-70"
+                  : "bg-emerald-500 hover:bg-emerald-600"
+              }`}
             >
               Aprobar
             </button>
