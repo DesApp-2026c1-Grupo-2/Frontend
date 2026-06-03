@@ -131,15 +131,6 @@ export default function Laboratorios() {
       });
 
 
-      equiposFijos.forEach((eq) => {
-        console.log(
-          "Equipo:",
-          eq.nombre,
-          "-> Laboratorio:",
-          eq.laboratorioId?.nombre
-        );
-      });
-
       setEquipos(equiposFijos);
     } catch (error) {
       console.error(error);
