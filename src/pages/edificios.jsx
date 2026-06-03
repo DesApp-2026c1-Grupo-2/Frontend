@@ -13,7 +13,6 @@ import {
 
 import { obtenerEquipos } from "../services/equipoFijoService";
 
-import { FiEdit2, FiTrash2 } from "react-icons/fi";
 import api from "../api/axios";
 
 import { FiEdit2, FiTrash2, FiHome, FiMapPin } from "react-icons/fi";
@@ -47,7 +46,6 @@ export default function Edificios() {
 
   /*
     =========================
-    OBTENER EDIFICIOS y equipos fijos
     OBTENER EDIFICIOS, equipos fijos y pedidos
     =========================
   */
@@ -247,59 +245,32 @@ export default function Edificios() {
       {/* METRICAS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8">
 
-        <div
-          className="
-            bg-white rounded-2xl
-            border border-emerald-200 
-            shadow-sm p-5
-          "
-        >
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div className="bg-white rounded-2xl border border-emerald-200 shadow-sm p-5">
           <p className="text-sm text-emerald-700 font-medium">
             Edificios
           </p>
 
           <p className="text-3xl font-bold text-slate-800 mt-2">
-          <p className="text-2xl font-bold text-slate-800">
             {edificios.length}
           </p>
         </div>
 
-        <div
-          className="
-            bg-white rounded-2xl
-            border border-emerald-200 
-            shadow-sm p-5
-          "
-        >
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div className="bg-white rounded-2xl border border-emerald-200 shadow-sm p-5">
           <p className="text-sm text-emerald-700 font-medium">
             Equipos fijos
           </p>
 
           <p className="text-3xl font-bold text-slate-800 mt-2">
-          <p className="text-2xl font-bold text-slate-800">
             {cantidadEquiposFijos}
           </p>
         </div>
 
-        <div
-          className="
-            bg-white rounded-2xl
-            border border-emerald-200
-            shadow-sm p-5
-          "
-        >
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div className="bg-white rounded-2xl border border-emerald-200 shadow-sm p-5">
           <p className="text-sm text-emerald-700 font-medium">
             Pedidos
           </p>
 
           <p className="text-3xl font-bold text-slate-800 mt-2">
-            0
-          <p className="text-2xl font-bold text-slate-800">
             {cantidadPedidos}
           </p>
         </div>
@@ -452,13 +423,6 @@ export default function Edificios() {
                     {e.nombre}
                   </h2>
 
-                  <p className="text-sm text-emerald-700 font-medium mt-2">
-                    {cantidadLabs} laboratorios
-                  </p>
-
-                  <p className="text-xs text-slate-400 mt-2 max-w-[220px]">
-                    {e.direccion}
-                  </p>
                   <div className="mt-2 flex items-center justify-center gap-1 text-sm text-emerald-700 font-medium">
                     <FiHome size={16} />
                     <span>{cantidadLabs} laboratorios</span>

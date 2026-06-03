@@ -20,10 +20,6 @@ import { PageHeader } from "../components/SharedUi";
 import {
   FiEdit2,
   FiTrash2,
-} from "react-icons/fi";
-
-import { FiMonitor } from "react-icons/fi";
-
   FiUsers,
   FiMonitor,
   FiLayers,
@@ -360,56 +356,32 @@ export default function Laboratorios() {
       {/* METRICAS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-14">
 
-        <div
-          className="
-            bg-white rounded-2xl
-            border border-emerald-200
-            shadow-sm p-5
-          "
-        >
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div className="bg-white rounded-2xl border border-emerald-200 shadow-sm p-5">
           <p className="text-sm text-emerald-700 font-medium">
             Laboratorios
           </p>
 
           <p className="text-3xl font-bold text-slate-800 mt-2">
-          <p className="text-2xl font-bold text-slate-800">
             {laboratorios.length}
           </p>
         </div>
 
-        <div
-          className="
-            bg-white rounded-2xl
-            border border-emerald-200
-            shadow-sm p-5
-          "
-        >
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div className="bg-white rounded-2xl border border-emerald-200 shadow-sm p-5">
           <p className="text-sm text-emerald-700 font-medium">
             Equipos fijos
           </p>
 
           <p className="text-3xl font-bold text-slate-800 mt-2">
-          <p className="text-2xl font-bold text-slate-800">
             {equipos.length}
           </p>
         </div>
 
-        <div
-          className="
-            bg-white rounded-2xl
-            border border-emerald-200
-            shadow-sm p-5
-          "
-        >
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div className="bg-white rounded-2xl border border-emerald-200 shadow-sm p-5">
           <p className="text-sm text-emerald-700 font-medium">
             Disponibles
           </p>
 
           <p className="text-3xl font-bold text-slate-800 mt-2">
-          <p className="text-2xl font-bold text-slate-800">
             {
               laboratorios.filter(
                 (lab) => lab.estado === "disponible"
@@ -613,39 +585,6 @@ export default function Laboratorios() {
 
                     {/* FOOTER */}
                     <div className="mt-4 flex justify-between">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs text-slate-500">Capacidad:</p>
-                          <p className="text-lg font-semibold text-slate-700">{lab.capacidad}</p>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs text-slate-500">Tipo:</p>
-                          <p className="font-semibold text-slate-700 capitalize">{lab.tipo}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-end">
-                        <span
-                          className={`
-                            px-3 py-1 rounded-full
-                            text-xs font-medium capitalize
-                            ${
-                              lab.estado === "disponible"
-                                ? "bg-emerald-100 text-emerald-700"
-                                : lab.estado === "ocupado"
-                                ? "bg-red-100 text-red-700"
-                                : "bg-yellow-100 text-yellow-700"
-                            }
-                          `}
-                        >
-                          {lab.estado}
-                        </span>
-                      </div>
-                    </div>
-                        
-                    
-
                       <div className="flex flex-col gap-2">
 
                         <div className="flex items-center gap-2 text-sm text-slate-600 font-semibold">
@@ -719,4 +658,3 @@ export default function Laboratorios() {
     </div>
   );
 }
-
