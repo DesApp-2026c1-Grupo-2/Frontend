@@ -5,6 +5,7 @@ import {
   obtenerLaboratoriosPorEdificio,
   crearLaboratorio,
   actualizarEstadoLaboratorio,
+  eliminarLaboratorio,
 } from "../services/laboratorioService";
 
 import { obtenerEquipos } from "../services/equipoFijoService";
@@ -15,6 +16,13 @@ import {
 
 import LaboratorioModal from "../components/laboratorios/LaboratorioModal";
 import { PageHeader } from "../components/SharedUi";
+
+import {
+  FiEdit2,
+  FiTrash2,
+} from "react-icons/fi";
+
+import { FiMonitor } from "react-icons/fi";
 
 export default function Laboratorios() {
 
@@ -80,11 +88,14 @@ export default function Laboratorios() {
   const cargarLaboratorios = async () => {
 
     try {
-
       const data =
         await obtenerLaboratoriosPorEdificio(id);
-      setLaboratorios(data);
+ 
+        console.log("LABORATORIOS:", data);
+
+        console.log("PRIMER LAB EQUIPOS:", data[0].equiposFijos);
       
+        setLaboratorios(data);
     } catch (error) {
       console.error(error);
     }
@@ -101,12 +112,24 @@ export default function Laboratorios() {
 
       const data = await obtenerEquipos();
 
+      console.log("EQUIPOS RAW:", data);
+
       const equiposFijos = data.filter(
         (eq) => eq.esFijo && eq.laboratorioId
       );
 
-      setEquipos(equiposFijos);
+      console.log("EQUIPOS FILTRADOS:", equiposFijos);
 
+      equiposFijos.forEach((eq) => {
+        console.log(
+          "Equipo:",
+          eq.nombre,
+          "-> Laboratorio:",
+          eq.laboratorioId?.nombre
+        );
+      });
+
+      setEquipos(equiposFijos);
     } catch (error) {
       console.error(error);
     }
@@ -261,16 +284,37 @@ export default function Laboratorios() {
     );
   }
 
+  /*
+    =========================
+    ELIMINAR
+    =========================
+  */
+  const handleEliminar = async (id) => {
+    try {
+      await eliminarLaboratorio(id);
+
+      // opcional: refrescar lista
+      setLaboratorios((prev) =>
+        prev.filter(
+          (lab) => (lab._id || lab.id) !== id
+        )
+      );
+
+    } catch (error) {
+      console.error("Error eliminando laboratorio:", error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-100 px-6 py-6">
 
       {/* HEADER */}
-      <div className="flex items-center justify-between mb-10">
+      <div className="flex items-center justify-between">
 
         <PageHeader
           preTitle="Edificio"
           title={edificioActual.nombre}
-          description={`Cantidad de laboratorios: ${laboratorios.length}`}
+          description=""
         />
 
         {/* BOTON */}
@@ -298,6 +342,63 @@ export default function Laboratorios() {
         </button>
       </div>
 
+      {/* METRICAS */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-14">
+
+        <div
+          className="
+            bg-white rounded-2xl
+            border border-emerald-200
+            shadow-sm p-5
+          "
+        >
+          <p className="text-sm text-emerald-700 font-medium">
+            Laboratorios
+          </p>
+
+          <p className="text-3xl font-bold text-slate-800 mt-2">
+            {laboratorios.length}
+          </p>
+        </div>
+
+        <div
+          className="
+            bg-white rounded-2xl
+            border border-emerald-200
+            shadow-sm p-5
+          "
+        >
+          <p className="text-sm text-emerald-700 font-medium">
+            Equipos fijos
+          </p>
+
+          <p className="text-3xl font-bold text-slate-800 mt-2">
+            {equipos.length}
+          </p>
+        </div>
+
+        <div
+          className="
+            bg-white rounded-2xl
+            border border-emerald-200
+            shadow-sm p-5
+          "
+        >
+          <p className="text-sm text-emerald-700 font-medium">
+            Disponibles
+          </p>
+
+          <p className="text-3xl font-bold text-slate-800 mt-2">
+            {
+              laboratorios.filter(
+                (lab) => lab.estado === "disponible"
+              ).length
+            }
+          </p>
+        </div>
+
+      </div>
+
       {/* CONTENEDOR */}
       <div className="relative">
 
@@ -315,9 +416,9 @@ export default function Laboratorios() {
           className="
             relative z-10
             bg-white/80 backdrop-blur-sm
-            border border-emerald-100
+            border border-slate-100
             rounded-[2.5rem]
-            shadow-xl
+            shadow-lg
             p-8 md:p-10
           "
         >
@@ -346,10 +447,22 @@ export default function Laboratorios() {
               const lid =
                 lab._id || lab.id;
 
+              const equiposDelLab = equipos.filter(
+                (eq) =>
+                  String(eq.laboratorioId?.id) ===
+                  String(lid)
+              );
+
+              const equiposVisibles = equiposDelLab.slice(0, 3);
+
+              const equiposRestantes =
+                equiposDelLab.length - equiposVisibles.length;
+
+
               const tieneEquipos =
                 equipos.some(
                   (eq) =>
-                    String(eq.laboratorioId) ===
+                    String(eq.laboratorioId?.id) ===
                     String(lid)
                 );
 
@@ -359,11 +472,10 @@ export default function Laboratorios() {
                   className="
                     relative overflow-hidden
                     bg-gradient-to-br
-                    from-white to-emerald-50
-                    border border-emerald-100
+                    border border-slate-300
                     rounded-3xl
                     p-6
-                    shadow-sm
+                    shadow-lg
                     hover:shadow-xl
                     hover:-translate-y-1
                     transition-all duration-300
@@ -385,136 +497,133 @@ export default function Laboratorios() {
                         >
                           {lab.nombre}
                         </h2>
+                        
 
                         <p className="text-sm text-slate-500 mt-1">
-                          {tieneEquipos
-                            ? "Laboratorio con equipos fijos"
-                            : "Laboratorio sin equipos fijos"}
+                          {equiposDelLab.length > 0
+                            ? `Laboratorio con ${equiposDelLab.length} equipos fijos`
+                            : "Laboratorio sin equipos fijos"
+                          }
                         </p>
                       </div>
 
-                      <div
-                        className={`
-                          px-3 py-1 rounded-full
-                          text-xs font-medium
-                          whitespace-nowrap
-                          ${
-                            lab.estado === "disponible"
-                              ? "bg-emerald-100 text-emerald-700"
-                              : lab.estado === "ocupado"
-                              ? "bg-red-100 text-red-700"
-                              : "bg-yellow-100 text-yellow-700"
-                          }
-                        `}
-                      >
-                        {lab.estado}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleEditar(lab)}
+                          className="
+                            p-1 rounded-lg
+                          hover:bg-emerald-50
+                          text-emerald-700
+                          transition
+                          "
+                        >
+                          <FiEdit2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (!confirm("¿Seguro que querés eliminar este laboratorio?")) return;
+                            handleEliminar(lab._id || lab.id);
+                          }}
+                          className="
+                            p-1 rounded-lg
+                         hover:bg-red-50
+                        text-red-600
+                      transition
+                          "
+                        >
+                          <FiTrash2 size={16} />
+                        </button>
                       </div>
                     </div>
 
-                    {/* VISUAL */}
-                    <div className="mt-8">
+                    <div
+                      className="
+                        w-12 h-[2px]
+                        bg-emerald-500
+                        rounded-full
+                        my-4
+                      "
+                    />
 
-                      <div className="flex flex-wrap gap-3">
+                    {/* EQUIPOS */}
+                    <div className="mb-5">
 
-                        {Array.from({
-                          length: Math.min(
-                            Number(
-                              lab.capacidad || 0
-                            ),
-                            24
-                          ),
-                        }).map((_, i) => (
-
-                          <div
-                            key={i}
-                            className="
-                              relative
-                              w-5 h-7
-                              flex items-end justify-center
-                            "
-                          >
-
-                            {/* CABEZA */}
-                            <div
+                      {equiposDelLab.length === 0 ? (
+                        <span className="text-xs text-slate-400">
+                          Sin equipos registrados
+                        </span>
+                      ) : (
+                        <div className="flex-wrap">
+                          <p className="text-xs font-semibold text-slate-500 mb-2">
+                            Equipo fijo instalado: 
+                          </p>
+                          {equiposVisibles.map((eq) => (
+                            <span
+                              key={eq.id}
                               className="
-                                absolute top-0
-                                w-3 h-3 rounded-full
-                                bg-amber-600
+                                px-2 py-1
+                                rounded-lg
+                                bg-emerald-100
+                                text-emerald-700
+                                text-xs
                               "
-                            />
+                            >
+                              {eq.nombre}
+                            </span>
+                          ))}
 
-                            {/* CUERPO */}
-                            <div
+                          {equiposRestantes > 0 && (
+                            <span
                               className="
-                                w-4 h-4 rounded-md
-                                bg-stone-700
+                                px-2 py-1
+                                rounded-lg
+                                bg-emerald-100
+                                text-emerald-700
+                                text-xs
+                                font-medium
                               "
-                            />
-                          </div>
-                        ))}
-                      </div>
+                            >
+                              +{equiposRestantes} más...
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* FOOTER */}
-                    <div
-                      className="
-                        mt-6 pt-4
-                        border-t border-slate-100
-                        flex items-center
-                        justify-between
-                      "
-                    >
+                    <div className="mt-4 flex justify-between">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-slate-500">Capacidad:</p>
+                          <p className="text-lg font-semibold text-slate-700">{lab.capacidad}</p>
+                        </div>
 
-                      <div>
-
-                        <p className="text-xs text-slate-400">
-                          Capacidad
-                        </p>
-
-                        <p
-                          className="
-                            text-lg font-bold
-                            text-slate-700
-                          "
-                        >
-                          {lab.capacidad}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-slate-500">Tipo:</p>
+                          <p className="font-semibold text-slate-700 capitalize">{lab.tipo}</p>
+                        </div>
                       </div>
 
-                      <div
-                        className="
-                          px-3 py-2 rounded-2xl
-                          bg-emerald-100
-                          text-emerald-700
-                          text-xs font-semibold
-                          capitalize
-                          text-center
-                          min-w-[70px]
-                        "
-                      >
-                        {lab.tipo}
+                      <div className="flex items-end">
+                        <span
+                          className={`
+                            px-3 py-1 rounded-full
+                            text-xs font-medium capitalize
+                            ${
+                              lab.estado === "disponible"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : lab.estado === "ocupado"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-yellow-100 text-yellow-700"
+                            }
+                          `}
+                        >
+                          {lab.estado}
+                        </span>
                       </div>
                     </div>
-
-                    {/* BOTON EDITAR */}
-                    <button
-                      onClick={() =>
-                        handleEditar(lab)
-                      }
-                      className="
-                        mt-5 w-full
-                        px-4 py-2 rounded-xl
-                        border border-slate-200
-                        bg-white text-slate-600
-                        hover:border-emerald-300
-                        hover:text-emerald-700
-                        transition
-                        text-sm font-medium
-                      "
-                    >
-                      Editar estado
-                    </button>
-
+                        
+                    
                   </div>
                 </div>
               );
