@@ -9,6 +9,8 @@ import {
   FiHome,
   FiUsers,
   FiCalendar,
+  FiEdit2,
+  FiTrash2,
 } from "react-icons/fi";
 
 const PENDING_STATES = ["Pendiente", "En Revisión"];
@@ -35,10 +37,25 @@ const formatFechaHora = (fechaHoraStr) => {
   })}`;
 };
 
+//ESTO VA PORQUE EL BACK DICE ACEPTADO Y EL FRONT APROBADO
+const normalizarEstado = (estado) => {
+  if (!estado) return "Pendiente";
+
+  switch (estado) {
+    case "Aceptado":
+      return "Aprobado";
+    case "En revisión":
+      return "En Revisión";
+    default:
+      return estado;
+  }
+};
+
 export default function PedidosLaboratorio() {
   const navigate = useNavigate();
 
   const [pedidos, setPedidos] = useState([]);
+
   const [isLoading, setIsLoading] = useState(true);
   const [tab, setTab] = useState("todos");
   const [showNuevo, setShowNuevo] = useState(false);
@@ -49,7 +66,11 @@ export default function PedidosLaboratorio() {
 
   const lista = tab === "pendientes" ? pendientes : pedidos;
 
-  // GET pedidos
+  const [pedidoEditando, setPedidoEditando] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+
+
+  // GET pedidos + labs
   useEffect(() => {
     const fetchPedidos = async () => {
       try {
@@ -89,6 +110,46 @@ export default function PedidosLaboratorio() {
     );
   }
 
+  const handleEditar = (pedido) => {
+    setPedidoEditando(pedido);
+    setShowForm(true);
+  }; 
+  
+  const handleEliminar = async (id) => {
+    const confirmar = window.confirm("¿Eliminar este pedido?");
+    if (!confirmar) return;
+
+    try {
+      await api.delete(`/pedido/${id}`);
+
+      setPedidos((prev) =>
+        prev.filter((p) => (p._id || p.id) !== id)
+      );
+    } catch (error) {
+        console.error("Error al eliminar pedido:", error.response?.data || error);
+        alert("No tenés permisos para eliminar este pedido");
+      }
+  };
+
+  const handleGuardar = async (e) => {
+    e.preventDefault();
+
+    try {
+      await api.put(`/pedido/${pedidoEditando._id || pedidoEditando.id}`, {
+        ...pedidoEditando,
+        ...formData
+      });
+
+      const res = await api.get("/pedido");
+      setPedidos(res.data);
+
+      setShowForm(false);
+      setPedidoEditando(null);
+    } catch (error) {
+      console.error("Error al actualizar pedido:", error);
+    }
+  };
+
   return (
   <div className="min-h-screen text-slate-800 px-4 sm:px-6 lg:px-8 py-6">
 
@@ -114,13 +175,13 @@ export default function PedidosLaboratorio() {
 
       <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
         <p className="text-sm text-emerald-700 font-medium">Pendientes</p>
-        <p className="text-2xl font-bold text-amber-600">{pendientes.length}</p>
+        <p className="text-2xl font-bold">{pendientes.length}</p>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
         <p className="text-sm text-emerald-700 font-medium">Aprobados</p>
-        <p className="text-2xl font-bold text-emerald-600">
-          {pedidos.filter(p => p.estado === "Aprobado").length}
+        <p className="text-2xl font-bold">
+          {pedidos.filter(p => normalizarEstado(p.estado) === "Aprobado").length}
         </p>
       </div>
     </div>
@@ -142,7 +203,7 @@ export default function PedidosLaboratorio() {
       ))}
     </div>
 
-   {/* CONTENEDOR ESTILO LABORATORIOS */}
+   {/* CONTENEDOR */}
     <div className="relative">
 
       {/* BASE */}
@@ -159,6 +220,7 @@ export default function PedidosLaboratorio() {
 
           {lista.map((p) => {
             const id = p._id || p.id;
+            const estado = normalizarEstado(p.estado);
 
             return (
               <div
@@ -171,28 +233,33 @@ export default function PedidosLaboratorio() {
                 "
               >
 
-                {/* ESTADO BADGE (COLORES LAB STYLE) */}
-                <div className="absolute top-4 right-4">
-                  <span
-                    className={`
-                      px-3 py-1 rounded-full text-xs font-medium capitalize
-                      ${
-                        p.estado === "Aprobado"
-                          ? "bg-emerald-100 text-emerald-700"
-                          : p.estado === "Rechazado"
-                          ? "bg-red-100 text-red-700"
-                          : "bg-yellow-100 text-yellow-700"
-                      }
-                    `}
-                  >
-                    {p.estado}
-                  </span>
-                </div>
-
                 {/* TITULO */}
-                <h2 className="text-lg font-bold text-slate-800">
-                  Pedido: {id?.slice(-6)}
-                </h2>
+                <div className="flex justify-between items-start">
+                  <h2 className="text-lg font-bold text-slate-800">
+                    Pedido: {id?.slice(-6)}
+                  </h2>
+
+                  <div className="flex gap-2 text-slate-500">
+
+                    <button
+                      title="Editar pedido"
+                      onClick={() => handleEditar(p)}
+                      className="p-1 rounded-lg hover:bg-emerald-50 text-emerald-700 transition"
+                    >
+                      <FiEdit2 size={16} />
+                    </button>
+
+                    <button
+                      title="Eliminar pedido"
+                      onClick={() => handleEliminar(id)}
+                      className="p-1 rounded-lg hover:bg-red-50 text-red-600 transition"
+                    >
+                      <FiTrash2 size={16} />
+                    </button>
+
+                  </div>
+
+                </div>
 
                 {/* SUBTITULO */}
                 <p className="text-sm text-emerald-700 mt-1 font-medium">
@@ -225,7 +292,7 @@ export default function PedidosLaboratorio() {
                 </div>
 
                 {/* FOOTER */}
-                <div className="flex justify-end">
+                <div className="flex justify-between items-center mt-4">
 
                   <button
                     onClick={() => navigate(`/pedidos/${id}`)}
@@ -240,6 +307,20 @@ export default function PedidosLaboratorio() {
                     Inspeccionar
                   </button>
 
+                  <span
+                    className={`
+                      px-3 py-1 rounded-full text-xs font-medium capitalize
+                      ${
+                        estado === "Aprobado"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : estado === "Rechazado"
+                          ? "bg-red-100 text-red-700"
+                          : "bg-yellow-100 text-yellow-700"
+                      }
+                    `}
+                  >
+                    {estado}
+                  </span>
                 </div>
 
               </div>
@@ -257,7 +338,6 @@ export default function PedidosLaboratorio() {
         onCrear={crearPedido}
       />
     )}
-
   </div>
 );
 } 
