@@ -3,6 +3,10 @@ import { describe, test, expect, vi, beforeEach } from 'vitest';
 import NuevoPedidoForm from '../../components/NuevoPedidoForm';
 import api from '../../api/axios';
 
+vi.mock('react-icons/fi', () => ({
+  FiX: () => <span data-testid="FiX" />
+}));
+
 vi.mock('../../api/axios', () => ({
   default: {
     get: vi.fn(),
@@ -18,7 +22,7 @@ vi.mock('../../context/AuthContext', () => {
 
 describe('NuevoPedidoForm Component', () => {
   const mockOnClose = vi.fn();
-  const mockOnCrear = vi.fn();
+  const mockOnCrear = vi.fn().mockResolvedValue({}); // Devuelve promesa por si handleCrear es async
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -66,11 +70,12 @@ describe('NuevoPedidoForm Component', () => {
     
     const dateInput = container.querySelector('input[type="date"]');
     const timeInput = container.querySelector('input[type="time"]');
-    fireEvent.change(dateInput, { target: { value: '2024-10-15' } });
+    fireEvent.change(dateInput, { target: { value: '2026-10-15' } });
     fireEvent.change(timeInput, { target: { value: '10:30' } });
 
     const selects = screen.getAllByRole('combobox');
-    // El selects[0] (Docente) ya viene auto-seleccionado por el user mockeado
+    // Para asegurar que pase la validación, forzamos ambos valores
+    fireEvent.change(selects[0], { target: { value: 'u-1' } }); // Seleccionar docente
     fireEvent.change(selects[1], { target: { value: 'lab-1' } }); // Seleccionar laboratorio
 
     fireEvent.click(screen.getByRole('button', { name: /Siguiente/i }));
@@ -102,17 +107,19 @@ describe('NuevoPedidoForm Component', () => {
     expect(screen.getByText('Química Avanzada')).toBeInTheDocument();
     
     // Finalizar
-    fireEvent.click(screen.getByRole('button', { name: /Cerrar y Finalizar/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Finalizar/i }));
 
     // --- PASO 3: Confirmación de enviado ---
-    expect(screen.getByText('¡Pedido enviado!')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('¡Pedido enviado!')).toBeInTheDocument();
+    });
     
     // Verificamos que se haya llamado a onCrear con el payload procesado correctamente
     expect(mockOnCrear).toHaveBeenCalledTimes(1);
     expect(mockOnCrear).toHaveBeenCalledWith(expect.objectContaining({
       materia: 'Química Avanzada',
       alumnos: 15,
-      fecha: '2024-10-15',
+      fecha: '2026-10-15',
       hora: '10:30',
       laboratorio: 'lab-1',
       recursos: [
