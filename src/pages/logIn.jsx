@@ -2,12 +2,16 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/axios";
+import RegistroForm from "../components/RegistroForm";
+
 
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [mostrarRegistro, setMostrarRegistro] = useState(false);
+  
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -41,13 +45,17 @@ function Login() {
   };
 
   return (
-    <div className="w-full h-screen flex items-center justify-center bg-gray-100">
+  <div className="min-h-screen flex items-center justify-center bg-slate-100">
 
+    {mostrarRegistro ? (
+      <RegistroForm
+        onVolverLogin={() => setMostrarRegistro(false)}
+      />
+    ) : (
       <form
         onSubmit={handleLogin}
         className="bg-white p-8 rounded-xl shadow-md w-[320px] flex flex-col gap-4"
       >
-
         <h2 className="text-xl font-bold text-center">
           Iniciar sesión
         </h2>
@@ -58,7 +66,6 @@ function Login() {
           </div>
         )}
 
-        {/* EMAIL */}
         <input
           type="email"
           placeholder="Correo electrónico"
@@ -67,7 +74,6 @@ function Login() {
           onChange={(e) => setEmail(e.target.value)}
         />
 
-        {/* PASSWORD */}
         <input
           type="password"
           placeholder="Contraseña"
@@ -76,7 +82,6 @@ function Login() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        {/* BOTÓN LOGIN */}
         <button
           type="submit"
           disabled={loading}
@@ -85,19 +90,18 @@ function Login() {
           {loading ? "Ingresando..." : "Ingresar"}
         </button>
 
-        {/* registrar pero no funciona */}
         <button
           type="button"
-          onClick={() => alert("Registro aún no disponible")}
+          onClick={() => setMostrarRegistro(true)}
           className="text-sm text-green-600 hover:underline"
         >
           ¿No tenés cuenta? Registrarse
         </button>
-
       </form>
+    )}
 
-    </div>
-  );
+  </div>
+);
 }
 
 export default Login;
