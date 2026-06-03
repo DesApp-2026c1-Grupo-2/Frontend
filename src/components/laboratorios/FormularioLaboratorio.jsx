@@ -95,7 +95,6 @@ export default function FormularioLaboratorio({
           "
         >
           <option value="disponible">Disponible</option>
-          <option value="reservado">Reservado</option>
           <option value="en mantenimiento">En mantenimiento</option>
           <option value="fuera de servicio">Fuera de servicio</option>
         </select>
@@ -121,17 +120,9 @@ export default function FormularioLaboratorio({
 
         <button
           type="submit"
-          className="
-            px-4 py-2
-            rounded-xl
-            text-sm
-            bg-emerald-500
-            text-white
-            font-semibold
-            hover:bg-emerald-600
-          "
+          className="px-6 py-2 rounded-xl text-sm bg-emerald-500 text-white font-bold hover:bg-emerald-600 transition-all shadow-md shadow-emerald-200"
         >
-          Guardar cambios
+          Guardar
         </button>
       </div>
     </form>

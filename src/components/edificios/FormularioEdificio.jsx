@@ -76,12 +76,7 @@ export default function FormularioEdificio({
 
         <button
           type="submit"
-          className="
-            px-4 py-2 rounded-xl text-sm font-medium
-            bg-emerald-500 text-white
-            hover:bg-emerald-600
-            shadow-sm transition
-          "
+          className="px-6 py-2 rounded-xl text-sm bg-emerald-500 text-white font-bold hover:bg-emerald-600 transition-all shadow-md shadow-emerald-200"
         >
           Guardar
         </button>

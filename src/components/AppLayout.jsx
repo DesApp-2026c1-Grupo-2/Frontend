@@ -1,21 +1,20 @@
 export function AppLayout({children, fullWidth = false }) {
   return (
-    <div className="min-h-screen bg-green-50 font-['DM_Sans',sans-serif] relative overflow-hidden">
+    <div className="min-h-screen font-['DM_Sans',sans-serif] relative overflow-hidden ">
+      {/* Background blobs: suaves, tonos mint claros */}
+      <div className="fixed rounded-full blur-[120px] opacity-[0.08] pointer-events-none w-[680px] h-[680px] bg-emerald-200 -top-[200px] right-[6%]" />
+      <div className="fixed rounded-full blur-[120px] opacity-[0.06] pointer-events-none w-[520px] h-[520px] bg-cyan-100 -bottom-[120px] left-[6%]" />
+      <div className="fixed rounded-full blur-[140px] opacity-[0.04] pointer-events-none w-[420px] h-[420px] bg-teal-100 top-[32%] left-1/2 -translate-x-1/2" />
 
-      {/* Background blobs */}
-      <div className="fixed rounded-full blur-[80px] opacity-[0.18] pointer-events-none w-[600px] h-[600px] bg-green-600 -top-[200px] -right-[200px]" />
-      <div className="fixed rounded-full blur-[80px] opacity-[0.18] pointer-events-none w-[400px] h-[400px] bg-green-400 -bottom-[100px] -left-[100px]" />
-      <div className="fixed rounded-full blur-[80px] opacity-[0.18] pointer-events-none w-[300px] h-[300px] bg-green-300 top-1/2 left-[40%]" />
-
-      {/* Dot grid */}
-      <div className="fixed inset-0 pointer-events-none z-0 opacity-50 bg-[radial-gradient(circle,#bbf7d0_1px,transparent_1px)] bg-[size:32px_32px]" />
+      {/* Grid overlay claro (cuadrícula) */}
+      <div className="fixed inset-0 pointer-events-none z-0 bg-[linear-gradient(rgba(0,0,0,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.06)_1px,transparent_1px)] bg-[size:48px_48px] opacity-30" />
 
       {/* contenido principal*/}
       <div
         className={`relative z-10 ${
           fullWidth
             ? "w-full h-screen"
-            : "py-[60px] px-12 max-w-[1100px] mx-auto"
+            : "max-w-7xl mx-auto px-6 py-8 h-screen"
         }`}
       >
         {children}
