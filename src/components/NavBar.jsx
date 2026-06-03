@@ -1,18 +1,22 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { useAuth } from "../context/AuthContext";
 
 import logo from "../assets/Logo.png";
 
 function Navbar() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user } = useAuth();
+
+  const canViewAdminSections = user?.rol?.toUpperCase() === "ADMIN" || user?.rol?.toUpperCase() === "PERSONAL";
 
   return (
     <header className="fixed top-0 left-0 z-50 w-full border-b border-lime-200/80 bg-[#b9d89b]/95 backdrop-blur-md shadow-[0_6px_24px_rgba(50,80,20,0.08)]">
       <div className="mx-auto flex h-[78px] w-full max-w-[1440px] items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
         <button
           type="button"
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/dashboard")} /*PRUEBA */
           className="flex items-center gap-3 rounded-2xl px-2 py-1 transition hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-700/40"
           aria-label="Ir al inicio"
         >
@@ -26,18 +30,29 @@ function Navbar() {
         {/* DESKTOP NAV */}
         <nav className="hidden md:flex items-center gap-2 sm:gap-4">
           <button
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/dashboard")} /*PRUEBA */
             className="rounded-xl px-4 py-2 text-base font-semibold text-slate-900 transition hover:bg-white/35 hover:text-green-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-700/40"
           >
-            Inicio
+            Dashboard 
           </button>
 
-          <button
-            onClick={() => navigate("/equipamiento")}
-            className="rounded-xl px-4 py-2 text-base font-semibold text-slate-900 transition hover:bg-white/35 hover:text-green-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-700/40"
-          >
-            Equipamiento
-          </button>
+          {canViewAdminSections && (
+            <>
+              <button
+                onClick={() => navigate("/edificios")}
+                className="rounded-xl px-4 py-2 text-base font-semibold text-slate-900 transition hover:bg-white/35 hover:text-green-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-700/40"
+              >
+                Edificios
+              </button>
+
+              <button
+                onClick={() => navigate("/equipamiento")}
+                className="rounded-xl px-4 py-2 text-base font-semibold text-slate-900 transition hover:bg-white/35 hover:text-green-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-700/40"
+              >
+                Equipamiento
+              </button>
+            </>
+          )}
 
           <button
             onClick={() => navigate("/pedidos")}
@@ -64,30 +79,46 @@ function Navbar() {
           <span className={`block h-0.5 w-6 bg-slate-900 transition ${menuOpen ? "-rotate-45 -translate-y-2" : ""}`} />
         </button>
       </div>
+
       {/* MOBILE MENU */}
       {menuOpen && (
         <div className="md:hidden border-t border-lime-200/70 bg-[#b9d89b]/95 backdrop-blur-md px-4 py-4 shadow-lg">
           <nav className="flex flex-col gap-2">
 
-            <button
-              onClick={() => {
-                navigate("/");
-                setMenuOpen(false);
-              }}
-              className="rounded-xl px-4 py-3 text-left text-base font-semibold text-slate-900 hover:bg-white/30 transition"
-            >
-              Inicio
-            </button>
+            {/* Agregados Dashboard y Edificios para móviles protegidos por rol */}
+            {canViewAdminSections && (
+              <>
+                <button
+                  onClick={() => {
+                    navigate("/dashboard");
+                    setMenuOpen(false);
+                  }}
+                  className="rounded-xl px-4 py-3 text-left text-base font-semibold text-slate-900 hover:bg-white/30 transition"
+                >
+                  Dashboard
+                </button>
 
-            <button
-              onClick={() => {
-                navigate("/equipamiento");
-                setMenuOpen(false);
-              }}
-              className="rounded-xl px-4 py-3 text-left text-base font-semibold text-slate-900 hover:bg-white/30 transition"
-            >
-              Equipamiento
-            </button>
+                <button
+                  onClick={() => {
+                    navigate("/edificios");
+                    setMenuOpen(false);
+                  }}
+                  className="rounded-xl px-4 py-3 text-left text-base font-semibold text-slate-900 hover:bg-white/30 transition"
+                >
+                  Edificios
+                </button>
+
+                <button
+                  onClick={() => {
+                    navigate("/equipamiento");
+                    setMenuOpen(false);
+                  }}
+                  className="rounded-xl px-4 py-3 text-left text-base font-semibold text-slate-900 hover:bg-white/30 transition"
+                >
+                  Equipamiento
+                </button>
+              </>
+            )}
 
             <button
               onClick={() => {
