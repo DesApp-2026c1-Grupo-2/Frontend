@@ -43,6 +43,7 @@ export default function PedidoDetalle() {
   const [pedido, setPedido] = useState(null);
   const [conflictos, setConflictos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [nombresRecursos, setNombresRecursos] = useState({});
 
   const tieneConflictos = conflictos.length > 0;
 
@@ -53,6 +54,35 @@ export default function PedidoDetalle() {
 
         setPedido(res.data);
         setConflictos(res.data.conflictos || []);
+
+        // Si el backend no pobla el nombre del recurso, lo buscamos manualmente
+        if (res.data.recursos && res.data.recursos.length > 0) {
+          const nombresMap = {};
+          await Promise.all(
+            res.data.recursos.map(async (r) => {
+              const recId = typeof r.recursoId === "object" ? r.recursoId?._id : r.recursoId;
+              
+              // Si ya viene con el nombre, lo guardamos y salimos
+              if (r.recursoId && typeof r.recursoId === "object" && r.recursoId.nombre) {
+                nombresMap[recId] = r.recursoId.nombre;
+                return;
+              }
+
+              // Si solo tenemos el ID, vamos a buscarlo a su respectiva API
+              const tipo = r.tipoRecurso?.toLowerCase() || r.tipo?.toLowerCase();
+              if (recId && tipo) {
+                try {
+                  const endpoint = tipo === "equipo" ? `/equipo/${recId}` : `/items/${recId}`;
+                  const resRecurso = await api.get(endpoint);
+                  nombresMap[recId] = resRecurso.data.nombre;
+                } catch (error) {
+                  console.error(`Error al obtener info del recurso ${recId}:`, error);
+                }
+              }
+            })
+          );
+          setNombresRecursos(nombresMap);
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -200,30 +230,31 @@ export default function PedidoDetalle() {
           </h2>
 
           <div className="space-y-2">
-            {pedido.recursos?.map((r, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between border border-slate-200 rounded-lg p-3 bg-slate-50"
-              >
-                <div>
-                  <p className="text-sm font-medium text-slate-700">
-                    {r.recursoId?.nombre ||
-                      r.nombre ||
-                      "Recurso"}
-                  </p>
+            {pedido.recursos?.map((r, i) => {
+              const recId = typeof r.recursoId === "object" ? r.recursoId?._id : r.recursoId;
+              const nombreRecurso = r.recursoId?.nombre || r.recurso?.nombre || nombresRecursos[recId] || r.nombre || "Recurso";
 
-                  <p className="text-xs text-slate-400 mt-1">
-                    {r.tipo ||
-                      r.tipoRecurso ||
-                      "—"}
-                  </p>
+              return (
+                <div
+                  key={i}
+                  className="flex items-center justify-between border border-slate-200 rounded-lg p-3 bg-slate-50"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-slate-700">
+                      {nombreRecurso}
+                    </p>
+
+                    <p className="text-xs text-slate-400 mt-1">
+                      {r.tipo || r.tipoRecurso || "—"}
+                    </p>
+                  </div>
+
+                  <span className="text-xs font-bold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-md">
+                    x{r.cantidad}
+                  </span>
                 </div>
-
-                <span className="text-xs font-bold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-md">
-                  x{r.cantidad}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
