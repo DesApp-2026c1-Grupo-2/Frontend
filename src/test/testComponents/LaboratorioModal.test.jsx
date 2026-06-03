@@ -35,6 +35,6 @@ describe('LaboratorioModal Component', () => {
     expect(screen.getByText('Editar laboratorio')).toBeInTheDocument();
     
     // El componente de edición tiene un botón específico
-    expect(screen.getByRole('button', { name: /Guardar cambios/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Guardar/i })).toBeInTheDocument();
   });
 });

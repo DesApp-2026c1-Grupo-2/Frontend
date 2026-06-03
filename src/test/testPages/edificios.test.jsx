@@ -10,6 +10,11 @@ vi.mock('../../services/edificioService', () => ({
   crearEdificio: vi.fn(),
 }));
 
+vi.mock('react-icons/fi', () => ({
+  FiEdit2: () => <span data-testid="FiEdit2" />,
+  FiTrash2: () => <span data-testid="FiTrash2" />
+}));
+
 // Mocking child components to simplify the test
 vi.mock('../../components/SharedUi', () => ({
   PageHeader: ({ preTitle, title, description }) => (
