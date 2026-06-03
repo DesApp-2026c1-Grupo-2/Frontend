@@ -12,6 +12,7 @@ import {
 } from "../services/edificioService";
 
 import { obtenerEquipos } from "../services/equipoFijoService";
+
 import api from "../api/axios";
 
 import { FiEdit2, FiTrash2, FiHome, FiMapPin } from "react-icons/fi";
@@ -242,34 +243,34 @@ export default function Edificios() {
       <div className="relative w-full overflow-hidden">
 
       {/* METRICAS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8">
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div className="bg-white rounded-2xl border border-emerald-200 shadow-sm p-5">
           <p className="text-sm text-emerald-700 font-medium">
             Edificios
           </p>
 
-          <p className="text-2xl font-bold text-slate-800">
+          <p className="text-3xl font-bold text-slate-800 mt-2">
             {edificios.length}
           </p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div className="bg-white rounded-2xl border border-emerald-200 shadow-sm p-5">
           <p className="text-sm text-emerald-700 font-medium">
             Equipos fijos
           </p>
 
-          <p className="text-2xl font-bold text-slate-800">
+          <p className="text-3xl font-bold text-slate-800 mt-2">
             {cantidadEquiposFijos}
           </p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div className="bg-white rounded-2xl border border-emerald-200 shadow-sm p-5">
           <p className="text-sm text-emerald-700 font-medium">
             Pedidos
           </p>
 
-          <p className="text-2xl font-bold text-slate-800">
+          <p className="text-3xl font-bold text-slate-800 mt-2">
             {cantidadPedidos}
           </p>
         </div>

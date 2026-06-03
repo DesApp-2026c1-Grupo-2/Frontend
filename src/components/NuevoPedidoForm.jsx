@@ -5,9 +5,7 @@ import { FiX } from "react-icons/fi";
 
 const STEPS = ["Datos Básicos", "Recursos", "Resumen", "Enviado"];
 
-export default function NuevoPedidoForm({ onClose, onCrear, pedidoInicial = null,
-  modo = "crear" }) {
-
+export default function NuevoPedidoForm({ onClose, onCrear }) {
   const { user } = useAuth();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -24,36 +22,6 @@ export default function NuevoPedidoForm({ onClose, onCrear, pedidoInicial = null
     laboratorio: "", 
     recursos: [], 
   });
-
-  useEffect(() => {
-    if (!pedidoInicial) return;
-
-    const fecha = pedidoInicial.fechaHora
-      ? pedidoInicial.fechaHora.split("T")[0]
-      : "";
-
-    const hora = pedidoInicial.fechaHora
-      ? new Date(pedidoInicial.fechaHora)
-          .toISOString()
-          .slice(11, 16)
-      : "10:00";
-
-    setForm({
-      materia: pedidoInicial.materia || "",
-      docente: pedidoInicial.docente?._id || "",
-      alumnos: pedidoInicial.alumnos || "",
-      fecha,
-      hora,
-      laboratorio:
-        pedidoInicial.laboratorio?.id ||
-        pedidoInicial.laboratorio?._id ||
-        "",
-      recursos: [],
-    });
-
-    console.log("FORM CARGADO");
-
-  }, [pedidoInicial]);
 
   const alumnos = Number(form.alumnos || 0);
 
@@ -198,9 +166,6 @@ export default function NuevoPedidoForm({ onClose, onCrear, pedidoInicial = null
   };
 
   const handleCrear = async () => {
-    console.log("RECURSOS FORM");
-    console.log(form.recursos);
-
     const payload = {
       materia: form.materia,
       docente: form.docente,
