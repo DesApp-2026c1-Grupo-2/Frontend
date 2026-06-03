@@ -79,31 +79,45 @@ function Navbar() {
           <span className={`block h-0.5 w-6 bg-slate-900 transition ${menuOpen ? "-rotate-45 -translate-y-2" : ""}`} />
         </button>
       </div>
+
       {/* MOBILE MENU */}
       {menuOpen && (
         <div className="md:hidden border-t border-lime-200/70 bg-[#b9d89b]/95 backdrop-blur-md px-4 py-4 shadow-lg">
           <nav className="flex flex-col gap-2">
 
-            <button
-              onClick={() => {
-                navigate("/");
-                setMenuOpen(false);
-              }}
-              className="rounded-xl px-4 py-3 text-left text-base font-semibold text-slate-900 hover:bg-white/30 transition"
-            >
-              Inicio
-            </button>
-
+            {/* Agregados Dashboard y Edificios para móviles protegidos por rol */}
             {canViewAdminSections && (
-              <button
-                onClick={() => {
-                  navigate("/equipamiento");
-                  setMenuOpen(false);
-                }}
-                className="rounded-xl px-4 py-3 text-left text-base font-semibold text-slate-900 hover:bg-white/30 transition"
-              >
-                Equipamiento
-              </button>
+              <>
+                <button
+                  onClick={() => {
+                    navigate("/dashboard");
+                    setMenuOpen(false);
+                  }}
+                  className="rounded-xl px-4 py-3 text-left text-base font-semibold text-slate-900 hover:bg-white/30 transition"
+                >
+                  Dashboard
+                </button>
+
+                <button
+                  onClick={() => {
+                    navigate("/edificios");
+                    setMenuOpen(false);
+                  }}
+                  className="rounded-xl px-4 py-3 text-left text-base font-semibold text-slate-900 hover:bg-white/30 transition"
+                >
+                  Edificios
+                </button>
+
+                <button
+                  onClick={() => {
+                    navigate("/equipamiento");
+                    setMenuOpen(false);
+                  }}
+                  className="rounded-xl px-4 py-3 text-left text-base font-semibold text-slate-900 hover:bg-white/30 transition"
+                >
+                  Equipamiento
+                </button>
+              </>
             )}
 
             <button

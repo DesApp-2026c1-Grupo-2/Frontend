@@ -130,19 +130,9 @@ export default function NuevoLaboratorioForm({
 
         <button
           type="submit"
-          className="
-            px-4 py-2
-            rounded-xl
-            text-sm
-            bg-emerald-500
-            text-white
-            font-semibold
-            hover:bg-emerald-600
-            shadow-sm
-            transition-colors
-          "
+          className="px-6 py-2 rounded-xl text-sm bg-emerald-500 text-white font-bold hover:bg-emerald-600 transition-all shadow-md shadow-emerald-200"
         >
-          Crear laboratorio
+          Guardar
         </button>
       </div>
     </form>

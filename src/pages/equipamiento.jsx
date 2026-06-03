@@ -1,8 +1,10 @@
 import { useMemo, useState, useEffect } from "react";
-import { Card } from "../components/Card";
-import { Button } from "../components/Button";
+import { Card } from "../components/equipamiento/Card";
 import { PageHeader } from "../components/SharedUi";
 import * as equipamientoService from "../services/equipamiento";
+import FormularioEquipamiento from "../components/equipamiento/FormularioEquipamiento";
+import FormularioEquipo from "../components/equipamiento/FormularioEquipo";
+
 
 
 
@@ -51,7 +53,7 @@ const mapearDatosBackend = (items, lotes) => {
         ubicacion: lote.ubicacion,
         estado: mapearEstado(lote.estado),
         cantidad: lote.cantidadDisponible,
-        movilidad: "Fija", // Por defecto, se puede agregar al modelo si es necesario
+        movilidad: lote.movilidad || "Fija",
         unidad: item.unidad,
         esConsumible: item.esConsumible,
       });
@@ -61,13 +63,42 @@ const mapearDatosBackend = (items, lotes) => {
   return inventario;
 };
 
+// Función para mapear los equipos desde el backend a la estructura del frontend
+const mapearEquiposBackend = (equipos) => {
+  return equipos.map(equipo => {
+    let ubicacion = "Sin asignar";
+    if (equipo.laboratorioId) {
+      ubicacion = typeof equipo.laboratorioId === 'object' ? equipo.laboratorioId.nombre : "Laboratorio asignado";
+    } else if (equipo.edificioId) {
+      ubicacion = typeof equipo.edificioId === 'object' ? equipo.edificioId.nombre : "Edificio asignado";
+    }
+
+    return {
+      id: equipo.id || equipo._id,
+      itemId: equipo.id || equipo._id,
+      categoria: 'Equipos',
+      tipo: equipo.nombre, // Usamos el nombre del equipo como "tipo" en la UI compartida
+      codigo: equipo.codigo,
+      ubicacion: ubicacion,
+      estado: mapearEstado(equipo.estado),
+      cantidad: 1, // Cada equipo es una unidad física única
+      movilidad: equipo.esFijo ? "Fija" : "Movible",
+      esConsumible: false,
+      equipoOriginal: equipo // Guardamos el objeto original en memoria para la edición
+    };
+  });
+};
+
 // Mapear estados del backend al frontend
 const mapearEstado = (estadoBackend) => {
   const estadoMap = {
     'disponible': 'Disponible',
     'reservado': 'Reservado',
     'en_uso': 'En uso',
-    'descartado': 'Descartado'
+    'descartado': 'Descartado',
+    'mantenimiento': 'Mantenimiento',
+    'fuera_de_servicio': 'Fuera de servicio',
+    'fuera de servicio': 'Fuera de servicio',
   };
   return estadoMap[estadoBackend] || 'Disponible';
 };
@@ -93,6 +124,29 @@ const statusConfig = {
 };
 
 const statusOptions = Object.keys(statusConfig);
+
+const DEFAULT_FORM_DATA = {
+  nombre: "",
+  cantidad: "1",
+  estado: "Disponible",
+  ubicacion: "",
+  unidad: "unidad",
+  movilidad: "Fija",
+};
+
+const DEFAULT_EQUIPOS_FORM_DATA = {
+  nombre: "",
+  codigo: "",
+  tipo: "",
+  esFijo: "",
+  estado: "disponible",
+  edificioId: "",
+  laboratorioId: "",
+  cantidad: "1",
+  ubicacion: "",
+  unidad: "unidad",
+  movilidad: "Fija",
+};
 
 /* ─── Iconos generales ─── */
 function SearchIcon() {
@@ -123,8 +177,8 @@ function TrashIcon() {
 /* ─── Iconos para los tabs ─── */
 function DeviceTabIcon() { // Ícono de dispositivo para "Equipos"
   return (
-    <svg class="w-6 h-6 text-gray-800 dark:text-black" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-      <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 16H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v1M9 12H4m8 8V9h8v11h-8Zm0 0H9m8-4a1 1 0 1 0-2 0 1 1 0 0 0 2 0Z"/>
+    <svg className="w-6 h-6 text-gray-800 dark:text-black" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 16H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v1M9 12H4m8 8V9h8v11h-8Zm0 0H9m8-4a1 1 0 1 0-2 0 1 1 0 0 0 2 0Z"/>
     </svg>
 
   );
@@ -132,8 +186,8 @@ function DeviceTabIcon() { // Ícono de dispositivo para "Equipos"
 
 function BoxTabIcon() { // Ícono de caja para "Materiales"
   return (
-    <svg class="w-6 h-6 text-gray-800 dark:text-black" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-      <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11H4m15.5 5a.5.5 0 0 0 .5-.5V8a1 1 0 0 0-1-1h-3.75a1 1 0 0 1-.829-.44l-1.436-2.12a1 1 0 0 0-.828-.44H8a1 1 0 0 0-1 1M4 9v10a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-7a1 1 0 0 0-1-1h-3.75a1 1 0 0 1-.829-.44L9.985 8.44A1 1 0 0 0 9.157 8H5a1 1 0 0 0-1 1Z"/>
+    <svg className="w-6 h-6 text-gray-800 dark:text-black" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 11H4m15.5 5a.5.5 0 0 0 .5-.5V8a1 1 0 0 0-1-1h-3.75a1 1 0 0 1-.829-.44l-1.436-2.12a1 1 0 0 0-.828-.44H8a1 1 0 0 0-1 1M4 9v10a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-7a1 1 0 0 0-1-1h-3.75a1 1 0 0 1-.829-.44L9.985 8.44A1 1 0 0 0 9.157 8H5a1 1 0 0 0-1 1Z"/>
     </svg>
 
   );
@@ -141,8 +195,8 @@ function BoxTabIcon() { // Ícono de caja para "Materiales"
 
 function FlaskTabIcon() { // Ícono de matraz para "Reactivos"
   return (
-    <svg class="w-6 h-6 text-gray-800 dark:text-black" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-      <path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M8.737 8.737a21.49 21.49 0 0 1 3.308-2.724m0 0c3.063-2.026 5.99-2.641 7.331-1.3 1.827 1.828.026 6.591-4.023 10.64-4.049 4.049-8.812 5.85-10.64 4.023-1.33-1.33-.736-4.218 1.249-7.253m6.083-6.11c-3.063-2.026-5.99-2.641-7.331-1.3-1.827 1.828-.026 6.591 4.023 10.64m3.308-9.34a21.497 21.497 0 0 1 3.308 2.724m2.775 3.386c1.985 3.035 2.579 5.923 1.248 7.253-1.336 1.337-4.245.732-7.295-1.275M14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"/>
+    <svg className="w-6 h-6 text-gray-800 dark:text-black" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+      <path stroke="currentColor" strokeLinecap="round" strokeWidth="2" d="M8.737 8.737a21.49 21.49 0 0 1 3.308-2.724m0 0c3.063-2.026 5.99-2.641 7.331-1.3 1.827 1.828.026 6.591-4.023 10.64-4.049 4.049-8.812 5.85-10.64 4.023-1.33-1.33-.736-4.218 1.249-7.253m6.083-6.11c-3.063-2.026-5.99-2.641-7.331-1.3-1.827 1.828-.026 6.591 4.023 10.64m3.308-9.34a21.497 21.497 0 0 1 3.308 2.724m2.775 3.386c1.985 3.035 2.579 5.923 1.248 7.253-1.336 1.337-4.245.732-7.295-1.275M14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"/>
     </svg>
 
   );
@@ -150,8 +204,8 @@ function FlaskTabIcon() { // Ícono de matraz para "Reactivos"
 
 function PillTabIcon() { // Ícono genérico de pastilla para "Sustancias básicas"
   return (
-    <svg class="w-6 h-6 text-gray-800 dark:text-black" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-      <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.05 3.00002v5C7.33127 8.93351 5.05005 11.2392 5.05005 14.2c0 3.7555 3.13401 6.8 6.99995 6.8 3.866 0 7-3.0445 7-6.8 0-2.9608-2.2812-5.26649-5-6.19998v-5m-4 0h4m-4 0H8.05005m5.99995 0h2M5.09798 15H19.0021"/>
+    <svg className="w-6 h-6 text-gray-800 dark:text-black" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.05 3.00002v5C7.33127 8.93351 5.05005 11.2392 5.05005 14.2c0 3.7555 3.13401 6.8 6.99995 6.8 3.866 0 7-3.0445 7-6.8 0-2.9608-2.2812-5.26649-5-6.19998v-5m-4 0h4m-4 0H8.05005m5.99995 0h2M5.09798 15H19.0021"/>
     </svg>
 
   );
@@ -324,11 +378,12 @@ function InventoryCard({ item, onEdit, onDelete }) {
 /* ─── Componente principal ─── */
 function Equipamiento() {
   //const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("Equipos");
+  const [activeTab, setActiveTab] = useState(tabs[0].label);
   const [query, setQuery] = useState("");
   const [inventory, setInventory] = useState([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [formData, setFormData] = useState({ nombre: "", cantidad: "1", estado: "Disponible", ubicacion: "", unidad: "unidad" });
+  const [editingItem, setEditingItem] = useState(null);
+  const [formData, setFormData] = useState({ nombre: "", cantidad: "1", estado: "Disponible", ubicacion: "", unidad: "unidad", movilidad: "Fija" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -338,10 +393,14 @@ function Equipamiento() {
       try {
         setLoading(true);
         setError(null);
-        const items = await equipamientoService.getItems();
-        const lotes = await equipamientoService.getLotes();
+        const [items, lotes, equipos] = await Promise.all([
+          equipamientoService.getItems(),
+          equipamientoService.getLotes(),
+          equipamientoService.getEquipos()
+        ]);
         const inventarioMapeado = mapearDatosBackend(items, lotes);
-        setInventory(inventarioMapeado);
+        const equiposMapeados = mapearEquiposBackend(equipos);
+        setInventory([...inventarioMapeado, ...equiposMapeados]);
       } catch (err) {
         console.error("Error al cargar datos:", err);
         setError("No se pudieron cargar los datos del inventario");
@@ -355,22 +414,164 @@ function Equipamiento() {
   // Funcion helper para recargar datos
   const recargarInventario = async () => {
     try {
-      const items = await equipamientoService.getItems();
-      const lotes = await equipamientoService.getLotes();
+      const [items, lotes, equipos] = await Promise.all([
+        equipamientoService.getItems(),
+        equipamientoService.getLotes(),
+        equipamientoService.getEquipos()
+      ]);
       const inventarioMapeado = mapearDatosBackend(items, lotes);
-      setInventory(inventarioMapeado);
+      const equiposMapeados = mapearEquiposBackend(equipos);
+      setInventory([...inventarioMapeado, ...equiposMapeados]);
     } catch (err) {
       console.error("Error al recargar datos:", err);
       setError("No se pudieron recargar los datos");
     }
   };
 
-  const resetForm = () => setFormData({ nombre: "", cantidad: "1", estado: "Disponible", ubicacion: "", unidad: "unidad" });
-  const openForm = () => { resetForm(); setIsFormOpen(true); };
-  const closeForm = () => setIsFormOpen(false);
+  const handleDeleteItem = async (item) => {
+    const confirmDelete = window.confirm(`¿Seguro que quieres borrar ${item.tipo}?`);
+    if (!confirmDelete) return;
+
+    try {
+      if (item.categoria === "Equipos") {
+        await equipamientoService.deleteEquipo(item.id);
+      } else {
+        await equipamientoService.deleteLote(item.loteId);
+      }
+      await recargarInventario();
+    } catch (err) {
+      console.error("Error al eliminar el registro:", err);
+      alert("No se pudo eliminar el registro: " + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const resetForm = () => setFormData({ nombre: "", cantidad: "1", estado: "Disponible", ubicacion: "", unidad: "unidad", movilidad: "Fija" });
+  const openForm = () => {
+  setEditingItem(null);
+
+  if (activeTab === "Equipos") {
+    setFormData({
+      nombre: "",
+      codigo: "",
+      tipo: "",
+      esFijo: "",
+      estado: "disponible",
+      edificioId: "",
+      laboratorioId: "",
+      cantidad: "1",
+      ubicacion: "",
+      unidad: "unidad",
+      movilidad: "Fija",
+    });
+  } else {
+    resetForm();
+  }
+
+  setIsFormOpen(true);
+};
+
+  const openEditForm = (item) => {
+    setEditingItem(item);
+    const visibleTabLabels = tabs.map((t) => t.label);
+    if (visibleTabLabels.includes(item.categoria)) setActiveTab(item.categoria);
+ if (item.categoria === "Equipos") {
+  const original = item.equipoOriginal || {};
+  setFormData({
+    nombre: item.tipo,
+    codigo: item.codigo,
+    tipo: original.tipo || "",
+    esFijo: item.movilidad === "Fija",
+    estado: estadoToBackend(item.estado),
+    edificioId: original.edificioId?._id || original.edificioId?.id || original.edificioId || "",
+    laboratorioId: original.laboratorioId?._id || original.laboratorioId?.id || original.laboratorioId || "",
+    cantidad: String(item.cantidad),
+    ubicacion: item.ubicacion,
+    unidad: item.unidad || "unidad",
+    movilidad: item.movilidad || "Fija",
+  });
+} else {
+  setFormData({
+    nombre: item.tipo,
+    cantidad: String(item.cantidad),
+    estado: item.estado,
+    ubicacion: item.ubicacion,
+    unidad: item.unidad || "unidad",
+    movilidad: item.movilidad || "Fija",
+  });
+}
+  setIsFormOpen(true);
+  };
+
+  const closeForm = () => {
+    setIsFormOpen(false);
+    setEditingItem(null);
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+    ...prev,
+    [name]:
+      name === "esFijo"
+        ? value === "true"
+        : value,
+    }));
+  };
+
+  const estadoToBackend = (estado) => {
+    const estadoMap = {
+      Disponible: "disponible",
+      Reservado: "reservado",
+      "En uso": "en_uso",
+      Descartado: "descartado",
+    };
+
+    return estadoMap[estado] || estado.toLowerCase().replace(/\s+/g, "_");
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    // --- 1. MANEJO ESPECÍFICO PARA EQUIPOS ---
+    if (activeTab === "Equipos") {
+      const isFijo = formData.esFijo === true || String(formData.esFijo) === "true";
+      
+      // Interceptamos los IDs: si es móvil, forzamos null en edificioId y laboratorioId
+      const payloadEquipo = {
+        nombre: formData.nombre.trim(),
+        codigo: formData.codigo.trim(),
+        tipo: formData.tipo.trim(),
+        esFijo: isFijo,
+        estado: formData.estado,
+        edificioId: isFijo && formData.edificioId ? formData.edificioId : null,
+        laboratorioId: isFijo && formData.laboratorioId ? formData.laboratorioId : null,
+      };
+
+      if (!payloadEquipo.nombre || !payloadEquipo.codigo || !payloadEquipo.tipo) {
+        alert("Por favor completa Nombre, Código y Tipo para el equipo.");
+        return;
+      }
+
+      try {
+        if (editingItem) {
+          // Extraemos el ID del registro seleccionado para editar
+          const equipoId = editingItem.itemId || editingItem.id;
+          await equipamientoService.updateEquipo(equipoId, payloadEquipo);
+        } else {
+          await equipamientoService.createEquipo(payloadEquipo);
+        }
+        
+        await recargarInventario();
+        closeForm();
+        resetForm();
+      } catch (err) {
+        console.error("Error al guardar equipo:", err);
+        alert("Error al guardar el equipo: " + (err.response?.data?.error || err.message));
+      }
+      return; // Fin de la ejecución para Equipos (Evita que pase a la lógica de Lotes/Items)
+    }
+
+    // --- 2. MANEJO PARA ITEMS Y LOTES (Materiales, Reactivos, Sustancias) ---
     const nombre = formData.nombre.trim();
     const cantidad = Number.parseInt(formData.cantidad, 10);
     const ubicacion = formData.ubicacion.trim();
@@ -381,50 +582,73 @@ function Equipamiento() {
     }
 
     try {
-      // Determinar tipo basado en la categoría activa
-      const tipoItem = Object.keys(tipoToCategoria).find(
-        key => tipoToCategoria[key] === activeTab
-      ) || 'material';
+      if (editingItem) {
+        const tipoItem = Object.keys(tipoToCategoria).find(
+          (key) => tipoToCategoria[key] === editingItem.categoria
+        ) || "material";
 
-      // Generar código
-      const codePrefix = activeTab === "Materiales" ? "MT" : activeTab === "Reactivos" ? "RC" : activeTab === "Sustancias basicas" ? "SB" : "EQ";
-      const nextNumber = inventory
-        .filter((item) => item.categoria === activeTab)
-        .reduce((max, item) => {
-          const [, num = "0"] = item.codigo.split("-");
-          const n = Number.parseInt(num, 10);
-          return Number.isNaN(n) ? max : Math.max(max, n);
-        }, 0) + 1;
-      const codigo = `${codePrefix}-${String(nextNumber).padStart(3, "0")}`;
-
-      // Crear el Item
-      const nuevoItem = await equipamientoService.createItem({
-        tipo: tipoItem,
-        nombre: nombre,
-        codigo: codigo,
-        unidad: formData.unidad,
-        esConsumible: tipoItem !== 'equipo', // Equipos no deben registrarse como consumibles
-        requiereReceta: tipoItem === 'reactivo' ? false : undefined
-      });
-
-      try {
-        // Crear el Lote asociado
-        await equipamientoService.createLote({
-          itemId: nuevoItem._id,
-          cantidadDisponible: cantidad,
-          ubicacion: ubicacion,
-          estado: formData.estado.toLowerCase().replace(' ', '_')
+        await equipamientoService.updateItem(editingItem.itemId, {
+          tipo: tipoItem,
+          nombre,
+          codigo: editingItem.codigo,
+          unidad: formData.unidad,
+          esConsumible: tipoItem !== "equipo",
+          requiereReceta: tipoItem === "reactivo" ? false : undefined,
         });
-      } catch (loteError) {
-        if (nuevoItem?._id && typeof equipamientoService.deleteItem === "function") {
-          try {
-            await equipamientoService.deleteItem(nuevoItem._id);
-          } catch (rollbackError) {
-            console.error("No se pudo revertir el item creado tras fallar el lote:", rollbackError);
-          }
-        }
 
-        throw loteError;
+        await equipamientoService.updateLote(editingItem.loteId, {
+          cantidadDisponible: cantidad,
+          ubicacion,
+          estado: estadoToBackend(formData.estado),
+          movilidad: formData.movilidad,
+        });
+      } else {
+        // Determinar tipo basado en la categoría activa
+        const tipoItem = Object.keys(tipoToCategoria).find(
+          (key) => tipoToCategoria[key] === activeTab
+        ) || "material";
+
+        // Generar código
+        const codePrefix = activeTab === "Materiales" ? "MT" : activeTab === "Reactivos" ? "RC" : activeTab === "Sustancias basicas" ? "SB" : "EQ";
+        const nextNumber = inventory
+          .filter((item) => item.categoria === activeTab)
+          .reduce((max, item) => {
+            const [, num = "0"] = item.codigo.split("-");
+            const n = Number.parseInt(num, 10);
+            return Number.isNaN(n) ? max : Math.max(max, n);
+          }, 0) + 1;
+        const codigo = `${codePrefix}-${String(nextNumber).padStart(3, "0")}`;
+
+        // Crear el Item
+        const nuevoItem = await equipamientoService.createItem({
+          tipo: tipoItem,
+          nombre,
+          codigo,
+          unidad: formData.unidad,
+          esConsumible: tipoItem !== "equipo",
+          requiereReceta: tipoItem === "reactivo" ? false : undefined,
+        });
+
+        try {
+          // Crear el Lote asociado
+          await equipamientoService.createLote({
+            itemId: nuevoItem._id,
+            cantidadDisponible: cantidad,
+            ubicacion,
+            estado: estadoToBackend(formData.estado),
+            movilidad: formData.movilidad,
+          });
+        } catch (loteError) {
+          if (nuevoItem?._id && typeof equipamientoService.deleteItem === "function") {
+            try {
+              await equipamientoService.deleteItem(nuevoItem._id);
+            } catch (rollbackError) {
+              console.error("No se pudo revertir el item creado tras fallar el lote:", rollbackError);
+            }
+          }
+
+          throw loteError;
+        }
       }
 
       // Recargar datos
@@ -432,8 +656,8 @@ function Equipamiento() {
       closeForm();
       resetForm();
     } catch (err) {
-      console.error("Error al crear item/lote:", err);
-      alert("Error al crear el ítem: " + (err.response?.data?.error || err.message));
+      console.error("Error al guardar item/lote:", err);
+      alert("Error al guardar el ítem: " + (err.response?.data?.error || err.message));
     }
   };
 
@@ -570,6 +794,8 @@ function Equipamiento() {
                     <InventoryCard
                       key={item.id}
                       item={item}
+                      onEdit={() => openEditForm(item)}
+                      onDelete={() => handleDeleteItem(item)}
                     />
                   ))
                 ) : (
@@ -623,6 +849,7 @@ function Equipamiento() {
                             <div className="flex items-center gap-2">
                               <button
                                 type="button"
+                                onClick={() => openEditForm(item)}
                                 className="rounded-lg p-2 text-cyan-500 bg-cyan-50 hover:bg-cyan-100 transition"
                                 aria-label={`Editar ${item.tipo}`}
                               >
@@ -630,6 +857,7 @@ function Equipamiento() {
                               </button>
                               <button
                                 type="button"
+                                onClick={() => handleDeleteItem(item)}
                                 className="rounded-lg p-2 text-rose-500 bg-rose-50 hover:bg-rose-100 transition"
                                 aria-label={`Eliminar ${item.tipo}`}
                               >
@@ -687,10 +915,10 @@ function Equipamiento() {
                     Registro
                   </div>
                   <h2 className="text-lg font-bold text-slate-900 sm:text-xl">
-                    Nuevo {activeTab.slice(0, -1).toLowerCase()}
+                    {editingItem ? `Editar ${editingItem.tipo}` : `Nuevo ${activeTab.slice(0, -1).toLowerCase()}`}
                   </h2>
                   <p className="mt-1 text-sm text-slate-500">
-                    Completa el formulario para registrar el ítem.
+                    {editingItem ? "Actualiza los campos y guarda los cambios." : "Completa el formulario para registrar el ítem."}
                   </p>
                 </div>
                 <button
@@ -703,90 +931,24 @@ function Equipamiento() {
               </div>
             </div>
 
-            <form className="flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6" onSubmit={handleSubmit}>
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-semibold text-slate-700">Nombre</span>
-                <input
-                  type="text"
-                  value={formData.nombre}
-                  onChange={(e) => setFormData((c) => ({ ...c, nombre: e.target.value }))}
-                  placeholder="Ej. Micropipeta digital"
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
-                  required
-                />
-              </label>
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <label className="block">
-                  <span className="mb-1.5 block text-sm font-semibold text-slate-700">Cantidad</span>
-                  <input
-                    type="number"
-                    min="1"
-                    value={formData.cantidad}
-                    onChange={(e) => setFormData((c) => ({ ...c, cantidad: e.target.value }))}
-                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
-                    required
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="mb-1.5 block text-sm font-semibold text-slate-700">Unidad</span>
-                  <input
-                    type="text"
-                    value={formData.unidad}
-                    onChange={(e) => setFormData((c) => ({ ...c, unidad: e.target.value }))}
-                    placeholder="Ej. unidad, ml, g"
-                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
-                    required
-                  />
-                </label>
-              </div>
-
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-semibold text-slate-700">Ubicación</span>
-                <input
-                  type="text"
-                  value={formData.ubicacion}
-                  onChange={(e) => setFormData((c) => ({ ...c, ubicacion: e.target.value }))}
-                  placeholder="Ej. Lab 1 / Edif. A"
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
-                  required
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-semibold text-slate-700">Estado</span>
-                <select
-                  value={formData.estado}
-                  onChange={(e) => setFormData((c) => ({ ...c, estado: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
-                >
-                  {statusOptions.map((option) => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
-                </select>
-              </label>
-
-              <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full sm:w-auto"
-                  onClick={closeForm}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="sm"
-                  className="w-full sm:w-auto"
-                >
-                  Guardar
-                </Button>
-              </div>
-            </form>
+            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+              {activeTab === "Equipos" ? (
+              <FormularioEquipo
+                formData={formData}
+                handleChange={handleChange}
+                handleSubmit={handleSubmit}
+                cerrarModal={closeForm}
+              />
+            ) : (
+              <FormularioEquipamiento
+                formData={formData}
+                handleChange={handleChange}
+                handleSubmit={handleSubmit}
+                cerrarModal={closeForm}
+                statusOptions={statusOptions}
+              />
+            )}
+          </div>
           </div>
         </div>
       )}
