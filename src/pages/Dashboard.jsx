@@ -1,152 +1,263 @@
-//import { Routes, Route, useNavigate, useParams } from "react-router-dom";
+import { useMemo } from "react";
 import { AppLayout } from "../components/AppLayout";
-import { useNavigate } from "react-router-dom";
-import imagenEdificios from "../assets/imagenEdificios.png";
-import { edificios } from "../data/edificios";
+import { Settings, Package, CheckCircle, BarChart3, AlertTriangle } from "lucide-react";
+import { LabCalendar } from "../components/LabCalendar";
+import { useCalendarReservas } from "../services/useCalendarReservas";
+import { usePedidos, useEquipamiento, useMateriales } from "../services/useDashboardData";
+import { useAuth } from "../context/AuthContext";
 
-//import { LabIcon, InventoryIcon, EquipmentIcon, OrdersIcon } from "../components/icons";
+export function Dashboard() {
+  const { user } = useAuth();
 
-/*
-const modulesData = [
-  { id: "laboratorios", label: "Laboratorio", description: "Laboratorios Universitarios", stats: "5 Laboratorios Disponibles", icon: <LabIcon /> },
-  { id: "inventario", label: "Inventario", description: "Control de stock y materiales del laboratorio", stats: "50 productos en stock", icon: <InventoryIcon /> },
-  { id: "equipamiento", label: "Equipamiento", description: "Gestión y mantenimiento de equipo", stats: "24 equipos registrados", icon: <EquipmentIcon /> },
-  { id: "pedidos", label: "Pedidos", description: "Solicitudes de reserva de laboratorios", stats: "2 pedidos pendientes", icon: <OrdersIcon /> },
-];
-const moduleColors = {
-  laboratorio: { title: "Laboratorio", color: "from-green-600 to-green-800" },
-  inventario: { title: "Inventario", color: "from-green-700 to-green-900" },
-  equipamiento: { title: "Equipamiento", color: "from-emerald-600 to-green-800" },
-  pedidos: { title: "Pedidos", color: "from-teal-600 to-green-800" },
-};*/
+  // Calculamos fechas iniciales por defecto (la semana actual de domingo a sábado)
+  const { initialStart, initialEnd } = useMemo(() => {
+    const today = new Date();
+    const start = new Date(today);
+    start.setDate(today.getDate() - today.getDay()); 
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return {
+      initialStart: start.toISOString().split("T")[0],
+      initialEnd: end.toISOString().split("T")[0]
+    };
+  }, []);
 
-/*
-function DashboardGrid() {
-  const navigate = useNavigate();
+  const { eventosLabCalendar, loading, handleDateRangeChange, dateRange } = useCalendarReservas(initialStart, initialEnd);
+
+  const { pedidos, loading: loadingPedidos } = usePedidos();
+  const { equipamiento, loading: loadingEquip } = useEquipamiento();
+  const { materiales, loading: loadingMat } = useMateriales();
+
+  // --- PROCESAMIENTO REACTIVO DE DATOS ---
+
+  const statsCards = useMemo(() => {
+    const aprobados = pedidos.filter(p => p.estado === "Aprobado" || p.estado === "Aceptado").length;
+    const totalPedidos = pedidos.length;
+
+    // Si no viene 'porcentajeUso', aplicamos un default de 0
+    const usoPromedio = equipamiento.length > 0
+      ? Math.round(equipamiento.reduce((acc, eq) => acc + (eq.porcentajeUso ?? eq.uso ?? 0), 0) / equipamiento.length)
+      : 0;
+
+    const alertasStockCount = materiales.filter(m => (m.stock ?? m.cantidad ?? 0) <= (m.stockMinimo ?? 20)).length;
+
+    return [
+      {
+        title: "TOTAL DE PEDIDOS",
+        subtitle: "Global",
+        value: totalPedidos.toString(),
+        change: "Total histórico",
+        icon: Package,
+        borderColor: "border-cyan-500",
+      },
+      {
+        title: "PEDIDOS APROBADOS",
+        subtitle: "Global",
+        value: aprobados.toString(),
+        change: totalPedidos ? `${Math.round((aprobados / totalPedidos) * 100)}% del total` : "0% del total",
+        icon: CheckCircle,
+        borderColor: "border-blue-500",
+      },
+      {
+        title: "USO DE EQUIPOS",
+        subtitle: "Promedio general",
+        value: `${usoPromedio}%`,
+        change: "Promedio de utilización",
+        icon: BarChart3,
+        borderColor: "border-orange-500",
+      },
+      {
+        title: "ALERTA DE STOCK",
+        subtitle: "Requieren atención",
+        value: alertasStockCount.toString(),
+        change: "Materiales críticos y bajos",
+        icon: AlertTriangle,
+        borderColor: "border-red-500",
+      },
+    ];
+  }, [pedidos, equipamiento, materiales]);
+
+  const equipmentUsage = useMemo(() => {
+    return equipamiento
+      .map((eq) => {
+        const value = eq.porcentajeUso ?? eq.uso ?? 0;
+        // Criterio: si no hay horasUso, estimamos basado en el % sobre una semana estandar de 40h
+        const hours = eq.horasUso ?? Math.round((value / 100) * 40);
+        return {
+          name: eq.nombre || eq.tipo || "Equipo Desconocido",
+          value,
+          hours: `${hours} h`,
+        };
+      })
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5); // Tomamos el top 5
+  }, [equipamiento]);
+
+  const stockAlerts = useMemo(() => {
+    return materiales
+      .filter((m) => (m.stock ?? m.cantidad ?? 0) <= (m.stockMinimo ?? 20))
+      .map((m) => {
+        const qty = m.stock ?? m.cantidad ?? 0;
+        return {
+          name: m.nombre || m.tipo || "Material Desconocido",
+          stock: `${qty} ${m.unidad || 'unts'}`,
+          status: qty <= (m.stockCritico ?? 5) ? "Crítico" : "Bajo",
+        };
+      })
+      .sort((a) => (a.status === "Crítico" ? -1 : 1))
+      .slice(0, 5); // Tomamos el top 5
+  }, [materiales]);
+
+  // Verificamos si el usuario tiene un rol válido para ver el Dashboard
+  const canViewDashboard = user?.rol?.toUpperCase() === "PERSONAL" || user?.rol?.toUpperCase() === "ADMIN";
 
   return (
     <AppLayout>
-      <PageHeader 
-        preTitle="Sistema de Gestión"
-        title="Panel de Control"
-        description="Seleccioná un módulo para acceder a su gestión completa."
-      />
-
-      //{/* Grid refactorizado a Tailwind }*/
-      /*
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-6">
-        {modulesData.map((mod, i) => (
-          <ModuleCard 
-            key={mod.id}
-            title={mod.label}
-            description={mod.description}
-            stats={mod.stats}
-            icon={mod.icon}
-            delayIndex={i + 1}
-            onClick={() => navigate(`/${mod.id}`)}
-          />
-        ))}
-      </div>*/
-      //{/* Footer refactorizado a Tailwind */}
-      /*
-      <div className="mt-[72px] pt-8 border-t border-green-100 flex justify-between items-center">
-        <span className="text-green-600 text-[13px]">© 2026 Sistema de Gestión Clínica</span>
-      </div>
-    </AppLayout>
-  )
-}
-
-
-function ModulePage() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const pageInfo = moduleColors[id];
-
-  if (!pageInfo) return <div>Módulo no encontrado</div>;
-
-  return (
-    <AppLayout>
-      <div className={`w-full max-w-lg mx-auto mt-20 rounded-3xl bg-gradient-to-br ${pageInfo.color} p-12 text-white text-center shadow-2xl`}>
-        <p className="text-green-200 text-sm font-medium uppercase tracking-widest mb-4">Módulo</p>
-        <h1 className="text-5xl font-bold mb-4 font-['Playfair_Display']">
-          {pageInfo.title}
-        </h1>
-        <p className="text-green-100 mb-10 text-base leading-relaxed">
-          Este módulo está en construcción.<br />Próximamente disponible.
-        </p>
-        <button
-          onClick={() => navigate("/")}
-          className="inline-flex items-center gap-2 bg-white/20 hover:bg-white/30 transition-all duration-200 text-white font-semibold px-6 py-3 rounded-xl backdrop-blur-sm"
-        >
-          Volver al Dashboard
-        </button>
-      </div>
-    </AppLayout>
-  );
-}
-
-export default function Dashboard() {
-  return (
-    <Routes>
-      <Route path="/" element={<DashboardGrid />} />
-      <Route path="/:id" element={<ModulePage />} />
-    </Routes>
-  );
-}*/
-
-function Dashboard() {
-  const navigate = useNavigate();
-
-  return (
-    <>
-      <div className="w-screen h-[calc(100vh-70px)] overflow-hidden relative">
-
-        {/* Fondo */}
-        <img
-          src={imagenEdificios}
-          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-        />
-
-        {/* Edificios */}
-        {edificios.map((ed, i) => {
-          const deshabilitado = ed.disponibles === 0;
-
-          return (
-            <div
-              key={i}
-              onClick={() => {
-                if (!deshabilitado) {
-                  navigate(ed.ruta);
-                }
-              }}
-              className={`
-                absolute ${ed.position} w-[28%] h-[18%]
-                rounded-xl border-2 p-3 flex flex-col justify-between
-                transition duration-200 backdrop-blur-sm
-
-                ${
-                  deshabilitado
-                    ? "bg-gray-400/75 border-gray-400 cursor-not-allowed"
-                    : "bg-green-500/75 border-green-500 hover:bg-green-500/40 cursor-pointer"
-                }
-              `}
-            >
-              {/* Nombre */}
-              <p className="text-sm font-semibold text-white [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">
-                {ed.nombre}
-              </p>
-
-              {/* Info */}
-              <div className="text-xs text-white/90 [text-shadow:0_1px_4px_rgba(0,0,0,0.7)]">
-                <p>Total: {ed.total}</p>
-                <p>Disponibles: {ed.disponibles}</p>
-              </div>
+      {!canViewDashboard ? (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] bg-white border border-gray-200 rounded-3xl p-8 shadow-sm text-center">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">¡Bienvenido, {user?.nombre || user?.email || "Usuario"}!</h1>
+          <p className="text-lg text-gray-600">Desde el menú podés acceder a todas tus opciones operativas.</p>
+        </div>
+      ) : (
+        <div className="space-y-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 relative">
+          {(loadingPedidos || loadingEquip || loadingMat) && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/50 backdrop-blur-sm rounded-2xl">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent"></div>
             </div>
-          );
-        })}
+          )}
+              {statsCards.map((card) => {
+            const IconComponent = card.icon;
+            return (
+              <div
+                key={card.title}
+                className={`bg-white border border-gray-200 ${card.borderColor} rounded-2xl p-6 shadow-lg`}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <p className="text-xs text-gray-600 font-semibold">{card.title}</p>
+                    <p className="text-xs text-gray-500">{card.subtitle}</p>
+                  </div>
+                  <IconComponent className="w-6 h-6 text-gray-400" />
+                </div>
+                <div className="mb-3">
+                  <p className="text-4xl font-bold text-gray-900">{card.value}</p>
+                </div>
+                <p className="text-xs text-gray-600">
+                  {card.change.startsWith("+") ? (
+                    <span className="text-green-600">📈 {card.change}</span>
+                  ) : (
+                    card.change
+                  )}
+                </p>
+              </div>
+            );
+          })}
+        </div>
 
-      </div>
-    </>
+        {/* Calendar Section */}
+        <div className="relative min-h-[200px]">
+          {loading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-sm rounded-3xl">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent"></div>
+            </div>
+          )}
+          <LabCalendar 
+            scheduleData={eventosLabCalendar} 
+            dateRange={dateRange}
+            onDateChange={handleDateRangeChange}
+          />
+        </div>
+
+        {/* Bottom sections */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+          {/* Equipment usage */}
+          <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-lg relative min-h-[200px]">
+            {loadingEquip && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-sm rounded-3xl">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent"></div>
+              </div>
+            )}
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-semibold text-gray-900">Uso de equipos (Top 5)</h2>
+              <a href="/equipamiento" className="text-blue-600 text-sm hover:text-blue-800">
+                Ver todos los equipos →
+              </a>
+            </div>
+
+            <div className="space-y-6">
+              {equipmentUsage.length > 0 ? (
+                equipmentUsage.map((item, idx) => (
+                <div key={`${item.name}-${idx}`}>
+                  <div className="flex justify-between mb-2 text-sm">
+                    <span className="text-gray-900">{item.name}</span>
+                    <div className="flex gap-4 text-gray-600 text-xs">
+                      <span>{item.value}%</span>
+                      <span>{item.hours}</span>
+                    </div>
+                  </div>
+
+                  <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-full"
+                      style={{ width: `${item.value}%` }}
+                    />
+                  </div>
+                </div>
+                ))
+              ) : (
+                !loadingEquip && <p className="text-sm text-gray-500 text-center py-4">No hay datos de equipos registrados.</p>
+              )}
+            </div>
+          </div>
+
+          {/* Stock alerts */}
+          <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-lg relative min-h-[200px]">
+            {loadingMat && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-sm rounded-3xl">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent"></div>
+              </div>
+            )}
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-semibold text-gray-900">Alerta de faltante de stock</h2>
+              <a href="/equipamiento" className="text-blue-600 text-sm hover:text-blue-800">
+                Ver todos los faltantes →
+              </a>
+            </div>
+
+            <div className="space-y-3">
+              {stockAlerts.length > 0 ? (
+                stockAlerts.map((item, idx) => (
+                  <div
+                    key={`${item.name}-${idx}`}
+                    className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 flex items-center justify-between"
+                  >
+                    <div>
+                      <p className="font-medium text-sm text-gray-900">{item.name}</p>
+                      <span className="text-xs text-gray-600">Stock actual: {item.stock}</span>
+                    </div>
+
+                    <span
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold ${
+                        item.status === "Crítico"
+                          ? "bg-red-100 text-red-700"
+                          : "bg-orange-100 text-orange-700"
+                      }`}
+                    >
+                      {item.status}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                !loadingMat && <p className="text-sm text-gray-500 text-center py-4">Inventario saludable, sin alertas.</p>
+              )}
+            </div>
+          </div>
+        </div>
+        </div>
+      )}
+    </AppLayout>
   );
 }
 

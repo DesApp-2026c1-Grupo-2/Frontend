@@ -26,6 +26,7 @@ function AppRouter() {
               <Route path="/*" element={<Dashboard />} /> {/*PRUEBA: dashboard  */}
               <Route path="/pedidos" element={<Pedidos />} />
               <Route path="/pedidos/:id" element={<PedidoDetalle />} />
+
               {/* RUTAS PROTEGIDAS POR ROL */}
               <Route element={<RoleProtectedRoute allowedRoles={["ADMIN", "PERSONAL"]} />}>
                 <Route path="/" element={<Edificios />} />
