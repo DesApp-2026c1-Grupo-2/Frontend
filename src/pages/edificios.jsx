@@ -78,9 +78,17 @@ export default function Edificios() {
   };
 
   useEffect(() => {
-    cargarEdificios();
-    cargarEquiposFijos();
-  }, []);
+    const cargar = async () => {
+      try {
+        const data = await obtenerEdificios();
+        setEdificios(data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    cargar();
+  }, [location.pathname]);
 
   /*
     =========================
@@ -288,7 +296,7 @@ export default function Edificios() {
           "
         >
 
-          {edificios.map((e) => {
+          {edificios?.map((e) => {
 
             const eid = e._id || e.id;
 
