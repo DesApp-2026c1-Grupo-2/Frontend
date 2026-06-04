@@ -3,6 +3,11 @@ import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import Navbar from '../../components/NavBar';
 
+// Mock de AuthContext
+vi.mock('../../context/AuthContext', () => ({
+  useAuth: () => ({ user: { nombre: 'Test', email: 'test@test.com', rol: 'ADMIN' } })
+}));
+
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
@@ -27,7 +32,7 @@ describe('Navbar Component', () => {
     expect(screen.getByAltText('Universidad Nacional de Hurlingham')).toBeInTheDocument();
     
     // Botones de la versión Desktop
-    expect(screen.getAllByText('Inicio')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('Dashboard')[0]).toBeInTheDocument();
     expect(screen.getAllByText('Equipamiento')[0]).toBeInTheDocument();
     expect(screen.getAllByText('Pedidos')[0]).toBeInTheDocument();
     expect(screen.getAllByText('Login')[0]).toBeInTheDocument();
@@ -46,8 +51,8 @@ describe('Navbar Component', () => {
     fireEvent.click(screen.getAllByText('Pedidos')[0]);
     expect(mockNavigate).toHaveBeenCalledWith('/pedidos');
 
-    fireEvent.click(screen.getAllByText('Inicio')[0]);
-    expect(mockNavigate).toHaveBeenCalledWith('/');
+    fireEvent.click(screen.getAllByText('Dashboard')[0]);
+    expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
 
     fireEvent.click(screen.getAllByText('Login')[0]);
     expect(mockNavigate).toHaveBeenCalledWith('/logIn');
@@ -61,7 +66,7 @@ describe('Navbar Component', () => {
     );
 
     fireEvent.click(screen.getByLabelText('Ir al inicio'));
-    expect(mockNavigate).toHaveBeenCalledWith('/');
+    expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
   });
 
   test('abre y cierra el menú móvil al hacer clic repetidamente en el botón hamburguesa', () => {
@@ -75,11 +80,11 @@ describe('Navbar Component', () => {
     
     // Abrir menú
     fireEvent.click(hamburgerBtn);
-    expect(screen.getAllByText('Inicio').length).toBe(2); // Desktop y Mobile
+    expect(screen.getAllByText('Dashboard').length).toBe(2); // Desktop y Mobile
 
     // Cerrar menú manualmente
     fireEvent.click(hamburgerBtn);
-    expect(screen.getAllByText('Inicio').length).toBe(1); // Solo Desktop
+    expect(screen.getAllByText('Dashboard').length).toBe(1); // Solo Desktop
   });
 
   test('abre el menú móvil y navega correctamente cerrando el menú (todos los enlaces)', () => {
@@ -93,9 +98,9 @@ describe('Navbar Component', () => {
     const hamburgerBtn = container.querySelector('button.md\\:hidden');
     fireEvent.click(hamburgerBtn);
 
-    // Navegación de Inicio
-    fireEvent.click(screen.getAllByText('Inicio')[1]);
-    expect(mockNavigate).toHaveBeenCalledWith('/');
+    // Navegación de Dashboard
+    fireEvent.click(screen.getAllByText('Dashboard')[1]);
+    expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
 
     // Abrir de nuevo y probar Equipamiento
     fireEvent.click(hamburgerBtn);
