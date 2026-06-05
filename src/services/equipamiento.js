@@ -78,7 +78,11 @@ export const createItem = async (itemData) => {
 // Crear un nuevo Lote
 export const createLote = async (loteData) => {
   try {
-    const response = await api.post("/lotes", loteData);
+    const payload = {
+      ...loteData,
+      movilidad: loteData?.movilidad || "Fija",
+    };
+    const response = await api.post("/lotes", payload);
     return response.data;
   } catch (error) {
     console.error("Error al crear lote:", error);
@@ -100,7 +104,11 @@ export const updateItem = async (itemId, itemData) => {
 // Actualizar un Lote
 export const updateLote = async (loteId, loteData) => {
   try {
-    const response = await api.put(`/lotes/${loteId}`, loteData);
+    const payload = {
+      ...loteData,
+      movilidad: loteData?.movilidad || "Fija",
+    };
+    const response = await api.put(`/lotes/${loteId}`, payload);
     return response.data;
   } catch (error) {
     console.error(`Error al actualizar lote ${loteId}:`, error);
@@ -145,6 +153,63 @@ export const getInventarioCompleto = async () => {
     return inventario;
   } catch (error) {
     console.error("Error al obtener inventario completo:", error);
+    throw error;
+  }
+};
+
+// --- Servicios para la colección Equipos ---
+
+export const getEquipos = async (filtros = {}) => {
+  try {
+    const params = new URLSearchParams();
+    if (filtros.estado) params.append("estado", filtros.estado);
+    if (filtros.edificioId) params.append("edificioId", filtros.edificioId);
+    if (filtros.laboratorioId) params.append("laboratorioId", filtros.laboratorioId);
+    
+    const response = await api.get(`/equipo${params.toString() ? "?" + params.toString() : ""}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error al obtener equipos:", error);
+    throw error;
+  }
+};
+
+export const getEquipoById = async (equipoId) => {
+  try {
+    const response = await api.get(`/equipo/${equipoId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error al obtener equipo ${equipoId}:`, error);
+    throw error;
+  }
+};
+
+export const createEquipo = async (equipoData) => {
+  try {
+    const response = await api.post("/equipo", equipoData);
+    return response.data;
+  } catch (error) {
+    console.error("Error al crear equipo:", error);
+    throw error;
+  }
+};
+
+export const updateEquipo = async (equipoId, equipoData) => {
+  try {
+    const response = await api.put(`/equipo/${equipoId}`, equipoData);
+    return response.data;
+  } catch (error) {
+    console.error(`Error al actualizar equipo ${equipoId}:`, error);
+    throw error;
+  }
+};
+
+export const deleteEquipo = async (equipoId) => {
+  try {
+    const response = await api.delete(`/equipo/${equipoId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error al eliminar equipo ${equipoId}:`, error);
     throw error;
   }
 };
