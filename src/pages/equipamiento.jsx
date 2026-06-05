@@ -6,7 +6,13 @@ import FormularioEquipamiento from "../components/equipamiento/FormularioEquipam
 import FormularioEquipo from "../components/equipamiento/FormularioEquipo";
 
 
-
+import {
+  FiEdit2,
+  FiTrash2,
+  FiUsers,
+  FiMonitor,
+  FiLayers,
+} from "react-icons/fi";
 
 const tabs = [
   { label: "Equipos", icon: DeviceTabIcon },
@@ -684,11 +690,10 @@ function Equipamiento() {
   }, [activeTab, inventory, query]);
 
   return (
-    <div className="min-h-screen bg-white text-slate-800">
+    <div className="min-h-screen  text-slate-800">
       <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
         <PageHeader
           title="Equipamiento"
-          description="Consulta equipos, materiales, reactivos y sustancias básicas con el estilo compartido del resto de la app."
         />
 
         {/* Stats Card */}
