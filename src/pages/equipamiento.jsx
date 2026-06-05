@@ -7,11 +7,13 @@ import FormularioEquipo from "../components/equipamiento/FormularioEquipo";
 
 
 import {
-  FiEdit2,
-  FiTrash2,
-  FiUsers,
-  FiMonitor,
-  FiLayers,
+  FiEdit2,//Lapiz
+  FiTrash2, //Basura
+  FiUsers,//Usuarios
+  FiMonitor,//Monitor para equipos
+  VscFileSubmodule ,//Caja para materiales
+  GiMaterialsScience ,//Materiales reactivos
+  MdScience ,//Matraz para sustancias
 } from "react-icons/fi";
 
 const tabs = [
