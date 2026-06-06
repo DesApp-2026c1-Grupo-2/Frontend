@@ -111,7 +111,7 @@ export default function PedidosLaboratorio() {
     try {
       await api.delete(`/pedido/${id}`);
       setPedidos((prev) => prev.filter((p) => (p._id || p.id) !== id));
-    } catch (error) {
+    } catch  (error) {
       alert("No tenés permisos para eliminar este pedido");
     }
   };

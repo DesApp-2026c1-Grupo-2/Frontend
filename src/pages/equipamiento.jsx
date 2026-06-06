@@ -5,22 +5,23 @@ import * as equipamientoService from "../services/equipamiento";
 import FormularioEquipamiento from "../components/equipamiento/FormularioEquipamiento";
 import FormularioEquipo from "../components/equipamiento/FormularioEquipo";
 
-
 import {
   FiEdit2,//Lapiz
   FiTrash2, //Basura
   FiUsers,//Usuarios
   FiMonitor,//Monitor para equipos
-  VscFileSubmodule ,//Caja para materiales
-  GiMaterialsScience ,//Materiales reactivos
-  MdScience ,//Matraz para sustancias
 } from "react-icons/fi";
+import { VscFileSubmodule } from "react-icons/vsc"; // Caja para materiales
+import { GiMaterialsScience } from "react-icons/gi"; // Materiales reactivos
+import { MdScience } from "react-icons/md";        // Matraz para sustancias
+import { AiOutlinePlus } from "react-icons/ai"; // Icono de suma para nuevo registro
+import { MdOutlineManageSearch } from "react-icons/md"; // Icono para estadísticas de busqueda
 
 const tabs = [
-  { label: "Equipos", icon: DeviceTabIcon },
-  { label: "Materiales", icon: BoxTabIcon },
-  { label: "Reactivos", icon: FlaskTabIcon },
-  { label: "Sustancias basicas", icon: PillTabIcon },
+  { label: "Equipos",           icon: FiMonitor       },
+  { label: "Materiales",        icon: VscFileSubmodule },
+  { label: "Reactivos",         icon: GiMaterialsScience },
+  { label: "Sustancias basicas",icon: MdScience        },
 ];
 
 // Mapeo de tipos del backend a categorías del frontend
@@ -166,89 +167,6 @@ function SearchIcon() {
   );
 }
 
-function PencilIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.8">
-      <path d="M4 20h4l10-10a2 2 0 10-4-4L4 16v4z" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function TrashIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.8">
-      <path d="M4 7h16M10 11v6M14 11v6M6 7l1 12h10l1-12M9 7V5h6v2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-/* ─── Iconos para los tabs ─── */
-function DeviceTabIcon() { // Ícono de dispositivo para "Equipos"
-  return (
-    <svg className="w-6 h-6 text-gray-800 dark:text-black" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 16H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v1M9 12H4m8 8V9h8v11h-8Zm0 0H9m8-4a1 1 0 1 0-2 0 1 1 0 0 0 2 0Z"/>
-    </svg>
-
-  );
-}
-
-function BoxTabIcon() { // Ícono de caja para "Materiales"
-  return (
-    <svg className="w-6 h-6 text-gray-800 dark:text-black" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 11H4m15.5 5a.5.5 0 0 0 .5-.5V8a1 1 0 0 0-1-1h-3.75a1 1 0 0 1-.829-.44l-1.436-2.12a1 1 0 0 0-.828-.44H8a1 1 0 0 0-1 1M4 9v10a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-7a1 1 0 0 0-1-1h-3.75a1 1 0 0 1-.829-.44L9.985 8.44A1 1 0 0 0 9.157 8H5a1 1 0 0 0-1 1Z"/>
-    </svg>
-
-  );
-}
-
-function FlaskTabIcon() { // Ícono de matraz para "Reactivos"
-  return (
-    <svg className="w-6 h-6 text-gray-800 dark:text-black" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-      <path stroke="currentColor" strokeLinecap="round" strokeWidth="2" d="M8.737 8.737a21.49 21.49 0 0 1 3.308-2.724m0 0c3.063-2.026 5.99-2.641 7.331-1.3 1.827 1.828.026 6.591-4.023 10.64-4.049 4.049-8.812 5.85-10.64 4.023-1.33-1.33-.736-4.218 1.249-7.253m6.083-6.11c-3.063-2.026-5.99-2.641-7.331-1.3-1.827 1.828-.026 6.591 4.023 10.64m3.308-9.34a21.497 21.497 0 0 1 3.308 2.724m2.775 3.386c1.985 3.035 2.579 5.923 1.248 7.253-1.336 1.337-4.245.732-7.295-1.275M14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"/>
-    </svg>
-
-  );
-}
-
-function PillTabIcon() { // Ícono genérico de pastilla para "Sustancias básicas"
-  return (
-    <svg className="w-6 h-6 text-gray-800 dark:text-black" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.05 3.00002v5C7.33127 8.93351 5.05005 11.2392 5.05005 14.2c0 3.7555 3.13401 6.8 6.99995 6.8 3.866 0 7-3.0445 7-6.8 0-2.9608-2.2812-5.26649-5-6.19998v-5m-4 0h4m-4 0H8.05005m5.99995 0h2M5.09798 15H19.0021"/>
-    </svg>
-
-  );
-}
-
-/* ─── Iconos para stats ─── */
-function DeviceIcon() {
-  return (
-    <svg className="h-5 w-5 text-slate-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <rect x="3" y="4" width="18" height="12" rx="2" />
-      <path d="M8 20h8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function BoxIcon() {
-  return (
-    <svg className="h-5 w-5 text-slate-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M21 16V8a2 2 0 0 0-1-1.73L13 2.18a2 2 0 0 0-2 0L4 6.27A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l6 3.09a2 2 0 0 0 2 0l6-3.09A2 2 0 0 0 21 16z" />
-    </svg>
-  );
-}
-
-function FlaskIcon() {
-  return (
-    <svg className="h-5 w-5 text-slate-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M8 2v2" strokeLinecap="round" />
-      <path d="M16 2v2" strokeLinecap="round" />
-      <path d="M12 7v9" strokeLinecap="round" />
-      <path d="M5 21h14" strokeLinecap="round" />
-      <path d="M8 11a4 4 0 0 0 8 0L12 3 8 11z" />
-    </svg>
-  );
-}
-
 function AlertIcon() {
   return (
     <svg className="h-5 w-5 text-slate-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -366,7 +284,7 @@ function InventoryCard({ item, onEdit, onDelete }) {
           className="inline-flex items-center gap-2 rounded-xl bg-cyan-50 px-3 py-2 text-sm font-medium text-cyan-600 transition hover:bg-cyan-100"
           aria-label={`Editar ${item.tipo}`}
         >
-          <PencilIcon />
+          <FiEdit2 />
           Editar
         </button>
         <button
@@ -375,7 +293,7 @@ function InventoryCard({ item, onEdit, onDelete }) {
           className="inline-flex items-center gap-2 rounded-xl bg-rose-50 px-3 py-2 text-sm font-medium text-rose-600 transition hover:bg-rose-100"
           aria-label={`Eliminar ${item.tipo}`}
         >
-          <TrashIcon />
+          <FiTrash2 />
           Eliminar
         </button>
       </div>
@@ -736,7 +654,7 @@ function Equipamiento() {
                 onClick={openForm}
                 className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-full border border-emerald-200 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800 sm:mt-0 sm:w-auto cursor-pointer"
               >
-                <span className="text-base leading-none">+</span>
+                <span className="text-base leading-none"><AiOutlinePlus /></span>
                 Nuevo equipo
               </button>
             </div>
@@ -770,7 +688,7 @@ function Equipamiento() {
               {/* Búsqueda */}
               <div className="mb-5 relative w-full max-w-full sm:max-w-sm">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                  <SearchIcon />
+                  <MdOutlineManageSearch />
                 </span>
                 <input
                   type="text"
@@ -860,7 +778,7 @@ function Equipamiento() {
                                 className="rounded-lg p-2 text-cyan-500 bg-cyan-50 hover:bg-cyan-100 transition"
                                 aria-label={`Editar ${item.tipo}`}
                               >
-                                <PencilIcon />
+                                <FiEdit2  />
                               </button>
                               <button
                                 type="button"
@@ -868,7 +786,7 @@ function Equipamiento() {
                                 className="rounded-lg p-2 text-rose-500 bg-rose-50 hover:bg-rose-100 transition"
                                 aria-label={`Eliminar ${item.tipo}`}
                               >
-                                <TrashIcon />
+                                <FiTrash2  />
                               </button>
                             </div>
                           </td>
