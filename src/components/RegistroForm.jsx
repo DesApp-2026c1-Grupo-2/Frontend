@@ -86,13 +86,20 @@ function RegistroForm({ onVolverLogin }) {
 
         setErrores({});
 
-    } catch (err) {
+       } catch (err) {
+        // Capturamos el primer detalle de Joi, o el mensaje del controlador
+        const errorValidacion = err.response?.data?.detalles?.[0];
+        const errorMensaje = err.response?.data?.message;
+
         setError(
-        err.response?.data?.message ||
-        "Error al crear usuario"
+            errorValidacion || 
+            errorMensaje || 
+            "Error al crear usuario"
         );
     }
-    };
+  };
+
+    
 
   return (
     <form
