@@ -43,6 +43,7 @@ export default function PedidoDetalle() {
   const [pedido, setPedido] = useState(null);
   const [conflictos, setConflictos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [nuevoComentario, setNuevoComentario] = useState("");
 
   const tieneConflictos = conflictos.length > 0;
 
@@ -98,6 +99,35 @@ export default function PedidoDetalle() {
       alert("No se pudo rechazar el pedido");
     }
   };
+
+  const enviarComentario = async () => {
+    try {
+
+      if (!nuevoComentario.trim()) return;
+
+      const res = await api.post(
+        `/pedido/${id}/comentarios`,
+        {
+          mensaje: nuevoComentario,
+        }
+      );
+
+      setPedido(prev => ({
+        ...prev,
+        comentarios: [
+          ...(prev.comentarios || []),
+          res.data,
+        ]
+      }));
+
+      setNuevoComentario("");
+
+    } catch (err) {
+      console.error(err);
+
+      alert("No se pudo agregar el comentario");
+    }
+  };  
 
   if (loading) {
     return (
@@ -348,15 +378,31 @@ export default function PedidoDetalle() {
                 className="border border-slate-200 rounded-lg p-3"
               >
                 <div className="flex justify-between mb-2">
-                  <span className="font-medium text-slate-700">
-                    {comentario.usuario?.nombre}{" "}
-                    {comentario.usuario?.apellido}
-                  </span>
+                  <div className="flex items-center gap-2">
+
+                    <span
+                      className={`text-xs px-2 py-1 rounded-full font-semibold
+                        ${
+                          comentario.usuario?.rol === "ADMIN"
+                            ? "bg-purple-100 text-purple-700"
+                            : comentario.usuario?.rol === "PERSONAL"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-green-100 text-green-700"
+                        }
+                      `}
+                    >
+                      {comentario.usuario?.rol}
+                    </span>
+
+                    <span className="font-medium text-slate-700">
+                      {comentario.usuario?.nombre}{" "}
+                      {comentario.usuario?.apellido}
+                    </span>
+
+                  </div>
 
                   <span className="text-xs text-slate-400">
-                    {new Date(
-                      comentario.createdAt
-                    ).toLocaleString()}
+                    {new Date(comentario.createdAt).toLocaleString()}
                   </span>
                 </div>
 
@@ -366,6 +412,35 @@ export default function PedidoDetalle() {
               </div>
             ))}
           </div>
+          <div className="mt-4">
+            <textarea
+              value={nuevoComentario}
+              onChange={(e) => setNuevoComentario(e.target.value)}
+              rows={3}
+              placeholder="Escribí un comentario..."
+              className="
+                w-full
+                border
+                border-slate-300
+                rounded-lg
+                p-3
+                text-sm
+                text-slate-800
+                placeholder:text-slate-400
+                bg-white
+                focus:outline-none
+                focus:ring-2
+                focus:ring-blue-500
+              "
+            />
+
+            <button
+              onClick={enviarComentario}
+              className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+            >
+              Comentar
+            </button>
+          </div>          
         </div>        
 
         {/* ACCIONES */}
