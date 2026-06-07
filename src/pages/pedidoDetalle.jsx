@@ -335,6 +335,39 @@ export default function PedidoDetalle() {
           )}
         </div>
 
+        {/* comentarios */}
+        <div className="mb-8">
+          <h2 className="font-semibold text-sm text-slate-700 mb-3">
+            Comentarios
+          </h2>
+
+          <div className="space-y-3">
+            {pedido.comentarios?.map((comentario) => (
+              <div
+                key={comentario._id}
+                className="border border-slate-200 rounded-lg p-3"
+              >
+                <div className="flex justify-between mb-2">
+                  <span className="font-medium text-slate-700">
+                    {comentario.usuario?.nombre}{" "}
+                    {comentario.usuario?.apellido}
+                  </span>
+
+                  <span className="text-xs text-slate-400">
+                    {new Date(
+                      comentario.createdAt
+                    ).toLocaleString()}
+                  </span>
+                </div>
+
+                <p className="text-sm text-slate-600">
+                  {comentario.mensaje}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>        
+
         {/* ACCIONES */}
         {PENDING_STATES.includes(pedido.estado) && (
           <div className="flex gap-3">
