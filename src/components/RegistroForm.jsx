@@ -66,7 +66,12 @@ function RegistroForm({ onVolverLogin }) {
     setSuccess("");
 
     try {
-      await api.post("/usuarios", form);
+      const payload = { ...form };
+      if (!payload.legajo.trim()) {
+        delete payload.legajo;
+      }
+
+      await api.post("/usuarios", payload);
 
       setSuccess("Usuario creado correctamente");
 
