@@ -8,6 +8,7 @@ import * as equipamientoService from '../../services/equipamiento';
 vi.mock('../../services/equipamiento', () => ({
   getItems: vi.fn(),
   getLotes: vi.fn(),
+  getEquipos: vi.fn(),
   createItem: vi.fn(),
   createLote: vi.fn(),
 }));
@@ -35,6 +36,7 @@ describe('Equipamiento Component', () => {
     equipamientoService.getLotes.mockResolvedValue([
       { _id: '10', itemId: '1', cantidadDisponible: 5, ubicacion: 'Lab Central', estado: 'disponible' }
     ]);
+    equipamientoService.getEquipos.mockResolvedValue([]);
 
     render(
       <MemoryRouter>
@@ -54,6 +56,7 @@ describe('Equipamiento Component', () => {
   test('muestra un mensaje de error si falla la llamada al servicio de datos', async () => {
     equipamientoService.getItems.mockRejectedValue(new Error('Fetch falló'));
     equipamientoService.getLotes.mockResolvedValue([]);
+    equipamientoService.getEquipos.mockResolvedValue([]);
 
     render(
       <MemoryRouter>

@@ -189,10 +189,7 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
       setStep(3);
 
     } catch (err) {
-      console.error("Error al crear pedido:", err);
-
-      alert("❌ Error al crear el pedido");
-
+      console.error("Error al crear pedido:",  err.response?.data);
       // 🔥 IMPORTANTE: cortar flujo
       return;
     }

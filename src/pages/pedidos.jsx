@@ -131,9 +131,8 @@ export default function PedidosLaboratorio() {
       }
   };
 
-  const handleGuardar = async (e) => {
-    e.preventDefault();
-
+  // formData debe recibirse como parámetro desde el componente que hace el submit
+  const handleGuardar = async (formData) => {
     try {
       await api.put(`/pedido/${pedidoEditando._id || pedidoEditando.id}`, {
         ...pedidoEditando,
@@ -336,6 +335,17 @@ export default function PedidosLaboratorio() {
       <NuevoPedidoForm
         onClose={() => setShowNuevo(false)}
         onCrear={crearPedido}
+      />
+    )}
+
+    {/* MODAL EDITAR PEDIDO */}
+    {showForm && (
+      /* Si tu NuevoPedidoForm está preparado para editar, puedes pasarle los datos iniciales.
+         Si tienes un componente distinto, simplemente reemplaza NuevoPedidoForm aquí. */
+      <NuevoPedidoForm
+        pedido={pedidoEditando}
+        onClose={() => { setShowForm(false); setPedidoEditando(null); }}
+        onCrear={handleGuardar}
       />
     )}
   </div>

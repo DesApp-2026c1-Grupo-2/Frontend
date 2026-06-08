@@ -66,7 +66,12 @@ function RegistroForm({ onVolverLogin }) {
     setSuccess("");
 
     try {
-      await api.post("/usuarios", form);
+      const payload = { ...form };
+      if (!payload.legajo.trim()) {
+        delete payload.legajo;
+      }
+
+      await api.post("/usuarios", payload);
 
       setSuccess("Usuario creado correctamente");
 
@@ -81,13 +86,20 @@ function RegistroForm({ onVolverLogin }) {
 
         setErrores({});
 
-    } catch (err) {
+       } catch (err) {
+        // Capturamos el primer detalle de Joi, o el mensaje del controlador
+        const errorValidacion = err.response?.data?.detalles?.[0];
+        const errorMensaje = err.response?.data?.message;
+
         setError(
-        err.response?.data?.message ||
-        "Error al crear usuario"
+            errorValidacion || 
+            errorMensaje || 
+            "Error al crear usuario"
         );
     }
-    };
+  };
+
+    
 
   return (
     <form
