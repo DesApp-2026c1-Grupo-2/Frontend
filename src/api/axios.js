@@ -9,7 +9,7 @@ const api = axios.create({
   },
 });
 
-// INTERCEPTOR
+// REQUEST INTERCEPTOR
 api.interceptors.request.use((config) => {
 
   const token = localStorage.getItem("token");
@@ -20,5 +20,25 @@ api.interceptors.request.use((config) => {
 
   return config;
 });
+
+// RESPONSE INTERCEPTOR
+api.interceptors.response.use(
+
+  (response) => response,
+
+  (error) => {
+
+    if (error.response?.status === 401) {
+
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      window.location.href = "/logIn";
+    }
+
+    return Promise.reject(error);
+  }
+
+);
 
 export default api;
