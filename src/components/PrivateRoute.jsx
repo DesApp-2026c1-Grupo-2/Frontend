@@ -2,14 +2,20 @@ import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 function PrivateRoute() {
-  const { user } = useAuth();
 
-  // Si no hay usuario en sesión, redirigimos directamente a /logIn
+  const { user, loading } = useAuth();
+
+  // Mientras verifica el token
+  if (loading) {
+    return <div>Cargando...</div>;
+  }
+
+  // Si terminó de verificar y no hay usuario
   if (!user) {
     return <Navigate to="/logIn" replace />;
   }
 
-  // Si el usuario existe, renderizamos las rutas hijas (Outlet)
+  // Usuario autenticado
   return <Outlet />;
 }
 
