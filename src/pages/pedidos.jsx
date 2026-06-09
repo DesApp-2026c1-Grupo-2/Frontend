@@ -286,25 +286,21 @@ export default function PedidosLaboratorio() {
                     )}
 
                     <div className="flex gap-2 text-slate-500">
-                      {puedeEditar && (
-                        <button
-                          title="Editar pedido"
-                          onClick={() => handleEditar(p)}
-                          className="p-1 rounded-lg hover:bg-emerald-50 text-emerald-700 transition"
-                        >
-                          <FiEdit2 size={16} />
-                        </button>
-                      )}
+                      <button
+                        title="Editar pedido"
+                        onClick={() => handleEditar(p)}
+                        className="p-1 rounded-lg hover:bg-emerald-50 text-emerald-700 transition"
+                      >
+                        <FiEdit2 size={16} />
+                      </button>
 
-                      {user?.rol !== "DOCENTE" && (
-                        <button
-                          title="Eliminar pedido"
-                          onClick={() => handleEliminar(id)}
-                          className="p-1 rounded-lg hover:bg-red-50 text-red-600 transition"
-                        >
-                          <FiTrash2 size={16} />
-                        </button>
-                      )}
+                      <button
+                        title="Eliminar pedido"
+                        onClick={() => handleEliminar(id)}
+                        className="p-1 rounded-lg hover:bg-red-50 text-red-600 transition"
+                      >
+                        <FiTrash2 size={16} />
+                      </button>
                     </div>
                   </div>
                 </div>
