@@ -93,17 +93,36 @@ export default function Landing() {
           </div>
 
           {/* Imagen/Gráfico */}
-          <div className="hidden lg:flex items-center justify-center">
-            <div className="relative w-full h-96 bg-gradient-to-br from-emerald-100 to-cyan-100 rounded-2xl shadow-xl overflow-hidden">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <svg className="h-40 w-40 text-emerald-600/20" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                </svg>
-              </div>
+        <div className="hidden lg:flex items-center justify-center">
+          <div className="relative">
+            {/* Fondo decorativo */}
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-100 to-cyan-100 rounded-3xl blur-2xl opacity-60"></div>
+            
+            {/* Icono */}
+            <div className="relative bg-gradient-to-br from-emerald-50 to-cyan-50 rounded-3xl p-16 shadow-2xl">
+              <svg 
+                className="h-48 w-48 text-emerald-600"
+                xmlns="http://www.w3.org/2000/svg" 
+                width="24" 
+                height="24" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              >
+                <path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2"/>
+                <path d="M6.453 15h11.094"/>
+                <path d="M8.5 2h7"/>
+              </svg>
             </div>
           </div>
         </div>
+
+        </div>
       </div>
+
 
       {/* Footer */}
       <div className="border-t border-slate-200 bg-white/50 backdrop-blur-sm py-8 mt-16">
