@@ -5,7 +5,9 @@ import { FiX } from "react-icons/fi";
 
 const STEPS = ["Datos Básicos", "Recursos", "Resumen", "Enviado"];
 
-export default function NuevoPedidoForm({ onClose, onCrear }) {
+export default function NuevoPedidoForm({ onClose, onCrear, pedidoInicial = null,
+  modo = "crear" }) {
+
   const { user } = useAuth();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -23,13 +25,51 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
     recursos: [], 
   });
 
+  useEffect(() => {
+    if (!pedidoInicial) return;
+
+    const fecha = pedidoInicial.fechaHora
+      ? pedidoInicial.fechaHora.split("T")[0]
+      : "";
+
+    const hora = pedidoInicial.fechaHora
+      ? new Date(pedidoInicial.fechaHora)
+          .toISOString()
+          .slice(11, 16)
+      : "10:00";
+
+    // SOLUCIÓN AL BUG: Mapear los recursos existentes del pedido
+    const recursosMapeados = pedidoInicial.recursos?.map(r => ({
+      ...r.recursoId, // Trae los datos del recurso (nombre, etc)
+      _id: r.recursoId?._id || r.recursoId, // Normaliza el ID
+      cantidad: r.cantidad,
+      tipoRecurso: r.tipoRecurso,
+      tipoDetalle: r.tipo
+    })) || [];
+
+    setForm({
+      materia: pedidoInicial.materia || "",
+      docente: pedidoInicial.docente?._id || "",
+      alumnos: pedidoInicial.alumnos || "",
+      fecha,
+      hora,
+      laboratorio:
+        pedidoInicial.laboratorio?.id ||
+        pedidoInicial.laboratorio?._id ||
+        "",
+      recursos: recursosMapeados, // Ya no es un array vacío []
+    });
+
+    console.log("FORM CARGADO CON RECURSOS");
+
+  }, [pedidoInicial]);
+
   const alumnos = Number(form.alumnos || 0);
 
   // Recuperar información real del backend
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Promise.allSettled evita que si una falla, todo el form colapse
         const [labsRes, usersRes, equiposRes, itemsRes] = await Promise.allSettled([
           api.get("/laboratorio"),
           api.get("/usuarios"),
@@ -46,8 +86,8 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
           docs = usuariosArray.filter(u => u.rol === "DOCENTE");
         }
 
-        // Garantizar que el usuario logueado aparezca en la lista y autoseleccionarlo por defecto
-        if (user && (user.id || user._id)) {
+        // Solo autoseleccionamos si es pedido NUEVO
+        if (!pedidoInicial && user && (user.id || user._id)) {
           const userId = user.id || user._id;
           const userInDocs = docs.find(d => (d._id === userId || d.id === userId));
           if (!userInDocs) {
@@ -61,7 +101,8 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
         
         if (equiposRes.status === "fulfilled") {
           const equipos = equiposRes.value.data
-            .filter(e => e.estado === "disponible") // Traemos solo equipos disponibles
+            // MEJORA: Filtramos disponibles O los que ya están en este pedido
+            .filter(e => e.estado === "disponible" || (pedidoInicial?.recursos?.some(pr => (pr.recursoId?._id || pr.recursoId) === e._id)))
             .map(e => ({ ...e, tipoRecurso: "Equipo", tipoDetalle: "Equipo" }));
           recursosRecopilados = [...recursosRecopilados, ...equipos];
         }
@@ -70,7 +111,6 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
           const items = itemsRes.value.data.map(i => ({
             ...i,
             tipoRecurso: "Item",
-            // Joi Schema requiere mayúscula inicial en el campo "tipo" -> "Material", "Reactivo", "Sustancia"
             tipoDetalle: i.tipo ? (i.tipo.charAt(0).toUpperCase() + i.tipo.slice(1)) : "Material"
           }));
           recursosRecopilados = [...recursosRecopilados, ...items];
@@ -84,7 +124,7 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
       }
     };
     fetchData();
-  }, [user]);
+  }, [user, pedidoInicial]);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -113,55 +153,24 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
 
   const handleSiguiente = () => {
     if (step === 0) {
-      if (
-        !form.materia ||
-        !form.docente ||
-        !form.alumnos ||
-        !form.fecha ||
-        !form.hora ||
-        !form.laboratorio
-      ) {
-        alert("Error: Faltan completar datos obligatorios.");
-        return;
+      if (!form.materia || !form.docente || !form.alumnos || !form.fecha || !form.hora || !form.laboratorio) {
+        alert("Error: Faltan completar datos obligatorios."); return;
       }
-
-      const alumnos = Number(form.alumnos);
-
-      //validar alumnos negativos o 0
-      if (alumnos <= 0) {
-        alert("Error: La cantidad de alumnos debe ser mayor a 0.");
-        return;
+      if (Number(form.alumnos) <= 0) {
+        alert("Error: La cantidad de alumnos debe ser mayor a 0."); return;
       }
-
-      // validar fecha
-      const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0);
-
-      const fechaSeleccionada = new Date(form.fecha);
-
-      if (fechaSeleccionada < hoy) {
-        alert("Error: La fecha no puede ser anterior a hoy.");
-        return;
+      const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+      if (new Date(form.fecha) < hoy) {
+        alert("Error: La fecha no puede ser anterior a hoy."); return;
       }
-
-      // validar capacidad laboratorio
-      const labSeleccionado = laboratorios.find(
-        (l) => (l._id || l.id) === form.laboratorio
-      );
-
-      if (labSeleccionado && alumnos > labSeleccionado.capacidad) {
-        alert("Error: El laboratorio no tiene capacidad suficiente.");
-        return;
+      const labSeleccionado = laboratorios.find((l) => (l._id || l.id) === form.laboratorio);
+      if (labSeleccionado && Number(form.alumnos) > labSeleccionado.capacidad) {
+        alert("Error: El laboratorio no tiene capacidad suficiente."); return;
       }
     }
-
-    if (step === 1) {
-      if (form.recursos.length === 0) {
-        alert("Error: Debes seleccionar al menos un recurso.");
-        return;
-      }
+    if (step === 1 && form.recursos.length === 0) {
+      alert("Error: Debes seleccionar al menos un recurso."); return;
     }
-
     setStep((s) => s + 1);
   };
 
@@ -181,16 +190,12 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
         cantidad: Number(r.cantidad)
       }))
     };
-
     try {
       await onCrear(payload);
-
-      // SOLO si sale bien
       setStep(3);
-
     } catch (err) {
-      console.error("Error al crear pedido:",  err.response?.data);
-      // 🔥 IMPORTANTE: cortar flujo
+      console.error("Error al crear pedido:", err);
+      alert("❌ Error al procesar el pedido");
       return;
     }
   };
@@ -202,17 +207,9 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/40 backdrop-blur-sm p-4">
       <div className="bg-white border border-zinc-200 rounded-2xl w-full max-w-2xl shadow-xl relative">
-        {/* CRUZ */}
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 text-zinc-400 hover:text-zinc-700 text-xl"
-        >
-          <FiX size={20} />
-        </button>
+        <button onClick={onClose} className="absolute top-3 right-3 text-zinc-400 hover:text-zinc-700 text-xl"><FiX size={20} /></button>
 
         <div className="px-8 pt-6 pb-4">
-           
-          {/* Stepper */}
           <div className="flex items-center mb-6">
             {STEPS.map((label, i) => (
               <div key={i} className="flex items-center flex-1 last:flex-none">
@@ -223,9 +220,7 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
                   </div>
                   <span className={`text-xs font-medium ${i <= step ? "text-emerald-600" : "text-zinc-400"}`}>{label}</span>
                 </div>
-                {i < STEPS.length - 1 && (
-                  <div className={`flex-1 h-0.5 mx-2 mb-4 rounded-full ${i < step ? "bg-emerald-500" : "bg-zinc-100"}`} />
-                )}
+                {i < STEPS.length - 1 && <div className={`flex-1 h-0.5 mx-2 mb-4 rounded-full ${i < step ? "bg-emerald-500" : "bg-zinc-100"}`} />}
               </div>
             ))}
           </div>
@@ -237,7 +232,6 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
                 <input type="text" placeholder="Ej: Biología Celular" value={form.materia} onChange={set("materia")}
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-zinc-400" />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-zinc-600 mb-1">Docente solicitante</label>
                 <select value={form.docente} onChange={set("docente")}
@@ -246,52 +240,30 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
                   {docentes.map(d => <option key={d._id || d.id} value={d._id || d.id}>{d.nombre} {d.apellido}</option>)}
                 </select>
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-zinc-600 mb-1">Cantidad de alumnos</label>
                 <input type="number" placeholder="Ej: 28" value={form.alumnos} onChange={set("alumnos")}
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-zinc-400" />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-zinc-600 mb-1">Fecha</label>
-                <input
-                  type="date"
-                  value={form.fecha}
-                  onChange={set("fecha")}
-                  min={new Date().toISOString().split("T")[0]}
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all"
-                />
+                <input type="date" value={form.fecha} onChange={set("fecha")} min={new Date().toISOString().split("T")[0]}
+                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-zinc-600 mb-1">Hora de inicio</label>
                 <input type="time" value={form.hora} onChange={set("hora")}
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all" />
               </div>
-              
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-zinc-600 mb-1">Laboratorio</label>
-                <select
-                  value={form.laboratorio}
-                  onChange={set("laboratorio")}
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm"
-                >
+                <select value={form.laboratorio} onChange={set("laboratorio")} className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm">
                   <option value="">Seleccionar laboratorio...</option>
-
-                  {laboratorios.map((l) => {
-                    const noDisponible = alumnos > l.capacidad;
-
-                    return (
-                      <option
-                        key={l._id || l.id}
-                        value={l._id || l.id}
-                        disabled={noDisponible}
-                      >
-                        {l.nombre} (Cap: {l.capacidad})
-                        {noDisponible ? " - NO DISPONIBLE" : ""}
-                      </option>
-                    );
-                  })}
+                  {laboratorios.map((l) => (
+                    <option key={l._id || l.id} value={l._id || l.id} disabled={alumnos > l.capacidad}>
+                      {l.nombre} (Cap: {l.capacidad}) {alumnos > l.capacidad ? " - NO DISPONIBLE" : ""}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -303,37 +275,20 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
               <div className="max-h-[40vh] overflow-y-auto grid grid-cols-1 gap-2 pr-2">
                 {recursosDB.map((r, i) => {
                   const seleccionado = form.recursos.find(rec => (rec._id || rec.id) === (r._id || r.id));
-                  
                   return (
                     <div key={i} className="flex items-center justify-between bg-white hover:bg-emerald-50 rounded-xl px-4 py-3 border border-zinc-200 hover:border-emerald-200 transition-colors group">
-                      
-                      {/* Lado Izquierdo: Checkbox y Texto (clickable) */}
                       <label className="flex items-center gap-3 cursor-pointer flex-1">
-                        <input 
-                          type="checkbox" 
-                          className="accent-emerald-500 w-4 h-4"
-                          checked={!!seleccionado}
-                          onChange={() => toggleRecurso(r)}
-                        />
+                        <input type="checkbox" className="accent-emerald-500 w-4 h-4" checked={!!seleccionado} onChange={() => toggleRecurso(r)} />
                         <div className="flex flex-col">
-                          <span className="text-zinc-700 text-sm font-medium group-hover:text-emerald-800">
-                            {r.nombre} {r.tipoRecurso === 'Equipo' ? '(Disponible)' : ''}
-                          </span>
+                          <span className="text-zinc-700 text-sm font-medium group-hover:text-emerald-800">{r.nombre} {r.tipoRecurso === 'Equipo' ? '(Disponible)' : ''}</span>
                           <span className="text-zinc-400 text-xs">{r.tipoDetalle}</span>
                         </div>
                       </label>
-
-                      {/* Lado Derecho: Input de cantidad (solo aparece si está tildado) */}
                       {seleccionado && (
                         <div className="flex items-center gap-2 ml-4">
                           <span className="text-xs text-zinc-500 font-medium">Cant:</span>
-                          <input 
-                            type="number" 
-                            min="1" 
-                            value={seleccionado.cantidad} 
-                            onChange={(e) => actualizarCantidad(r._id || r.id, e.target.value)}
-                            className="w-16 bg-zinc-50 border border-zinc-300 rounded-lg px-2 py-1 text-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all text-center shadow-sm"
-                          />
+                          <input type="number" min="1" value={seleccionado.cantidad} onChange={(e) => actualizarCantidad(r._id || r.id, e.target.value)}
+                            className="w-16 bg-zinc-50 border border-zinc-300 rounded-lg px-2 py-1 text-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all text-center shadow-sm" />
                         </div>
                       )}
                     </div>
@@ -348,9 +303,7 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
               <p className="text-zinc-400 text-xs uppercase tracking-wider font-bold mb-4">Resumen del pedido</p>
               {[
                 ["Materia", form.materia || "—"],
-                ["Docente", docentes.find(d => (d._id || d.id) === form.docente) 
-                  ? `${docentes.find(d => (d._id || d.id) === form.docente).nombre} ${docentes.find(d => (d._id || d.id) === form.docente).apellido}` 
-                  : "—"],
+                ["Docente", docentes.find(d => (d._id || d.id) === form.docente) ? `${docentes.find(d => (d._id || d.id) === form.docente).nombre} ${docentes.find(d => (d._id || d.id) === form.docente).apellido}` : "—"],
                 ["Alumnos", form.alumnos || "—"],
                 ["Fecha y hora", form.fecha ? `${form.fecha} ${form.hora}` : "—"],
                 ["Laboratorio", laboratorios.find(l => (l._id || l.id) === form.laboratorio)?.nombre || "—"],
@@ -360,15 +313,10 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
                   <span className="text-zinc-800 font-semibold text-sm text-right max-w-[200px]">{v}</span>
                 </div>
               ))}
-              
-              {/* Desglose de recursos en el resumen */}
               <div className="pt-2">
                 <span className="text-zinc-500 text-sm block mb-2">Recursos ({form.recursos.length}):</span>
                 {form.recursos.map((r, i) => (
-                  <div key={i} className="flex justify-between items-center text-xs py-1">
-                    <span className="text-zinc-600">- {r.nombre}</span>
-                    <span className="font-medium text-zinc-800">x{r.cantidad}</span>
-                  </div>
+                  <div key={i} className="flex justify-between items-center text-xs py-1"><span className="text-zinc-600">- {r.nombre}</span><span className="font-medium text-zinc-800">x{r.cantidad}</span></div>
                 ))}
               </div>
             </div>
@@ -378,28 +326,18 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
             <div className="flex flex-col items-center justify-center py-8 gap-3">
               <div className="w-20 h-20 rounded-full bg-emerald-100 border-4 border-white shadow-sm flex items-center justify-center text-emerald-600 text-3xl">✓</div>
               <p className="text-zinc-800 font-bold text-xl">¡Pedido enviado!</p>
-              <p className="text-zinc-500 text-sm text-center max-w-xs">Tu solicitud ha sido registrada y será revisada por el equipo técnico a la brevedad.</p>
+              <p className="text-zinc-500 text-sm text-center max-w-xs">Tu solicitud ha sido registrada correctamente.</p>
             </div>
           )}
         </div>
         
         <div className="flex justify-between px-8 py-5 border-t border-zinc-100 bg-zinc-50/50 rounded-b-2xl">
-          <button onClick={step === 0 ? onClose : () => setStep(s => s - 1)}
-            className="px-5 py-2 rounded-xl text-sm font-medium text-zinc-600 border border-zinc-200 bg-white hover:bg-zinc-50 hover:text-zinc-800 transition-all shadow-sm">
+          <button onClick={step === 0 ? onClose : () => setStep(s => s - 1)} className="px-5 py-2 rounded-xl text-sm font-medium text-zinc-600 border border-zinc-200 bg-white hover:bg-zinc-50 transition-all shadow-sm">
             {step === 0 ? "Cancelar" : "Anterior"}
           </button>
-          
-          {step < 2 ? (
-            <button onClick={handleSiguiente}
-              className="px-6 py-2 rounded-xl text-sm bg-emerald-500 text-white font-bold hover:bg-emerald-600 transition-all shadow-md shadow-emerald-200">
-              Siguiente
-            </button>
-          ) : step === 2 ? (
-            <button onClick={handleCrear}
-              className="px-6 py-2 rounded-xl text-sm bg-emerald-500 text-white font-bold hover:bg-emerald-600 transition-all shadow-md shadow-emerald-200">
-              Finalizar
-            </button>
-          ) : null}
+          <button onClick={step < 2 ? handleSiguiente : handleCrear} className="px-6 py-2 rounded-xl text-sm bg-emerald-500 text-white font-bold hover:bg-emerald-600 transition-all shadow-md">
+            {step < 2 ? "Siguiente" : "Finalizar"}
+          </button>
         </div>
       </div>
     </div>
