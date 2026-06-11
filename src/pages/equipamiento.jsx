@@ -4,12 +4,14 @@ import { PageHeader } from "../components/SharedUi";
 import * as equipamientoService from "../services/equipamiento";
 import FormularioEquipamiento from "../components/equipamiento/FormularioEquipamiento";
 import FormularioEquipo from "../components/equipamiento/FormularioEquipo";
+import FormularioDesperfecto from "../components/equipamiento/FormularioDesperfecto"; // <-- Importamos tu nuevo formulario
 
 import {
-  FiEdit2,//Lapiz
-  FiTrash2, //Basura
-  FiUsers,//Usuarios
-  FiMonitor,//Monitor para equipos
+  FiEdit2, // Lapiz
+  FiTrash2, // Basura
+  FiUsers, // Usuarios
+  FiMonitor, // Monitor para equipos
+  FiAlertTriangle, // <-- Nuevo icono para reportar desperfectos
 } from "react-icons/fi";
 import { VscFileSubmodule } from "react-icons/vsc"; // Caja para materiales
 import { GiMaterialsScience } from "react-icons/gi"; // Materiales reactivos
@@ -86,14 +88,14 @@ const mapearEquiposBackend = (equipos) => {
       id: equipo.id || equipo._id,
       itemId: equipo.id || equipo._id,
       categoria: 'Equipos',
-      tipo: equipo.nombre, // Usamos el nombre del equipo como "tipo" en la UI compartida
+      tipo: equipo.nombre, 
       codigo: equipo.codigo,
       ubicacion: ubicacion,
       estado: mapearEstado(equipo.estado),
-      cantidad: 1, // Cada equipo es una unidad física única
+      cantidad: 1, 
       movilidad: equipo.esFijo ? "Fija" : "Movible",
       esConsumible: false,
-      equipoOriginal: equipo // Guardamos el objeto original en memoria para la edición
+      equipoOriginal: equipo 
     };
   });
 };
@@ -112,7 +114,6 @@ const mapearEstado = (estadoBackend) => {
   return estadoMap[estadoBackend] || 'Disponible';
 };
 
-// Fuente única de verdad para estados y estilos asociados
 const statusConfig = {
   Disponible: {
     statusClassName: "bg-emerald-100 text-emerald-700 border-emerald-200",
@@ -134,29 +135,6 @@ const statusConfig = {
 
 const statusOptions = Object.keys(statusConfig);
 
-const DEFAULT_FORM_DATA = {
-  nombre: "",
-  cantidad: "1",
-  estado: "Disponible",
-  ubicacion: "",
-  unidad: "unidad",
-  movilidad: "Fija",
-};
-
-const DEFAULT_EQUIPOS_FORM_DATA = {
-  nombre: "",
-  codigo: "",
-  tipo: "",
-  esFijo: "",
-  estado: "disponible",
-  edificioId: "",
-  laboratorioId: "",
-  cantidad: "1",
-  ubicacion: "",
-  unidad: "unidad",
-  movilidad: "Fija",
-};
-
 /* ─── Iconos generales ─── */
 function SearchIcon() {
   return (
@@ -177,7 +155,6 @@ function AlertIcon() {
   );
 }
 
-/* ─── Ícono "i" para alertas ─── */
 function InfoIcon({ colorClass = "text-amber-500" }) {
   return (
     <div className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-2 border-current ${colorClass}`}>
@@ -188,7 +165,6 @@ function InfoIcon({ colorClass = "text-amber-500" }) {
   );
 }
 
-/* ─── Pills de estado ─── */
 function StatusPill({ status }) {
   const statusMap = {
     Disponible: "bg-emerald-100 text-emerald-700",
@@ -215,21 +191,11 @@ function MobilityPill({ mobility }) {
   );
 }
 
-/* ─── Alerta individual con colores por estado ─── */
 function AlertCard({ item }) {
   const styleMap = {
-    Reservado: {
-      bg: "bg-amber-50 border-amber-200",
-      iconColor: "text-amber-500",
-    },
-    "Fuera de servicio": {
-      bg: "bg-rose-50 border-rose-200",
-      iconColor: "text-rose-500",
-    },
-    Mantenimiento: {
-      bg: "bg-yellow-50 border-yellow-200",
-      iconColor: "text-yellow-500",
-    },
+    Reservado: { bg: "bg-amber-50 border-amber-200", iconColor: "text-amber-500" },
+    "Fuera de servicio": { bg: "bg-rose-50 border-rose-200", iconColor: "text-rose-500" },
+    Mantenimiento: { bg: "bg-yellow-50 border-yellow-200", iconColor: "text-yellow-500" },
   };
 
   const style = styleMap[item.estado] || { bg: "bg-slate-50 border-slate-200", iconColor: "text-slate-400" };
@@ -252,7 +218,8 @@ function AlertCard({ item }) {
   );
 }
 
-function InventoryCard({ item, onEdit, onDelete }) {
+// Actualizamos InventoryCard para recibir la acción de Desperfecto
+function InventoryCard({ item, onEdit, onDelete, onReportDesperfecto }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
@@ -277,7 +244,18 @@ function InventoryCard({ item, onEdit, onDelete }) {
         </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-end gap-2">
+      <div className="mt-4 flex items-center justify-end gap-2 flex-wrap">
+        {/* Botón condicional: Solo para la categoría Equipos */}
+        {item.categoria === "Equipos" && (
+          <button
+            type="button"
+            onClick={onReportDesperfecto}
+            className="inline-flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm font-medium text-amber-600 transition hover:bg-amber-100 cursor-pointer"
+          >
+            <FiAlertTriangle />
+            Desperfecto
+          </button>
+        )}
         <button
           type="button"
           onClick={onEdit}
@@ -303,7 +281,6 @@ function InventoryCard({ item, onEdit, onDelete }) {
 
 /* ─── Componente principal ─── */
 function Equipamiento() {
-  //const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(tabs[0].label);
   const [query, setQuery] = useState("");
   const [inventory, setInventory] = useState([]);
@@ -313,7 +290,16 @@ function Equipamiento() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Cargar datos del backend al montar el componente
+  // ─── NUEVOS ESTADOS PARA EL MODAL DE DESPERFECTOS ───
+  const [isDesperfectoOpen, setIsDesperfectoOpen] = useState(false);
+  const [desperfectoItem, setDesperfectoItem] = useState(null);
+  const [desperfectoForm, setDesperfectoForm] = useState({
+    reservaId: "",
+    fecha: new Date().toISOString().split('T')[0], // Coloca el día actual por defecto
+    descripcion: ""
+  });
+
+  // Cargar datos del backend
   useEffect(() => {
     const cargar = async () => {
       try {
@@ -337,7 +323,6 @@ function Equipamiento() {
     cargar();
   }, []);
 
-  // Funcion helper para recargar datos
   const recargarInventario = async () => {
     try {
       const [items, lotes, equipos] = await Promise.all([
@@ -372,60 +357,50 @@ function Equipamiento() {
   };
 
   const resetForm = () => setFormData({ nombre: "", cantidad: "1", estado: "Disponible", ubicacion: "", unidad: "unidad", movilidad: "Fija" });
+  
   const openForm = () => {
-  setEditingItem(null);
-
-  if (activeTab === "Equipos") {
-    setFormData({
-      nombre: "",
-      codigo: "",
-      tipo: "",
-      esFijo: "",
-      estado: "disponible",
-      edificioId: "",
-      laboratorioId: "",
-      cantidad: "1",
-      ubicacion: "",
-      unidad: "unidad",
-      movilidad: "Fija",
-    });
-  } else {
-    resetForm();
-  }
-
-  setIsFormOpen(true);
-};
+    setEditingItem(null);
+    if (activeTab === "Equipos") {
+      setFormData({
+        nombre: "", codigo: "", tipo: "", esFijo: "", estado: "disponible",
+        edificioId: "", laboratorioId: "", cantidad: "1", ubicacion: "", unidad: "unidad", movilidad: "Fija",
+      });
+    } else {
+      resetForm();
+    }
+    setIsFormOpen(true);
+  };
 
   const openEditForm = (item) => {
     setEditingItem(item);
     const visibleTabLabels = tabs.map((t) => t.label);
     if (visibleTabLabels.includes(item.categoria)) setActiveTab(item.categoria);
- if (item.categoria === "Equipos") {
-  const original = item.equipoOriginal || {};
-  setFormData({
-    nombre: item.tipo,
-    codigo: item.codigo,
-    tipo: original.tipo || "",
-    esFijo: item.movilidad === "Fija",
-    estado: estadoToBackend(item.estado),
-    edificioId: original.edificioId?._id || original.edificioId?.id || original.edificioId || "",
-    laboratorioId: original.laboratorioId?._id || original.laboratorioId?.id || original.laboratorioId || "",
-    cantidad: String(item.cantidad),
-    ubicacion: item.ubicacion,
-    unidad: item.unidad || "unidad",
-    movilidad: item.movilidad || "Fija",
-  });
-} else {
-  setFormData({
-    nombre: item.tipo,
-    cantidad: String(item.cantidad),
-    estado: item.estado,
-    ubicacion: item.ubicacion,
-    unidad: item.unidad || "unidad",
-    movilidad: item.movilidad || "Fija",
-  });
-}
-  setIsFormOpen(true);
+    if (item.categoria === "Equipos") {
+      const original = item.equipoOriginal || {};
+      setFormData({
+        nombre: item.tipo,
+        codigo: item.codigo,
+        tipo: original.tipo || "",
+        esFijo: item.movilidad === "Fija",
+        estado: estadoToBackend(item.estado),
+        edificioId: original.edificioId?._id || original.edificioId?.id || original.edificioId || "",
+        laboratorioId: original.laboratorioId?._id || original.laboratorioId?.id || original.laboratorioId || "",
+        cantidad: String(item.cantidad),
+        ubicacion: item.ubicacion,
+        unidad: item.unidad || "unidad",
+        movilidad: item.movilidad || "Fija",
+      });
+    } else {
+      setFormData({
+        nombre: item.tipo,
+        cantidad: String(item.cantidad),
+        estado: item.estado,
+        ubicacion: item.ubicacion,
+        unidad: item.unidad || "unidad",
+        movilidad: item.movilidad || "Fija",
+      });
+    }
+    setIsFormOpen(true);
   };
 
   const closeForm = () => {
@@ -433,36 +408,59 @@ function Equipamiento() {
     setEditingItem(null);
   };
 
+  // ─── ACCIONES DEL FORMULARIO DE DESPERFECTOS ───
+  const openDesperfectoModal = (item) => {
+    setDesperfectoItem(item);
+    setDesperfectoForm({
+      reservaId: "",
+      fecha: new Date().toISOString().split('T')[0],
+      descripcion: ""
+    });
+    setIsDesperfectoOpen(true);
+  };
+
+  const closeDesperfectoModal = () => {
+    setIsDesperfectoOpen(false);
+    setDesperfectoItem(null);
+  };
+
+  const handleDesperfectoChange = (e) => {
+    const { name, value } = e.target;
+    setDesperfectoForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleDesperfectoSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      // Aquí puedes mapear la llamada a tu API real, ej:
+      // await equipamientoService.createDesperfecto(desperfectoItem.id, desperfectoForm);
+      alert(`Desperfecto registrado con éxito para el equipo: ${desperfectoItem.tipo}`);
+      closeDesperfectoModal();
+      await recargarInventario();
+    } catch (err) {
+      console.error("Error al guardar desperfecto:", err);
+      alert("Error al registrar el desperfecto.");
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
-    ...prev,
-    [name]:
-      name === "esFijo"
-        ? value === "true"
-        : value,
+      ...prev,
+      [name]: name === "esFijo" ? value === "true" : value,
     }));
   };
 
   const estadoToBackend = (estado) => {
-    const estadoMap = {
-      Disponible: "disponible",
-      Reservado: "reservado",
-      "En uso": "en_uso",
-      Descartado: "descartado",
-    };
-
+    const estadoMap = { Disponible: "disponible", Reservado: "reservado", "En uso": "en_uso", Descartado: "descartado" };
     return estadoMap[estado] || estado.toLowerCase().replace(/\s+/g, "_");
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    // --- 1. MANEJO ESPECÍFICO PARA EQUIPOS ---
     if (activeTab === "Equipos") {
       const isFijo = formData.esFijo === true || String(formData.esFijo) === "true";
-      
-      // Interceptamos los IDs: si es móvil, forzamos null en edificioId y laboratorioId
       const payloadEquipo = {
         nombre: formData.nombre.trim(),
         codigo: formData.codigo.trim(),
@@ -480,13 +478,11 @@ function Equipamiento() {
 
       try {
         if (editingItem) {
-          // Extraemos el ID del registro seleccionado para editar
           const equipoId = editingItem.itemId || editingItem.id;
           await equipamientoService.updateEquipo(equipoId, payloadEquipo);
         } else {
           await equipamientoService.createEquipo(payloadEquipo);
         }
-        
         await recargarInventario();
         closeForm();
         resetForm();
@@ -494,10 +490,9 @@ function Equipamiento() {
         console.error("Error al guardar equipo:", err);
         alert("Error al guardar el equipo: " + (err.response?.data?.error || err.message));
       }
-      return; // Fin de la ejecución para Equipos (Evita que pase a la lógica de Lotes/Items)
+      return; 
     }
 
-    // --- 2. MANEJO PARA ITEMS Y LOTES (Materiales, Reactivos, Sustancias) ---
     const nombre = formData.nombre.trim();
     const cantidad = Number.parseInt(formData.cantidad, 10);
     const ubicacion = formData.ubicacion.trim();
@@ -509,32 +504,15 @@ function Equipamiento() {
 
     try {
       if (editingItem) {
-        const tipoItem = Object.keys(tipoToCategoria).find(
-          (key) => tipoToCategoria[key] === editingItem.categoria
-        ) || "material";
-
+        const tipoItem = Object.keys(tipoToCategoria).find(key => tipoToCategoria[key] === editingItem.categoria) || "material";
         await equipamientoService.updateItem(editingItem.itemId, {
-          tipo: tipoItem,
-          nombre,
-          codigo: editingItem.codigo,
-          unidad: formData.unidad,
-          esConsumible: tipoItem !== "equipo",
-          requiereReceta: tipoItem === "reactivo" ? false : undefined,
+          tipo: tipoItem, nombre, codigo: editingItem.codigo, unidad: formData.unidad, esConsumible: tipoItem !== "equipo",
         });
-
         await equipamientoService.updateLote(editingItem.loteId, {
-          cantidadDisponible: cantidad,
-          ubicacion,
-          estado: estadoToBackend(formData.estado),
-          movilidad: formData.movilidad,
+          cantidadDisponible: cantidad, ubicacion, estado: estadoToBackend(formData.estado), movilidad: formData.movilidad,
         });
       } else {
-        // Determinar tipo basado en la categoría activa
-        const tipoItem = Object.keys(tipoToCategoria).find(
-          (key) => tipoToCategoria[key] === activeTab
-        ) || "material";
-
-        // Generar código
+        const tipoItem = Object.keys(tipoToCategoria).find(key => tipoToCategoria[key] === activeTab) || "material";
         const codePrefix = activeTab === "Materiales" ? "MT" : activeTab === "Reactivos" ? "RC" : activeTab === "Sustancias basicas" ? "SB" : "EQ";
         const nextNumber = inventory
           .filter((item) => item.categoria === activeTab)
@@ -545,39 +523,21 @@ function Equipamiento() {
           }, 0) + 1;
         const codigo = `${codePrefix}-${String(nextNumber).padStart(3, "0")}`;
 
-        // Crear el Item
         const nuevoItem = await equipamientoService.createItem({
-          tipo: tipoItem,
-          nombre,
-          codigo,
-          unidad: formData.unidad,
-          esConsumible: tipoItem !== "equipo",
-          requiereReceta: tipoItem === "reactivo" ? false : undefined,
+          tipo: tipoItem, nombre, codigo, unidad: formData.unidad, esConsumible: tipoItem !== "equipo",
         });
 
         try {
-          // Crear el Lote asociado
           await equipamientoService.createLote({
-            itemId: nuevoItem._id,
-            cantidadDisponible: cantidad,
-            ubicacion,
-            estado: estadoToBackend(formData.estado),
-            movilidad: formData.movilidad,
+            itemId: nuevoItem._id, cantidadDisponible: cantidad, ubicacion, estado: estadoToBackend(formData.estado), movilidad: formData.movilidad,
           });
         } catch (loteError) {
           if (nuevoItem?._id && typeof equipamientoService.deleteItem === "function") {
-            try {
-              await equipamientoService.deleteItem(nuevoItem._id);
-            } catch (rollbackError) {
-              console.error("No se pudo revertir el item creado tras fallar el lote:", rollbackError);
-            }
+            try { await equipamientoService.deleteItem(nuevoItem._id); } catch (r) { console.error(r); }
           }
-
           throw loteError;
         }
       }
-
-      // Recargar datos
       await recargarInventario();
       closeForm();
       resetForm();
@@ -610,22 +570,18 @@ function Equipamiento() {
   }, [activeTab, inventory, query]);
 
   return (
-    <div className="min-h-screen  text-slate-800">
+    <div className="min-h-screen text-slate-800">
       <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
-        <PageHeader
-          title="Equipamiento"
-        />
+        <PageHeader title="Equipamiento" />
 
         {/* Stats Card */}
         <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((s) => (
+          {stats.map((s) => (
             <Card key={s.title} padding="none" className="relative overflow-hidden rounded-[24px] border border-emerald-100 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
-              {/* Badge estilo imagen: visible en pantallas pequeñas, el número grande queda en escritorio */}
               <div className="absolute inset-x-0 top-0 h-1.5" style={{ backgroundColor: s.hex }} />
               <div className="absolute right-4 top-4 inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold sm:hidden" style={{ backgroundColor: `${s.hex}20`, color: s.hex }}>
                 {s.value}
               </div>
-
               <div>
                 <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">{s.title}</div>
                 <div className="hidden text-4xl font-black leading-none text-slate-900 sm:block" style={{ color: s.hex }}>{s.value}</div>
@@ -640,49 +596,45 @@ function Equipamiento() {
           <Card padding="none" className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_14px_40px_rgba(15,23,42,0.06)]">
             <div className="border-b border-slate-100 px-4 py-4 sm:px-6 sm:py-5">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
-                  Registro activo
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
+                    Registro activo
+                  </div>
+                  <h2 className="mt-3 font-['Playfair_Display',serif] text-2xl font-bold leading-tight text-emerald-950 sm:text-[2rem]">
+                    Últimos movimientos de stock
+                  </h2>
+                  <p className="mt-2 max-w-2xl text-sm text-slate-500">Usa tus filtros para ver por categoría los registros cargados.</p>
                 </div>
-                <h2 className="mt-3 font-['Playfair_Display',serif] text-2xl font-bold leading-tight text-emerald-950 sm:text-[2rem]">
-                  Últimos movimientos de stock
-                </h2>
-                <p className="mt-2 max-w-2xl text-sm text-slate-500">Usa tus filtros para ver por categoría los registros cargados.</p>
+                <button
+                  type="button"
+                  onClick={openForm}
+                  className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-full border border-emerald-200 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800 sm:mt-0 sm:w-auto cursor-pointer"
+                >
+                  <span className="text-base leading-none"><AiOutlinePlus /></span>
+                  Nuevo ítem
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={openForm}
-                className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-full border border-emerald-200 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800 sm:mt-0 sm:w-auto cursor-pointer"
-              >
-                <span className="text-base leading-none"><AiOutlinePlus /></span>
-                Nuevo equipo
-              </button>
-            </div>
             </div>
 
             <div className="px-4 pt-4 sm:px-6">
               <div className="mb-5 grid grid-cols-2 gap-2 rounded-[18px] border border-emerald-100 bg-emerald-50/40 p-1 sm:grid-cols-4">
                 {tabs.map(({ label, icon }) => {
-                const TabIcon = icon;
-                const isActive = label === activeTab;
-                return (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={() => setActiveTab(label)}
-                    className={`flex min-w-0 items-center justify-center gap-2 rounded-[14px] px-3 py-2 text-xs font-medium transition-all duration-200 sm:shrink-0 sm:justify-start sm:px-4 sm:text-sm ${
-                      isActive
-                        ? "bg-white text-emerald-700 shadow-sm ring-1 ring-emerald-100 font-semibold"
-                        : "text-slate-500 hover:text-emerald-700 hover:bg-white/80"
-                    }`}
-                  >
-                    <span className={isActive ? "text-emerald-600" : "text-slate-400"}>
-                      <TabIcon />
-                    </span>
-                    {label}
-                  </button>
-                );
-              })}
+                  const TabIcon = icon;
+                  const isActive = label === activeTab;
+                  return (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => setActiveTab(label)}
+                      className={`flex min-w-0 items-center justify-center gap-2 rounded-[14px] px-3 py-2 text-xs font-medium transition-all duration-200 sm:shrink-0 sm:justify-start sm:px-4 sm:text-sm ${
+                        isActive ? "bg-white text-emerald-700 shadow-sm ring-1 ring-emerald-100 font-semibold" : "text-slate-500 hover:text-emerald-700 hover:bg-white/80"
+                      }`}
+                    >
+                      <span className={isActive ? "text-emerald-600" : "text-slate-400"}><TabIcon /></span>
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Búsqueda */}
@@ -705,7 +657,7 @@ function Equipamiento() {
               <div className="space-y-3 md:hidden">
                 {loading ? (
                   <div className="flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 p-8">
-                    <div className="text-center ">
+                    <div className="text-center">
                       <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-500"></div>
                       <p className="text-sm text-slate-500">Cargando inventario...</p>
                     </div>
@@ -721,6 +673,7 @@ function Equipamiento() {
                       item={item}
                       onEdit={() => openEditForm(item)}
                       onDelete={() => handleDeleteItem(item)}
+                      onReportDesperfecto={() => openDesperfectoModal(item)} // <-- Enlazado móvil
                     />
                   ))
                 ) : (
@@ -732,18 +685,19 @@ function Equipamiento() {
 
               {/* Tabla escritorio */}
               <div className="hidden overflow-hidden rounded-[22px] border border-slate-200 md:block">
-                {loading ? (
+                {loading && (
                   <div className="flex items-center justify-center p-8">
                     <div className="text-center">
                       <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-500"></div>
                       <p className="text-sm text-slate-500">Cargando inventario...</p>
                     </div>
                   </div>
-                ) : error ? (
+                )}
+                {error && (
                   <div className="border-b border-rose-200 bg-rose-50 p-4">
                     <p className="text-sm font-medium text-rose-700">{error}</p>
                   </div>
-                ) : null}
+                )}
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[820px] border-collapse bg-white">
                     <thead>
@@ -764,21 +718,28 @@ function Equipamiento() {
                           <td className="px-4 py-3 text-slate-500">{item.cantidad}</td>
                           <td className="px-4 py-3 text-slate-500">{item.codigo}</td>
                           <td className="px-4 py-3 text-slate-500">{item.ubicacion}</td>
-                          <td className="px-4 py-3">
-                            <StatusPill status={item.estado} />
-                          </td>
-                          <td className="px-4 py-3">
-                            <MobilityPill mobility={item.movilidad} />
-                          </td>
+                          <td className="px-4 py-3"><StatusPill status={item.estado} /></td>
+                          <td className="px-4 py-3"><MobilityPill mobility={item.movilidad} /></td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
+                              {/* Botón condicional de desperfecto para escritorio */}
+                              {item.categoria === "Equipos" && (
+                                <button
+                                  type="button"
+                                  onClick={() => openDesperfectoModal(item)}
+                                  className="rounded-lg p-2 text-amber-500 bg-amber-50 hover:bg-amber-100 transition cursor-pointer"
+                                  title="Registrar Desperfecto"
+                                >
+                                  <FiAlertTriangle />
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 onClick={() => openEditForm(item)}
                                 className="rounded-lg p-2 text-cyan-500 bg-cyan-50 hover:bg-cyan-100 transition"
                                 aria-label={`Editar ${item.tipo}`}
                               >
-                                <FiEdit2  />
+                                <FiEdit2 />
                               </button>
                               <button
                                 type="button"
@@ -786,7 +747,7 @@ function Equipamiento() {
                                 className="rounded-lg p-2 text-rose-500 bg-rose-50 hover:bg-rose-100 transition"
                                 aria-label={`Eliminar ${item.tipo}`}
                               >
-                                <FiTrash2  />
+                                <FiTrash2 />
                               </button>
                             </div>
                           </td>
@@ -796,7 +757,6 @@ function Equipamiento() {
                   </table>
                 </div>
               </div>
-
             </div>
           </Card>
 
@@ -812,7 +772,6 @@ function Equipamiento() {
                 </div>
                 <p className="mb-0 text-sm text-slate-500">Estados que requieren revisión o mantenimiento.</p>
               </div>
-
               <div className="flex flex-col gap-3 p-5">
                 {alertItems.map((item) => (
                   <AlertCard key={item.id} item={item} />
@@ -823,57 +782,49 @@ function Equipamiento() {
         </div>
       </div>
 
-      {/* Modal formulario */}
+      {/* ─── MODAL 1: FORMULARIO GENERAL (EQUIPO / EQUIPAMIENTO) ─── */}
       {isFormOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/45 backdrop-blur-sm sm:items-center sm:p-4"
-          onClick={closeForm}
-        >
-          <div
-            className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-lg sm:rounded-[28px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/45 backdrop-blur-sm sm:items-center sm:p-4" onClick={closeForm}>
+          <div className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-lg sm:rounded-[28px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:static sm:px-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">
-                    Registro
-                  </div>
+                  <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">Registro</div>
                   <h2 className="text-lg font-bold text-slate-900 sm:text-xl">
                     {editingItem ? `Editar ${editingItem.tipo}` : `Nuevo ${activeTab.slice(0, -1).toLowerCase()}`}
                   </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {editingItem ? "Actualiza los campos y guarda los cambios." : "Completa el formulario para registrar el ítem."}
-                  </p>
+                  <p className="mt-1 text-sm text-slate-500">{editingItem ? "Actualiza los campos y guarda los cambios." : "Completa el formulario para registrar el ítem."}</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={closeForm}
-                  className="rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
-                >
-                  Cerrar
-                </button>
+                <button type="button" onClick={closeForm} className="rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900">Cerrar</button>
               </div>
             </div>
-
             <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
               {activeTab === "Equipos" ? (
-              <FormularioEquipo
-                formData={formData}
-                handleChange={handleChange}
-                handleSubmit={handleSubmit}
-                cerrarModal={closeForm}
-              />
-            ) : (
-              <FormularioEquipamiento
-                formData={formData}
-                handleChange={handleChange}
-                handleSubmit={handleSubmit}
-                cerrarModal={closeForm}
-                statusOptions={statusOptions}
-              />
-            )}
+                <FormularioEquipo formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} />
+              ) : (
+                <FormularioEquipamiento formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} statusOptions={statusOptions} />
+              )}
+            </div>
           </div>
+        </div>
+      )}
+
+      {/* ─── MODAL 2: REGISTRAR DESPERFECTO (NUEVO) ─── */}
+      {isDesperfectoOpen && (
+        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/45 backdrop-blur-sm sm:items-center sm:p-4" onClick={closeDesperfectoModal}>
+          <div className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-md sm:rounded-[24px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]" onClick={(e) => e.stopPropagation()}>
+            <div className="border-b border-slate-100 px-6 py-4 bg-slate-50/80">
+              <h2 className="text-lg font-bold text-slate-900">Registrar desperfecto</h2>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+              <FormularioDesperfecto
+                desperfectoItem={desperfectoItem}
+                desperfectoForm={desperfectoForm}
+                handleChange={handleDesperfectoChange}
+                handleSubmit={handleDesperfectoSubmit}
+                cerrarModal={closeDesperfectoModal}
+              />
+            </div>
           </div>
         </div>
       )}
