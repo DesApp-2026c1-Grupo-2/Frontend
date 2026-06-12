@@ -101,7 +101,12 @@ export default function PedidosLaboratorio() {
       setPedidoEditando(null);
     } catch (error) {
       console.error("Error en la operación:", error);
-      alert(error.response?.data?.message || "Error al procesar el pedido");
+      alert(
+  error.response?.data?.message ||
+  error.response?.data?.error ||
+  JSON.stringify(error.response?.data) ||
+  "Error al procesar el pedido"
+);
     }
   };
 

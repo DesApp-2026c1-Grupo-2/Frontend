@@ -125,7 +125,61 @@ export default function NuevoPedidoForm({ onClose, onCrear, pedidoInicial = null
     };
     fetchData();
   }, [user, pedidoInicial]);
+useEffect(() => {
 
+  if (!form.fecha || !form.hora) {
+    return;
+  }
+
+  const cargarDisponibles = async () => {
+
+    try {
+
+      const fechaHora =
+        `${form.fecha}T${form.hora}`;
+
+      const { data } =
+        await api.get(
+          "/laboratorio/disponibles-horario",
+          {
+            params: {
+              fechaHora,
+              alumnos: form.alumnos
+            }
+          }
+        );
+
+      setLaboratorios(data);
+
+      // Si el laboratorio seleccionado dejó de estar disponible para
+      // el nuevo horario/cantidad de alumnos, volvemos a "Asignación
+      // posterior" (genérico) en lugar de dejar un ID inconsistente.
+      if (form.laboratorio) {
+        const sigueDisponible = data.some(
+          (l) => (l._id || l.id) === form.laboratorio
+        );
+        if (!sigueDisponible) {
+          setForm((f) => ({ ...f, laboratorio: "" }));
+        }
+      }
+
+    } catch (error) {
+
+      console.error(
+        "Error cargando laboratorios",
+        error
+      );
+
+    }
+  };
+
+  cargarDisponibles();
+
+}, [
+  form.fecha,
+  form.hora,
+  form.alumnos
+]);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const toggleRecurso = (recurso) => {
@@ -153,7 +207,7 @@ export default function NuevoPedidoForm({ onClose, onCrear, pedidoInicial = null
 
   const handleSiguiente = () => {
     if (step === 0) {
-      if (!form.materia || !form.docente || !form.alumnos || !form.fecha || !form.hora || !form.laboratorio) {
+      if (!form.materia || !form.docente || !form.alumnos || !form.fecha || !form.hora) {
         alert("Error: Faltan completar datos obligatorios."); return;
       }
       if (Number(form.alumnos) <= 0) {
@@ -178,7 +232,7 @@ export default function NuevoPedidoForm({ onClose, onCrear, pedidoInicial = null
     const payload = {
       materia: form.materia,
       docente: form.docente,
-      laboratorio: form.laboratorio,
+      laboratorio: form.laboratorio || null,
       fecha: form.fecha,
       hora: form.hora,
       alumnos: Number(form.alumnos),
@@ -265,6 +319,9 @@ export default function NuevoPedidoForm({ onClose, onCrear, pedidoInicial = null
                     </option>
                   ))}
                 </select>
+                <p className="text-xs text-zinc-400 mt-1">
+                  Si no seleccionás un laboratorio, el equipo de gestión asignará uno disponible antes de aprobar el pedido.
+                </p>
               </div>
             </div>
           )}
@@ -306,7 +363,7 @@ export default function NuevoPedidoForm({ onClose, onCrear, pedidoInicial = null
                 ["Docente", docentes.find(d => (d._id || d.id) === form.docente) ? `${docentes.find(d => (d._id || d.id) === form.docente).nombre} ${docentes.find(d => (d._id || d.id) === form.docente).apellido}` : "—"],
                 ["Alumnos", form.alumnos || "—"],
                 ["Fecha y hora", form.fecha ? `${form.fecha} ${form.hora}` : "—"],
-                ["Laboratorio", laboratorios.find(l => (l._id || l.id) === form.laboratorio)?.nombre || "—"],
+                ["Laboratorio", laboratorios.find(l => (l._id || l.id) === form.laboratorio)?.nombre || "Pendiente de asignación"],
               ].map(([k,v]) => (
                 <div key={k} className="flex justify-between border-b border-zinc-200/60 py-2 last:border-0">
                   <span className="text-zinc-500 text-sm">{k}</span>
