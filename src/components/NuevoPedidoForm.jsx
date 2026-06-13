@@ -326,6 +326,10 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all"
                 />
               </div>
+
+              {/* Columna vacía para mantener fecha sola en su fila */}
+              <div />
+
               <div>
                 <label className="block text-sm font-medium text-zinc-600 mb-1">Hora de inicio</label>
                 <input type="time" value={form.hora} onChange={set("hora")}

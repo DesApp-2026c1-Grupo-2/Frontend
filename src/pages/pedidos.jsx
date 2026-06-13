@@ -39,6 +39,31 @@ const formatFechaHora = (fechaHoraStr) => {
   })}`;
 };
 
+// Muestra fecha + hora de inicio y hora de finalización del pedido
+const formatRangoHorario = (p) => {
+  const fechaHoraStr = p.fechaHora || p.fecha;
+  if (!fechaHoraStr) return "—";
+
+  const inicio = new Date(fechaHoraStr);
+  if (isNaN(inicio.getTime())) return fechaHoraStr;
+
+  const horaInicio = inicio.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  let horaFin = null;
+
+  if (typeof p.duracionClase === "number") {
+    const fin = new Date(inicio.getTime() + p.duracionClase * 60 * 1000);
+    horaFin = fin.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  if (!horaFin) return `${inicio.toLocaleDateString()} a las ${horaInicio}`;
+
+  return `${inicio.toLocaleDateString()} de ${horaInicio} a ${horaFin}`;
+};
+
 //ESTO VA PORQUE EL BACK DICE ACEPTADO Y EL FRONT APROBADO
 const normalizarEstado = (estado) => {
   if (!estado) return "Pendiente";
@@ -309,7 +334,7 @@ export default function PedidosLaboratorio() {
 
                   <p className="flex items-center gap-2">
                     <FiCalendar className="text-slate-500" />
-                    {formatFechaHora(p.fechaHora || p.fecha)}
+                    {formatRangoHorario(p)}
                   </p>
 
                 </div>
