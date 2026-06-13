@@ -1,33 +1,18 @@
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
 import logo from "../assets/Logo.png";
-import { FiUser, FiLogOut } from "react-icons/fi";
 
 function Navbar() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const canViewAdminSections = user?.rol?.toUpperCase() === "ADMIN" || user?.rol?.toUpperCase() === "PERSONAL";
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
-
-  const navButtonClass = (path) =>
-  `w-full rounded-xl px-4 py-3 text-left text-base font-semibold transition
-   ${
-     location.pathname.startsWith(path)
-       ? "bg-emerald-600 text-white shadow-sm"
-       : "text-slate-700 hover:bg-slate-100 hover:text-slate-900"
-   }`;
-
   return (
-    <header className="fixed top-0 left-0 z-50 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md shadow-sm">
+    <header className="fixed top-0 left-0 z-50 w-full border-b border-lime-200/80 bg-[#b9d89b]/95 backdrop-blur-md shadow-[0_6px_24px_rgba(50,80,20,0.08)]">
       <div className="mx-auto flex h-[78px] w-full max-w-[1440px] items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
         <button
           type="button"
@@ -38,7 +23,7 @@ function Navbar() {
           <img
             src={logo}
             alt="Universidad Nacional de Hurlingham"
-            className="h-[42px] w-auto object-contain"
+            className="h-[52px] w-auto object-contain sm:h-[58px]"
           />
         </button>
 
@@ -46,7 +31,7 @@ function Navbar() {
         <nav className="hidden md:flex items-center gap-2 sm:gap-4">
           <button
             onClick={() => navigate("/dashboard")} /*PRUEBA */
-            className={navButtonClass("/dashboard")}
+            className="rounded-xl px-4 py-2 text-base font-semibold text-slate-900 transition hover:bg-white/35 hover:text-green-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-700/40"
           >
             Dashboard 
           </button>
@@ -55,14 +40,14 @@ function Navbar() {
             <>
               <button
                 onClick={() => navigate("/edificios")}
-                className={navButtonClass("/edificios")}
+                className="rounded-xl px-4 py-2 text-base font-semibold text-slate-900 transition hover:bg-white/35 hover:text-green-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-700/40"
               >
                 Edificios
               </button>
 
               <button
                 onClick={() => navigate("/equipamiento")}
-                className={navButtonClass("/equipamiento")}
+                className="rounded-xl px-4 py-2 text-base font-semibold text-slate-900 transition hover:bg-white/35 hover:text-green-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-700/40"
               >
                 Equipamiento
               </button>
@@ -71,40 +56,17 @@ function Navbar() {
 
           <button
             onClick={() => navigate("/pedidos")}
-            className={navButtonClass("/pedidos")}
+            className="rounded-xl bg-[#94c463] px-5 py-2.5 text-base font-semibold text-slate-950 shadow-[0_6px_16px_rgba(72,110,28,0.18)] transition hover:bg-[#85b957] hover:shadow-[0_10px_24px_rgba(72,110,28,0.24)] focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/40"
           >
             Pedidos
           </button>
 
-          {user && (
-            <div className="ml-2 flex items-center gap-3 border-l border-slate-200 pl-4">
-              <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100">
-                  <span className="font-semibold text-emerald-700">
-                    {user.nombre?.charAt(0)?.toUpperCase()}
-                  </span>
-                </div>
-
-                <div className="hidden lg:block">
-                  <p className="text-sm font-semibold text-slate-800">
-                    {user.nombre}
-                  </p>
-
-                  <p className="text-xs uppercase tracking-wide text-slate-500">
-                    {user.rol}
-                  </p>
-                </div>
-              </div>
-
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 rounded-xl border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
-              >
-                <FiLogOut />
-                Salir
-              </button>
-            </div>
-          )}
+          <button
+            onClick={() => navigate("/logIn")}
+            className="rounded-xl border-2 border-green-700 bg-transparent px-5 py-2.5 text-base font-semibold text-slate-950 transition hover:border-green-800 hover:bg-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-700/40"
+          >
+            Login
+          </button>
         </nav>
 
         {/* MOBILE BUTTON */}
@@ -120,24 +82,7 @@ function Navbar() {
 
       {/* MOBILE MENU */}
       {menuOpen && (
-        <div className="md:hidden border-t border-slate-200 bg-white/95 backdrop-blur-md px-4 py-4 shadow-lg">
-          {user && (
-            <div className="mb-4 flex items-center gap-3 border-b border-slate-200 pb-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-100 font-semibold text-emerald-700">
-                {user.nombre?.charAt(0)?.toUpperCase()}
-              </div>
-
-              <div>
-                <p className="font-semibold text-slate-800">
-                  {user.nombre}
-                </p>
-
-                <p className="text-xs uppercase tracking-wide text-slate-500">
-                  {user.rol}
-                </p>
-              </div>
-            </div>
-          )}
+        <div className="md:hidden border-t border-lime-200/70 bg-[#b9d89b]/95 backdrop-blur-md px-4 py-4 shadow-lg">
           <nav className="flex flex-col gap-2">
 
             {/* Agregados Dashboard y Edificios para móviles protegidos por rol */}
@@ -148,7 +93,7 @@ function Navbar() {
                     navigate("/dashboard");
                     setMenuOpen(false);
                   }}
-                  className={navButtonClass("/dashboard")}
+                  className="rounded-xl px-4 py-3 text-left text-base font-semibold text-slate-900 hover:bg-white/30 transition"
                 >
                   Dashboard
                 </button>
@@ -158,7 +103,7 @@ function Navbar() {
                     navigate("/edificios");
                     setMenuOpen(false);
                   }}
-                  className={navButtonClass("/edificios")}
+                  className="rounded-xl px-4 py-3 text-left text-base font-semibold text-slate-900 hover:bg-white/30 transition"
                 >
                   Edificios
                 </button>
@@ -168,7 +113,7 @@ function Navbar() {
                     navigate("/equipamiento");
                     setMenuOpen(false);
                   }}
-                  className={navButtonClass("/equipamiento")}
+                  className="rounded-xl px-4 py-3 text-left text-base font-semibold text-slate-900 hover:bg-white/30 transition"
                 >
                   Equipamiento
                 </button>
@@ -180,34 +125,21 @@ function Navbar() {
                 navigate("/pedidos");
                 setMenuOpen(false);
               }}
-              className={navButtonClass("/pedidos")}
+              className="rounded-xl bg-[#94c463] px-4 py-3 text-left text-base font-semibold text-slate-950 transition hover:bg-[#85b957]"
             >
               Pedidos
             </button>
 
-            {user && (
-              <button
-                onClick={() => {
-                  handleLogout();
-                  setMenuOpen(false);
-                }}
-                className="rounded-xl border border-red-200 px-4 py-3 text-left font-medium text-red-600 hover:bg-red-50 transition"
-              >
-                Salir
-              </button>
-            )}
+            <button
+              onClick={() => {
+                navigate("/logIn");
+                setMenuOpen(false);
+              }}
+              className="rounded-xl border-2 border-green-700 px-4 py-3 text-left text-base font-semibold text-slate-950 hover:bg-white/30 transition"
+            >
+              Login
+            </button>
 
-            {!user && (
-              <button
-                onClick={() => {
-                  navigate("/logIn");
-                  setMenuOpen(false);
-                }}
-                className="rounded-xl border border-slate-300 px-4 py-3 text-left text-base font-semibold text-slate-700 hover:bg-slate-100 transition"
-              >
-                Login
-              </button>
-            )}
           </nav>
         </div>
       )}
