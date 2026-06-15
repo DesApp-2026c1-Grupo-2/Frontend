@@ -124,6 +124,7 @@ export default function PedidosLaboratorio() {
       setShowNuevo(false);
     } catch (error) {
       console.error("Error al crear:", error.message);
+      alert("Error al crear el pedido");
       throw error; 
     }
   };
@@ -152,7 +153,7 @@ export default function PedidosLaboratorio() {
         prev.filter((p) => (p._id || p.id) !== id)
       );
     } catch (error) {
-        console.error("Error al eliminar pedido:", error.response?.data || error);
+        console.error("Error al eliminar pedido:", error.response?.data || error); //eliminaraaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
         alert("No tenés permisos para eliminar este pedido");
       }
   };
@@ -172,6 +173,7 @@ export default function PedidosLaboratorio() {
       setPedidoEditando(null);
     } catch (error) {
       console.error("Error al actualizar pedido:", error);
+      console.log("DATA ERROR BACKEND:", error.response?.data); //eliminaraaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
     }
   };
 

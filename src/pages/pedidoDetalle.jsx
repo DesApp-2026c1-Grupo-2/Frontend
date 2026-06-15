@@ -408,6 +408,82 @@ export default function PedidoDetalle() {
           )}
         </div>
 
+        {/* HISTORIAL */}
+        <div className="mb-8">
+          <h2 className="font-semibold text-sm text-slate-700 mb-3">
+            Historial de actividad
+          </h2>
+
+          {pedido.historial?.length > 0 ? (
+            <div className="space-y-3">
+
+              {[...pedido.historial]
+                .sort(
+                  (a, b) =>
+                    new Date(b.fecha) -
+                    new Date(a.fecha)
+                )
+                .map((evento, index) => (
+                  <div
+                    key={index}
+                    className="border border-slate-200 rounded-lg p-3 bg-slate-50"
+                  >
+                    <div className="flex justify-between items-start">
+
+                      <div>
+                        <p className="font-medium text-slate-700">
+                          {evento.descripcion}
+                        </p>
+
+                        <p className="text-xs text-slate-500 mt-1">
+                          {evento.usuario?.nombre}{" "}
+                          {evento.usuario?.apellido}
+                          {" · "}
+                          {evento.usuario?.rol}
+                        </p>
+                      </div>
+
+                      <span className="text-xs text-slate-400">
+                        {new Date(
+                          evento.fecha
+                        ).toLocaleString()}
+                      </span>
+
+                    </div>
+
+                    {evento.cambios &&
+                      Object.keys(evento.cambios).length > 0 && (
+                        <div className="mt-3 border-t pt-3">
+                          {Object.entries(
+                            evento.cambios
+                          ).map(([campo, valor]) => (
+                            <div
+                              key={campo}
+                              className="text-sm text-slate-600"
+                            >
+                              <span className="font-medium">
+                                {campo}:
+                              </span>{" "}
+                              {String(valor.antes)} →{" "}
+                              {String(valor.despues)}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                  </div>
+                ))}
+
+            </div>
+          ) : (
+            <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
+              <p className="text-sm text-slate-500">
+                No hay actividad registrada.
+              </p>
+            </div>
+          )}
+        </div>        
+
         {/* comentarios */}
         <div className="mb-8">
           <h2 className="font-semibold text-sm text-slate-700 mb-3">
