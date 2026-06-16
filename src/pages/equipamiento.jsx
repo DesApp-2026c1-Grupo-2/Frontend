@@ -12,6 +12,7 @@ import {
   FiUsers, // Usuarios
   FiMonitor, // Monitor para equipos
   FiAlertTriangle, // <-- Nuevo icono para reportar desperfectos
+  FiArchive, // Archivo para Descartados
 } from "react-icons/fi";
 import { VscFileSubmodule } from "react-icons/vsc"; // Caja para materiales
 import { GiMaterialsScience } from "react-icons/gi"; // Materiales reactivos
