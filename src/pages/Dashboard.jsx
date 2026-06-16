@@ -6,6 +6,7 @@ import { useCalendarReservas } from "../services/useCalendarReservas";
 import { usePedidos, useEquipamiento, useMateriales } from "../services/useDashboardData";
 import { useAuth } from "../context/AuthContext";
 
+
 import {
   Package,
   CheckCircle,
@@ -14,15 +15,17 @@ import {
   ClipboardList,
 } from "lucide-react";
 
+
 export function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
+
 
   // Calculamos fechas iniciales por defecto (la semana actual de domingo a sábado)
   const { initialStart, initialEnd } = useMemo(() => {
     const today = new Date();
     const start = new Date(today);
-    start.setDate(today.getDate() - today.getDay()); 
+    start.setDate(today.getDate() - today.getDay());
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
     return {
@@ -31,19 +34,23 @@ export function Dashboard() {
     };
   }, []);
 
+
   const { eventosLabCalendar, loading, handleDateRangeChange, dateRange } = useCalendarReservas(initialStart, initialEnd);
 
+
   const { pedidos, loading: loadingPedidos } = usePedidos();
-  //misPedidos para docente 
+  //misPedidos para docente
   const misPedidos = pedidos.filter(
     (p) => p.docente?._id === user?._id
   );
+
 
   const pedidosPendientes = misPedidos.filter(
     (p) =>
       p.estado === "Pendiente" ||
       p.estado === "En Revisión"
   ).length;
+
 
   const pedidosAprobados = misPedidos.filter(
     (p) =>
@@ -53,18 +60,23 @@ export function Dashboard() {
   const { equipamiento, loading: loadingEquip } = useEquipamiento();
   const { materiales, loading: loadingMat } = useMateriales();
 
+
   // --- PROCESAMIENTO REACTIVO DE DATOS ---
+
 
   const statsCards = useMemo(() => {
     const aprobados = pedidos.filter(p => p.estado === "Aprobado" || p.estado === "Aceptado").length;
     const totalPedidos = pedidos.length;
+
 
     // Si no viene 'porcentajeUso', aplicamos un default de 0
     const usoPromedio = equipamiento.length > 0
       ? Math.round(equipamiento.reduce((acc, eq) => acc + (eq.porcentajeUso ?? eq.uso ?? 0), 0) / equipamiento.length)
       : 0;
 
+
     const alertasStockCount = materiales.filter(m => (m.stock ?? m.cantidad ?? 0) <= (m.stockMinimo ?? 20)).length;
+
 
     return [
       {
@@ -102,6 +114,7 @@ export function Dashboard() {
     ];
   }, [pedidos, equipamiento, materiales]);
 
+
   const equipmentUsage = useMemo(() => {
     return equipamiento
       .map((eq) => {
@@ -118,6 +131,7 @@ export function Dashboard() {
       .slice(0, 5); // Tomamos el top 5
   }, [equipamiento]);
 
+
   const stockAlerts = useMemo(() => {
     return materiales
       .filter((m) => (m.stock ?? m.cantidad ?? 0) <= (m.stockMinimo ?? 20))
@@ -133,8 +147,10 @@ export function Dashboard() {
       .slice(0, 5); // Tomamos el top 5
   }, [materiales]);
 
+
   // Verificamos si el usuario tiene un rol válido para ver el Dashboard
   const canViewDashboard = user?.rol?.toUpperCase() === "PERSONAL" || user?.rol?.toUpperCase() === "ADMIN";
+
 
   return (
     <AppLayout>
@@ -142,41 +158,51 @@ export function Dashboard() {
         //vista docente
         <div className="max-w-5xl mx-auto space-y-12">
 
+
           {/* Bienvenida */}
           <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
             <h1 className="text-3xl font-bold font-['Playfair_Display',serif] text-emerald-800">
               Hola, {user?.nombre} 👋
             </h1>
 
+
             <p className="mt-2 text-slate-600">
               Bienvenido al sistema de gestión de laboratorios.
             </p>
           </div>
 
+
           {/* Mis pedidos */}
           <div className="relative bg-white border border-slate-200 rounded-3xl p-8 shadow-sm mt-20">
+
 
             {/* Techo */}
             <div className="absolute -top-4 left-10 right-10 h-5 bg-stone-700 rounded-t-2xl" />
 
+
             <div className="flex items-start justify-between gap-4">
+
 
               <div>
                 <div className="flex items-center gap-3">
 
+
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50">
                     <ClipboardList className="h-6 w-6 text-emerald-700" />
                   </div>
+
 
                   <div className="min-w-0">
                     <h2 className="text-2xl font-bold font-['Playfair_Display',serif] text-slate-800">
                       Mis Pedidos
                     </h2>
 
+
                     <p className="text-slate-600 text-sm">
                       Consultá el estado de tus solicitudes y realizá nuevos pedidos.
                     </p>
                   </div>
+
 
                   {misPedidos.length === 0 && (
                     <div className="mt-6 rounded-2xl bg-slate-50 border border-slate-200 p-4">
@@ -187,6 +213,7 @@ export function Dashboard() {
                   )}
                 </div>
               </div>
+
 
               <button
                 onClick={() => navigate("/pedidos")}
@@ -200,43 +227,54 @@ export function Dashboard() {
                 Ver pedidos
               </button>
 
+
             </div>
 
+
             <div className="mt-8 flex flex-wrap gap-6 border-t border-slate-200 pt-6">
+
 
               <div>
                 <p className="text-sm text-slate-500">
                   Pedidos realizados
                 </p>
 
+
                 <p className="text-2xl font-bold text-slate-800">
                   {misPedidos.length}
                 </p>
               </div>
+
 
               <div>
                 <p className="text-sm text-yellow-700">
                   Pendientes
                 </p>
 
+
                 <p className="text-2xl font-bold text-yellow-800">
                   {pedidosPendientes}
                 </p>
               </div>
+
 
               <div>
                 <p className="text-sm text-emerald-700">
                   Aprobados
                 </p>
 
+
                 <p className="text-2xl font-bold text-emerald-800">
                   {pedidosAprobados}
                 </p>
               </div>
 
+
             </div>
 
+
           </div>
+
 
         </div>
       ) : (
@@ -277,6 +315,7 @@ export function Dashboard() {
           })}
         </div>
 
+
         {/* Calendar Section */}
         <div className="relative min-h-[200px]">
           {loading && (
@@ -284,12 +323,13 @@ export function Dashboard() {
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent"></div>
             </div>
           )}
-          <LabCalendar 
-            scheduleData={eventosLabCalendar} 
+          <LabCalendar
+            scheduleData={eventosLabCalendar}
             dateRange={dateRange}
             onDateChange={handleDateRangeChange}
           />
         </div>
+
 
         {/* Bottom sections */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
@@ -307,6 +347,7 @@ export function Dashboard() {
               </a>
             </div>
 
+
             <div className="space-y-6">
               {equipmentUsage.length > 0 ? (
                 equipmentUsage.map((item, idx) => (
@@ -318,6 +359,7 @@ export function Dashboard() {
                       <span>{item.hours}</span>
                     </div>
                   </div>
+
 
                   <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
                     <div
@@ -333,6 +375,7 @@ export function Dashboard() {
             </div>
           </div>
 
+
           {/* Stock alerts */}
           <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-lg relative min-h-[200px]">
             {loadingMat && (
@@ -347,6 +390,7 @@ export function Dashboard() {
               </a>
             </div>
 
+
             <div className="space-y-3">
               {stockAlerts.length > 0 ? (
                 stockAlerts.map((item, idx) => (
@@ -358,6 +402,7 @@ export function Dashboard() {
                       <p className="font-medium text-sm text-gray-900">{item.name}</p>
                       <span className="text-xs text-gray-600">Stock actual: {item.stock}</span>
                     </div>
+
 
                     <span
                       className={`px-3 py-1 rounded-lg text-xs font-semibold ${
@@ -381,5 +426,6 @@ export function Dashboard() {
     </AppLayout>
   );
 }
+
 
 export default Dashboard;

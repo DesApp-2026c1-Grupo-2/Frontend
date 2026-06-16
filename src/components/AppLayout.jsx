@@ -6,6 +6,7 @@ export function AppLayout({children, fullWidth = false }) {
       <div className="fixed rounded-full blur-[120px] opacity-[0.04] pointer-events-none w-[520px] h-[520px] bg-cyan-100 -bottom-[120px] left-[6%]" />
       <div className="fixed rounded-full blur-[140px] opacity-[0.03] pointer-events-none w-[420px] h-[420px] bg-teal-100 top-[32%] left-1/2 -translate-x-1/2" />
 
+
       {/* contenido principal*/}
       <div
         className={`relative z-10 ${
