@@ -27,6 +27,8 @@ const tabs = [
   { label: "Sustancias basicas",icon: MdScience        },
 ];
 
+const discardCategories = ["Todos", "Equipos", "Materiales", "Reactivos"];
+
 // Mapeo de tipos del backend a categorías del frontend
 const tipoToCategoria = {
   'material': 'Materiales',
@@ -68,6 +70,9 @@ const mapearDatosBackend = (items, lotes) => {
         movilidad: lote.movilidad || "Fija",
         unidad: item.unidad,
         esConsumible: item.esConsumible,
+        fechaDescarte: lote.fechaDescarte || lote.descartadoEn || lote.updatedAt || lote.createdAt,
+        motivoDescarte: lote.motivoDescarte || lote.motivo || "",
+        responsableDescarte: lote.responsableDescarte || lote.responsable || "",
       });
     });
   });
@@ -96,6 +101,9 @@ const mapearEquiposBackend = (equipos) => {
       cantidad: 1, 
       movilidad: equipo.esFijo ? "Fija" : "Movible",
       esConsumible: false,
+      fechaDescarte: equipo.fechaDescarte || equipo.descartadoEn || equipo.updatedAt || equipo.createdAt,
+      motivoDescarte: equipo.motivoDescarte || equipo.motivo || "",
+      responsableDescarte: equipo.responsableDescarte || equipo.responsable || "",
       equipoOriginal: equipo 
     };
   });
@@ -172,6 +180,7 @@ function StatusPill({ status }) {
     Reservado: "bg-amber-100 text-amber-700",
     "Fuera de servicio": "bg-rose-100 text-rose-700",
     Mantenimiento: "bg-yellow-100 text-yellow-700",
+    Descartado: "bg-rose-100 text-rose-700",
   };
 
   return (
@@ -215,6 +224,45 @@ function AlertCard({ item }) {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function formatDate(value) {
+  if (!value) return "Sin fecha registrada";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Sin fecha registrada";
+
+  return new Intl.DateTimeFormat("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
+
+function DiscardHistoryCard({ item }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-slate-900">{item.tipo}</p>
+          <p className="mt-1 text-xs text-slate-500">Código {item.codigo}</p>
+        </div>
+        <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+          {item.categoria}
+        </span>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+        <div>
+          <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">Cantidad</span>
+          <span className="mt-1 block font-semibold text-slate-900">{item.cantidad}</span>
+        </div>
+        <div>
+          <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">Fecha</span>
+          <span className="mt-1 block font-semibold text-slate-900">{formatDate(item.fechaDescarte)}</span>
+        </div>
+      </div>
+      <p className="mt-3 text-sm text-slate-500">{item.motivoDescarte || "Sin motivo registrado"}</p>
     </div>
   );
 }
@@ -290,6 +338,8 @@ function Equipamiento() {
   const [formData, setFormData] = useState({ nombre: "", cantidad: "1", estado: "Disponible", ubicacion: "", unidad: "unidad", movilidad: "Fija" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [discardCategory, setDiscardCategory] = useState("Todos");
+  const [discardQuery, setDiscardQuery] = useState("");
 
   // ─── NUEVOS ESTADOS PARA EL MODAL DE DESPERFECTOS ───
   const [isDesperfectoOpen, setIsDesperfectoOpen] = useState(false);
@@ -549,12 +599,36 @@ function Equipamiento() {
   };
 
   const alertItems = inventory.filter((i) => i.estado !== "Disponible");
+  const discardItems = useMemo(() => {
+    const normalizedQuery = discardQuery.trim().toLowerCase();
+
+    return inventory
+      .filter((item) => item.estado === "Descartado")
+      .filter((item) => discardCategories.includes(item.categoria))
+      .filter((item) => discardCategory === "Todos" || item.categoria === discardCategory)
+      .filter((item) => {
+        if (!normalizedQuery) return true;
+
+        return (
+          item.tipo.toLowerCase().includes(normalizedQuery) ||
+          item.codigo.toLowerCase().includes(normalizedQuery) ||
+          item.ubicacion.toLowerCase().includes(normalizedQuery) ||
+          item.categoria.toLowerCase().includes(normalizedQuery) ||
+          (item.motivoDescarte || "").toLowerCase().includes(normalizedQuery)
+        );
+      })
+      .sort((a, b) => {
+        const dateA = new Date(a.fechaDescarte || 0).getTime();
+        const dateB = new Date(b.fechaDescarte || 0).getTime();
+        return dateB - dateA;
+      });
+  }, [discardCategory, discardQuery, inventory]);
 
   const stats = [
     { title: "Equipos registrados", value: inventory.filter(i => i.categoria === "Equipos").length, subtitle: "Inventario general", hex: "#06b6d4" },
     { title: "Materiales", value: inventory.filter(i => i.categoria === "Materiales").length, subtitle: "Categoría activa", hex: "#4f46e5" },
     { title: "Reactivos", value: inventory.filter(i => i.categoria === "Reactivos").length, subtitle: "Categoría activa", hex: "#f59e0b" },
-    { title: "Alertas activas", value: alertItems.length, subtitle: "Estados por revisar", hex: "#f43f5e" },
+    { title: "Descartes", value: discardItems.length, subtitle: "Historial consultable", hex: "#f43f5e" },
   ];
 
   const filteredItems = useMemo(() => {
@@ -781,6 +855,137 @@ function Equipamiento() {
             </Card>
           </div>
         </div>
+
+        <section className="mt-6">
+          <Card padding="none" className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_14px_40px_rgba(15,23,42,0.06)]">
+            <div className="border-b border-slate-100 px-4 py-4 sm:px-6 sm:py-5">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-rose-700">
+                    <FiArchive />
+                    Historial
+                  </div>
+                  <h2 className="mt-3 font-['Playfair_Display',serif] text-[1.7rem] font-bold leading-tight text-emerald-950 sm:text-[2rem]">
+                    Historial de descartes
+                  </h2>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+                    Consulta los equipos, materiales y reactivos marcados como descartados.
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-2 sm:flex-row lg:items-center">
+                  <div className="relative w-full sm:w-72">
+                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                      <MdOutlineManageSearch />
+                    </span>
+                    <input
+                      type="text"
+                      value={discardQuery}
+                      onChange={(e) => setDiscardQuery(e.target.value)}
+                      placeholder="Buscar descarte..."
+                      className="w-full rounded-full border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-700 outline-none transition focus:border-rose-300 focus:ring-4 focus:ring-rose-100"
+                    />
+                  </div>
+                  <select
+                    value={discardCategory}
+                    onChange={(e) => setDiscardCategory(e.target.value)}
+                    className="hidden w-full rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 outline-none transition focus:border-rose-300 focus:ring-4 focus:ring-rose-100 sm:block sm:w-44"
+                  >
+                    {discardCategories.map((category) => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-4 py-4 sm:px-6 sm:py-5">
+              <div className="mb-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+                {discardCategories.map((category) => {
+                  const isActive = discardCategory === category;
+                  const count = category === "Todos"
+                    ? inventory.filter((item) => item.estado === "Descartado" && discardCategories.includes(item.categoria)).length
+                    : inventory.filter((item) => item.estado === "Descartado" && item.categoria === category).length;
+
+                  return (
+                    <button
+                      key={category}
+                      type="button"
+                      onClick={() => setDiscardCategory(category)}
+                      className={`inline-flex min-w-0 items-center justify-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition sm:justify-start ${
+                        isActive
+                          ? "border-rose-200 bg-rose-50 text-rose-700"
+                          : "border-slate-200 bg-white text-slate-500 hover:border-rose-200 hover:text-rose-600"
+                      }`}
+                    >
+                      {category}
+                      <span className={`rounded-full px-2 py-0.5 ${isActive ? "bg-white text-rose-700" : "bg-slate-100 text-slate-500"}`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="space-y-3 md:hidden">
+                {discardItems.length > 0 ? (
+                  discardItems.map((item) => (
+                    <DiscardHistoryCard key={item.id} item={item} />
+                  ))
+                ) : (
+                  <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center text-sm leading-6 text-slate-500">
+                    No hay descartes registrados para la consulta actual.
+                  </p>
+                )}
+              </div>
+
+              <div className="hidden overflow-hidden rounded-[22px] border border-slate-200 md:block">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[940px] border-collapse bg-white">
+                    <thead>
+                      <tr className="bg-slate-50 text-left">
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Fecha</th>
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Tipo</th>
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Nombre</th>
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Codigo</th>
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Cantidad</th>
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Ubicacion</th>
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Motivo</th>
+                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Responsable</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {discardItems.length > 0 ? (
+                        discardItems.map((item) => (
+                          <tr key={item.id} className="border-t border-slate-100 text-sm text-slate-700 hover:bg-rose-50/40 transition-colors">
+                            <td className="px-4 py-3 text-slate-500">{formatDate(item.fechaDescarte)}</td>
+                            <td className="px-4 py-3">
+                              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                                {item.categoria}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 font-semibold text-slate-900">{item.tipo}</td>
+                            <td className="px-4 py-3 text-slate-500">{item.codigo}</td>
+                            <td className="px-4 py-3 text-slate-500">{item.cantidad}</td>
+                            <td className="px-4 py-3 text-slate-500">{item.ubicacion}</td>
+                            <td className="px-4 py-3 text-slate-500">{item.motivoDescarte || "Sin motivo registrado"}</td>
+                            <td className="px-4 py-3 text-slate-500">{item.responsableDescarte || "Sin responsable"}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="8" className="px-4 py-8 text-center text-sm text-slate-500">
+                            No hay descartes registrados para la consulta actual.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </section>
       </div>
 
       {/* ─── MODAL 1: FORMULARIO GENERAL (EQUIPO / EQUIPAMIENTO) ─── */}
