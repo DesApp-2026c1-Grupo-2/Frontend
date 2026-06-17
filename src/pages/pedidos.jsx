@@ -124,7 +124,6 @@ export default function PedidosLaboratorio() {
       setShowNuevo(false);
     } catch (error) {
       console.error("Error al crear:", error.message);
-      alert("Error al crear el pedido");
       throw error; 
     }
   };
