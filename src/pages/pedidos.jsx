@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
-import NuevoPedidoForm from "../components/NuevoPedidoForm";
-import EditarPedidoForm from "../components/EditarPedidoForm";
+import NuevoPedidoForm from "../components/pedidos/NuevoPedidoForm";
+import EditarPedidoForm from "../components/pedidos/EditarPedidoForm";
 import { PageHeader } from "../components/SharedUi";
 import { useAuth } from "../context/AuthContext";
 
