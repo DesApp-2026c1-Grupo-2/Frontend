@@ -4,6 +4,7 @@ export default function CrearEdificioModal({
   mostrar,
   cerrarModal,
   formData,
+  errores,
   handleChange,
   handleSubmit,
 }) {
@@ -25,6 +26,7 @@ export default function CrearEdificioModal({
         <div className="p-6">
           <FormularioEdificio
             formData={formData}
+            errores={errores}
             handleChange={handleChange}
             handleSubmit={handleSubmit}
             cerrarModal={cerrarModal}
