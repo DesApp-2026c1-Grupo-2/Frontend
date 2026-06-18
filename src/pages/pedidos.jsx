@@ -87,7 +87,7 @@ export default function PedidosLaboratorio() {
         estado: "Pendiente",
       });
       setPedidos((prev) => [...prev, res.data]);
-      setShowNuevo(false);
+
     } catch (error) {
       console.error("Error al crear:", error.message);
       throw error; 
@@ -262,16 +262,21 @@ export default function PedidosLaboratorio() {
                       Inspeccionar
                     </button>
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
+                    className={`
+                      px-3 py-1 rounded-full text-xs font-medium capitalize
+                      ${
                         estado === "Aprobado"
                           ? "bg-emerald-100 text-emerald-700"
                           : estado === "Rechazado"
                           ? "bg-red-100 text-red-700"
+                          : estado === "Finalizado"
+                          ? "bg-slate-200 text-slate-700"
                           : "bg-yellow-100 text-yellow-700"
-                      }`}
-                    >
-                      {estado}
-                    </span>
+                      }
+                    `}
+                  >
+                    {estado}
+                  </span>
                   </div>
                 </div>
               );
