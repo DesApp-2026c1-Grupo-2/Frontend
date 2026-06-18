@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import api from "../api/axios";
-import { useAuth } from "../context/AuthContext";
+import api from "../../api/axios";
+import { useAuth } from "../../context/AuthContext";
 import { FiX } from "react-icons/fi";
 
 const STEPS = ["Datos Básicos", "Recursos", "Resumen", "Enviado"];
