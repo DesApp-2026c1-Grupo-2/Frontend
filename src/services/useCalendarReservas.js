@@ -92,10 +92,15 @@ export function useCalendarReservas(initialStartDate, initialEndDate) {
       const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
       const startTimeStr = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const endTimeStr = end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const yyyy = start.getFullYear();
+      const mm = String(start.getMonth() + 1).padStart(2, '0');
+      const dd = String(start.getDate()).padStart(2, '0');
 
       labsMap.get(labId).schedule.push({
+        date: `${yyyy}-${mm}-${dd}`,
         time: `${startTimeStr} - ${endTimeStr}`,
         subject: reserva.pedidoId?.materia || "Reservado",
+        estado: reserva.estado,
         status: reserva.estado === "Pendiente" ? "reserved-alt" : "reserved",
       });
     });
