@@ -57,6 +57,9 @@ export default function Laboratorios() {
     estado: "disponible",
   });
 
+  //Errores
+  const [errores, setErrores] = useState({});
+
   /*
     =========================
     CARGAR EDIFICIO
@@ -171,6 +174,13 @@ export default function Laboratorios() {
           ? checked
           : value,
     });
+
+    if (errores[name]) {
+      setErrores((prev) => ({
+        ...prev,
+        [name]: undefined,
+      }));
+    }
   };
 
   /*
@@ -181,6 +191,39 @@ export default function Laboratorios() {
   const handleSubmit = async (e) => {
 
     e.preventDefault();
+
+    if (!laboratorioEditando) {
+
+      const nuevosErrores = {};
+
+      if (!formData.nombre.trim()) {
+        nuevosErrores.nombre = "El nombre es obligatorio";
+      }
+
+      if (!formData.capacidad) {
+        nuevosErrores.capacidad = "La capacidad es obligatoria";
+      }
+
+      if (
+        formData.capacidad &&
+        Number(formData.capacidad) <= 0
+      ) {
+        nuevosErrores.capacidad =
+          "La capacidad debe ser mayor a 0";
+      }
+
+      if (!formData.tipo) {
+        nuevosErrores.tipo =
+          "Seleccioná un tipo de laboratorio";
+      }
+
+      if (Object.keys(nuevosErrores).length > 0) {
+        setErrores(nuevosErrores);
+        return;
+      }
+
+      setErrores({});
+    }
 
     try {
 
@@ -638,10 +681,12 @@ export default function Laboratorios() {
       {/* MODAL */}
       <LaboratorioModal
         mostrar={mostrarModal}
-        cerrarModal={() =>
-          setMostrarModal(false)
-        }
+        cerrarModal={() => {
+          setMostrarModal(false);
+          setErrores({});
+        }}
         formData={formData}
+        errores={errores}
         handleChange={handleChange}
         handleSubmit={handleSubmit}
         esEdicion={!!laboratorioEditando}

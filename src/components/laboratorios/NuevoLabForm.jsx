@@ -1,5 +1,6 @@
 export default function NuevoLaboratorioForm({
   formData,
+  errores,
   handleChange,
   handleSubmit,
   cerrarModal,
@@ -18,22 +19,30 @@ export default function NuevoLaboratorioForm({
           value={formData.nombre}
           onChange={handleChange}
           placeholder="Ej: Laboratorio 202"
-          className="
+          className={`
             w-full
             rounded-xl
-            border border-slate-200
+            border
             bg-white
             px-4 py-2.5
             text-sm text-slate-700
             placeholder:text-slate-400
             outline-none
             transition-colors
-            focus:border-emerald-300
+            ${
+              errores.nombre
+                ? "border-red-400 focus:border-red-500"
+                : "border-slate-200 focus:border-emerald-300"
+            }
             focus:ring-4
             focus:ring-emerald-100
-          "
-          required
+          `}
         />
+        {errores.nombre && (
+              <p className="text-red-500 text-xs mt-1">
+                {errores.nombre}
+              </p>
+            )}
       </div>
 
       {/* CAPACIDAD */}
@@ -48,22 +57,31 @@ export default function NuevoLaboratorioForm({
           value={formData.capacidad}
           onChange={handleChange}
           placeholder="Ej: 30"
-          className="
+          className={`
             w-full
             rounded-xl
-            border border-slate-200
+            border
             bg-white
             px-4 py-2.5
             text-sm text-slate-700
             placeholder:text-slate-400
             outline-none
             transition-colors
-            focus:border-emerald-300
+            ${
+              errores.capacidad
+                ? "border-red-400 focus:border-red-500"
+                : "border-slate-200 focus:border-emerald-300"
+            }
             focus:ring-4
             focus:ring-emerald-100
-          "
-          required
+          `}
         />
+
+        {errores.capacidad && (
+          <p className="text-red-500 text-xs mt-1">
+            {errores.capacidad}
+          </p>
+        )}
       </div>
 
       {/* TIPO */}
@@ -76,26 +94,35 @@ export default function NuevoLaboratorioForm({
           name="tipo"
           value={formData.tipo}
           onChange={handleChange}
-          className="
+          className={`
             w-full
             rounded-xl
-            border border-slate-200
+            border
             bg-white
             px-4 py-2.5
             text-sm text-slate-700
+            placeholder:text-slate-400
             outline-none
             transition-colors
-            focus:border-emerald-300
+            ${
+              errores.tipo
+                ? "border-red-400 focus:border-red-500"
+                : "border-slate-200 focus:border-emerald-300"
+            }
             focus:ring-4
             focus:ring-emerald-100
-          "
-          required
+          `}
         >
           <option value="">Seleccionar tipo</option>
           <option value="biologia">Biología</option>
           <option value="quimica">Química</option>
           <option value="mixto">Mixto</option>
         </select>
+        {errores.tipo && (
+          <p className="text-red-500 text-xs mt-1">
+            {errores.tipo}
+          </p>
+        )}
       </div>
 
       {/* INFO */}
