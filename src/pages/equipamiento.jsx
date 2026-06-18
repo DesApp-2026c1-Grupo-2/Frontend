@@ -847,10 +847,18 @@ function Equipamiento() {
                 </div>
                 <p className="mb-0 text-sm text-slate-500">Estados que requieren revisión o mantenimiento.</p>
               </div>
-              <div className="flex flex-col gap-3 p-5">
-                {alertItems.map((item) => (
-                  <AlertCard key={item.id} item={item} />
-                ))}
+              <div className="max-h-[36rem] overflow-y-auto p-5 pr-3">
+                <div className="flex flex-col gap-3 pr-2">
+                  {alertItems.length > 0 ? (
+                    alertItems.map((item) => (
+                      <AlertCard key={item.id} item={item} />
+                    ))
+                  ) : (
+                    <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center text-sm leading-6 text-slate-500">
+                      No hay alertas activas.
+                    </p>
+                  )}
+                </div>
               </div>
             </Card>
           </div>
