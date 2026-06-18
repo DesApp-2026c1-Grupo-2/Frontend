@@ -157,7 +157,19 @@ export default function PedidoDetalle() {
 
       alert("No se pudo agregar el comentario");
     }
-  };  
+  };
+
+  useEffect(() => {
+    const marcarVisto = async () => {
+      try {
+        await api.patch(`/pedido/${id}/comentarios/visto`);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    marcarVisto();
+  }, [id]);
 
   if (loading) {
     return (

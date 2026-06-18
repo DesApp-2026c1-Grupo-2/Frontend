@@ -2,8 +2,10 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
+
 import logo from "../assets/Logo.png";
 import { FiUser, FiLogOut } from "react-icons/fi";
+
 
 function Navbar() {
   const navigate = useNavigate();
@@ -11,12 +13,15 @@ function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { user, logout } = useAuth();
 
+
   const canViewAdminSections = user?.rol?.toUpperCase() === "ADMIN" || user?.rol?.toUpperCase() === "PERSONAL";
+
 
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
+
 
   const navButtonClass = (path) =>
   `w-full rounded-xl px-4 py-3 text-left text-base font-semibold transition
@@ -25,6 +30,7 @@ function Navbar() {
        ? "bg-emerald-600 text-white shadow-sm"
        : "text-slate-700 hover:bg-slate-100 hover:text-slate-900"
    }`;
+
 
   return (
     <header className="fixed top-0 left-0 z-50 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md shadow-sm">
@@ -42,14 +48,16 @@ function Navbar() {
           />
         </button>
 
+
         {/* DESKTOP NAV */}
         <nav className="hidden md:flex items-center gap-2 sm:gap-4">
           <button
             onClick={() => navigate("/dashboard")} /*PRUEBA */
             className={navButtonClass("/dashboard")}
           >
-            Dashboard 
+            Dashboard
           </button>
+
 
           {canViewAdminSections && (
             <>
@@ -60,6 +68,7 @@ function Navbar() {
                 Edificios
               </button>
 
+
               <button
                 onClick={() => navigate("/equipamiento")}
                 className={navButtonClass("/equipamiento")}
@@ -69,12 +78,14 @@ function Navbar() {
             </>
           )}
 
+
           <button
             onClick={() => navigate("/pedidos")}
             className={navButtonClass("/pedidos")}
           >
             Pedidos
           </button>
+
 
           {user && (
             <div className="ml-2 flex items-center gap-3 border-l border-slate-200 pl-4">
@@ -85,16 +96,19 @@ function Navbar() {
                   </span>
                 </div>
 
+
                 <div className="hidden lg:block">
                   <p className="text-sm font-semibold text-slate-800">
                     {user.nombre}
                   </p>
+
 
                   <p className="text-xs uppercase tracking-wide text-slate-500">
                     {user.rol}
                   </p>
                 </div>
               </div>
+
 
               <button
                 onClick={handleLogout}
@@ -107,6 +121,7 @@ function Navbar() {
           )}
         </nav>
 
+
         {/* MOBILE BUTTON */}
         <button
           onClick={() => setMenuOpen(!menuOpen)}
@@ -118,6 +133,7 @@ function Navbar() {
         </button>
       </div>
 
+
       {/* MOBILE MENU */}
       {menuOpen && (
         <div className="md:hidden border-t border-slate-200 bg-white/95 backdrop-blur-md px-4 py-4 shadow-lg">
@@ -127,10 +143,12 @@ function Navbar() {
                 {user.nombre?.charAt(0)?.toUpperCase()}
               </div>
 
+
               <div>
                 <p className="font-semibold text-slate-800">
                   {user.nombre}
                 </p>
+
 
                 <p className="text-xs uppercase tracking-wide text-slate-500">
                   {user.rol}
@@ -139,6 +157,7 @@ function Navbar() {
             </div>
           )}
           <nav className="flex flex-col gap-2">
+
 
             {/* Agregados Dashboard y Edificios para móviles protegidos por rol */}
             {canViewAdminSections && (
@@ -153,6 +172,7 @@ function Navbar() {
                   Dashboard
                 </button>
 
+
                 <button
                   onClick={() => {
                     navigate("/edificios");
@@ -162,6 +182,7 @@ function Navbar() {
                 >
                   Edificios
                 </button>
+
 
                 <button
                   onClick={() => {
@@ -175,6 +196,7 @@ function Navbar() {
               </>
             )}
 
+
             <button
               onClick={() => {
                 navigate("/pedidos");
@@ -184,6 +206,7 @@ function Navbar() {
             >
               Pedidos
             </button>
+
 
             {user && (
               <button
@@ -196,6 +219,7 @@ function Navbar() {
                 Salir
               </button>
             )}
+
 
             {!user && (
               <button
@@ -214,5 +238,6 @@ function Navbar() {
     </header>
   );
 }
+
 
 export default Navbar;
