@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
-import { FiX } from "react-icons/fi";
+import { FiX, FiLoader, FiCheckCircle } from "react-icons/fi";
 
 const STEPS = ["Datos Básicos", "Recursos", "Resumen", "Enviado"];
 
@@ -13,6 +13,8 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
   const [docentes, setDocentes] = useState([]);
   const [recursosDB, setRecursosDB] = useState([]);
   const [errorSubmit, setErrorSubmit] = useState("");
+  const [estadoEnvio, setEstadoEnvio] = useState(null);
+  const [errores, setErrores] = useState({});
 
   const [form, setForm] = useState({
     materia: "", 
@@ -143,16 +145,51 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
     cargarDisponibles();
   }, [form.fecha, form.hora, form.horaFin, form.alumnos]);
 
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const set = (k) => (e) => {
+    setForm((f) => ({
+      ...f,
+      [k]: e.target.value,
+    }));
+
+    if (errores[k]) {
+      setErrores((prev) => ({
+        ...prev,
+        [k]: undefined,
+      }));
+    }
+  };
 
   const toggleRecurso = (recurso) => {
+
+    if (errores.recursos) {
+      setErrores((prev) => ({
+        ...prev,
+        recursos: undefined,
+      }));
+    }
+
     setForm((prev) => {
       const recursoId = recurso._id || recurso.id;
-      const existe = prev.recursos.some((r) => (r._id || r.id) === recursoId);
+
+      const existe = prev.recursos.some(
+        (r) => (r._id || r.id) === recursoId
+      );
+
       if (existe) {
-        return { ...prev, recursos: prev.recursos.filter((r) => (r._id || r.id) !== recursoId) };
+        return {
+          ...prev,
+          recursos: prev.recursos.filter(
+            (r) => (r._id || r.id) !== recursoId
+          ),
+        };
       } else {
-        return { ...prev, recursos: [...prev.recursos, { ...recurso, cantidad: 1 }] };
+        return {
+          ...prev,
+          recursos: [
+            ...prev.recursos,
+            { ...recurso, cantidad: 1 },
+          ],
+        };
       }
     });
   };
@@ -170,17 +207,21 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
 
   const handleSiguiente = () => {
     if (step === 0) {
-      if (
-        !form.materia ||
-        !form.docente ||
-        !form.alumnos ||
-        !form.fecha ||
-        !form.hora ||
-        !form.horaFin
-      ) {
-        alert("Error: Faltan completar datos obligatorios.");
+      const nuevosErrores = {};
+
+      if (!form.materia) nuevosErrores.materia = "La materia es obligatoria";
+      if (!form.docente) nuevosErrores.docente = "Seleccioná un docente";
+      if (!form.alumnos) nuevosErrores.alumnos = "Ingresá la cantidad de alumnos";
+      if (!form.fecha) nuevosErrores.fecha = "Seleccioná una fecha";
+      if (!form.hora) nuevosErrores.hora = "Seleccioná una hora de inicio";
+      if (!form.horaFin) nuevosErrores.horaFin = "Seleccioná una hora de finalización";
+
+      if (Object.keys(nuevosErrores).length > 0) {
+        setErrores(nuevosErrores);
         return;
       }
+
+      setErrores({});
 
       const alumnos = Number(form.alumnos);
 
@@ -221,9 +262,13 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
 
     if (step === 1) {
       if (form.recursos.length === 0) {
-        alert("Error: Debes seleccionar al menos un recurso.");
+        setErrores({
+          recursos: "Debes seleccionar al menos un recurso"
+        });
         return;
       }
+
+      setErrores({});
     }
 
     setStep((s) => s + 1);
@@ -249,17 +294,32 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
     };
 
     try {
+      setEstadoEnvio("loading");
+
       await onCrear(payload);
 
-      // SOLO si sale bien
-      setStep(3);
+      setEstadoEnvio("success");
+
+      setTimeout(() => {
+        onClose();
+      }, 2000);
 
     } catch (err) {
-      console.error("Error al crear pedido:",  err.response?.data);
-      const serverError = err.response?.data?.error || err.response?.data?.message || "Ocurrió un error al procesar el pedido.";
-      const detalles = err.response?.data?.detalles ? err.response.data.detalles.map(d => d.message).join(", ") : "";
+      setEstadoEnvio(null);
+
+      console.error("Error al crear pedido:", err.response?.data);
+
+      const serverError =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        "Ocurrió un error al procesar el pedido.";
+
+      const detalles = err.response?.data?.detalles
+        ? err.response.data.detalles.map((d) => d.message).join(", ")
+        : "";
+
       setErrorSubmit(`${serverError} ${detalles}`.trim());
-      // 🔥 IMPORTANTE: cortar flujo
+
       return;
     }
   };
@@ -302,24 +362,69 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
           {step === 0 && (
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
-                <label className="block text-sm font-medium text-zinc-600 mb-1">Materia</label>
+                <label className="block text-sm font-medium text-zinc-600 mb-1">
+                  Materia
+                </label>
+
                 <input type="text" placeholder="Ej: Biología Celular" value={form.materia} onChange={set("materia")}
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-zinc-400" />
+                  className={`w-full bg-zinc-50 border rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none transition-all placeholder:text-zinc-400
+                    ${
+                      errores.materia
+                        ? "border-red-400 focus:border-red-500"
+                        : "border-zinc-200 focus:border-emerald-500"
+                    }`
+                  }
+                />
+
+                {errores.materia && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errores.materia}
+                  </p>
+                )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-zinc-600 mb-1">Docente solicitante</label>
+                <label className="block text-sm font-medium text-zinc-600 mb-1">
+                  Docente solicitante
+                </label>
                 <select value={form.docente} onChange={set("docente")}
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all">
+                  className={`w-full bg-zinc-50 border rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none transition-all
+                    ${
+                      errores.docente
+                        ? "border-red-400 focus:border-red-500"
+                        : "border-zinc-200 focus:border-emerald-500"
+                    }`}
+                >
                   <option value="">Seleccionar docente...</option>
                   {docentes.map(d => <option key={d._id || d.id} value={d._id || d.id}>{d.nombre} {d.apellido}</option>)}
                 </select>
+
+                {errores.docente && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errores.docente}
+                  </p>
+                )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-zinc-600 mb-1">Cantidad de alumnos</label>
+                <label className="block text-sm font-medium text-zinc-600 mb-1">
+                  Cantidad de alumnos
+                </label>
                 <input type="number" placeholder="Ej: 28" value={form.alumnos} onChange={set("alumnos")}
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-zinc-400" />
+                  className={`w-full bg-zinc-50 border rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none transition-all
+                    ${
+                      errores.alumnos
+                        ? "border-red-400 focus:border-red-500"
+                        : "border-zinc-200 focus:border-emerald-500"
+                    }`}
+                                
+                />
+                
+                {errores.alumnos && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errores.alumnos}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -329,8 +434,19 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
                   value={form.fecha}
                   onChange={set("fecha")}
                   min={new Date().toISOString().split("T")[0]}
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all"
+                  className={`w-full bg-zinc-50 border rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none transition-all
+                    ${
+                      errores.fecha
+                        ? "border-red-400 focus:border-red-500"
+                        : "border-zinc-200 focus:border-emerald-500"
+                    }`}
                 />
+
+                {errores.fecha && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errores.fecha}
+                  </p>
+                )}
               </div>
 
               {/* Columna vacía para mantener fecha sola en su fila */}
@@ -339,13 +455,35 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
               <div>
                 <label className="block text-sm font-medium text-zinc-600 mb-1">Hora de inicio</label>
                 <input type="time" value={form.hora} onChange={set("hora")}
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all" />
+                  className={`w-full bg-zinc-50 border rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none transition-all
+                  ${
+                    errores.hora
+                      ? "border-red-400 focus:border-red-500"
+                      : "border-zinc-200 focus:border-emerald-500"
+                  }`} 
+                />
+                {errores.hora && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errores.hora}
+                  </p>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-zinc-600 mb-1">Hora de finalización</label>
                 <input type="time" value={form.horaFin} onChange={set("horaFin")}
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all" />
+                  className={`w-full bg-zinc-50 border rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none transition-all
+                    ${
+                      errores.horaFin
+                        ? "border-red-400 focus:border-red-500"
+                        : "border-zinc-200 focus:border-emerald-500"
+                    }`} 
+                />
+                {errores.horaFin && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errores.horaFin}
+                  </p>
+                )}
               </div>
               
               <div className="col-span-2">
@@ -381,7 +519,18 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
 
           {step === 1 && (
             <div className="space-y-4">
-              <p className="text-zinc-500 text-sm italic">Seleccionar recursos requeridos e indicar cantidad:</p>
+              <p className="text-zinc-500 text-sm italic">
+                Seleccionar recursos requeridos e indicar cantidad:
+              </p>
+
+              {errores.recursos && (
+                <div className="p-3 rounded-xl bg-red-50 border border-red-200">
+                  <p className="text-red-600 text-sm font-medium">
+                    {errores.recursos}
+                  </p>
+                </div>
+              )}
+
               <div className="max-h-[40vh] overflow-y-auto grid grid-cols-1 gap-2 pr-2">
                 {recursosDB.map((r, i) => {
                   const seleccionado = form.recursos.find(rec => (rec._id || rec.id) === (r._id || r.id));
@@ -483,13 +632,64 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
               Siguiente
             </button>
           ) : step === 2 ? (
-            <button onClick={handleCrear}
-              className="px-6 py-2 rounded-xl text-sm bg-emerald-500 text-white font-bold hover:bg-emerald-600 transition-all shadow-md shadow-emerald-200">
+            <button onClick={handleCrear} disabled={estadoEnvio === "loading"}
+              className="px-6 py-2 rounded-xl text-sm bg-emerald-500 text-white font-bold hover:bg-emerald-600 transition-all shadow-md shadow-emerald-200 disabled:opacity-50 disabled:cursor-not-allowed">
               Finalizar
             </button>
           ) : null}
         </div>
       </div>
+      {estadoEnvio && (
+      <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
+
+        <div className="
+          w-full max-w-sm
+          bg-white
+          rounded-3xl
+          shadow-2xl
+          border border-zinc-200
+          p-8
+          flex flex-col items-center
+          text-center
+          animate-fade-in
+        ">
+
+          {estadoEnvio === "loading" ? (
+            <>
+              <FiLoader
+                size={56}
+                className="text-emerald-600 animate-spin mb-5"
+              />
+
+              <h3 className="text-xl font-bold text-zinc-800">
+                Enviando pedido...
+              </h3>
+
+              <p className="mt-2 text-sm text-zinc-500">
+                Estamos registrando tu solicitud.
+              </p>
+            </>
+          ) : (
+            <>
+              <FiCheckCircle
+                size={64}
+                className="text-emerald-600 mb-5"
+              />
+
+              <h3 className="text-xl font-bold text-zinc-800">
+                ¡Pedido enviado!
+              </h3>
+
+              <p className="mt-2 text-sm text-zinc-500">
+                Tu solicitud fue registrada correctamente y será revisada por el equipo técnico.
+              </p>
+            </>
+          )}
+
+        </div>
+      </div>
+    )}
     </div>
+    
   );
 }
