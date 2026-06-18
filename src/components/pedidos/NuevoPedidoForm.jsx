@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import api from "../api/axios";
-import { useAuth } from "../context/AuthContext";
+import api from "../../api/axios";
+import { useAuth } from "../../context/AuthContext";
 import { FiX } from "react-icons/fi";
 
 const STEPS = ["Datos Básicos", "Recursos", "Resumen", "Enviado"];
@@ -12,6 +12,7 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
   const [laboratorios, setLaboratorios] = useState([]);
   const [docentes, setDocentes] = useState([]);
   const [recursosDB, setRecursosDB] = useState([]);
+  const [errorSubmit, setErrorSubmit] = useState("");
 
   const [form, setForm] = useState({
     materia: "", 
@@ -199,7 +200,8 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
       const hoy = new Date();
       hoy.setHours(0, 0, 0, 0);
 
-      const fechaSeleccionada = new Date(form.fecha);
+      const [year, month, day] = form.fecha.split("-").map(Number);
+      const fechaSeleccionada = new Date(year, month - 1, day);
 
       if (fechaSeleccionada < hoy) {
         alert("Error: La fecha no puede ser anterior a hoy.");
@@ -228,6 +230,7 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
   };
 
   const handleCrear = async () => {
+    setErrorSubmit("");
     const payload = {
       materia: form.materia,
       docente: form.docente,
@@ -253,6 +256,9 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
 
     } catch (err) {
       console.error("Error al crear pedido:",  err.response?.data);
+      const serverError = err.response?.data?.error || err.response?.data?.message || "Ocurrió un error al procesar el pedido.";
+      const detalles = err.response?.data?.detalles ? err.response.data.detalles.map(d => d.message).join(", ") : "";
+      setErrorSubmit(`${serverError} ${detalles}`.trim());
       // 🔥 IMPORTANTE: cortar flujo
       return;
     }
@@ -447,6 +453,12 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
                   </div>
                 ))}
               </div>
+
+            {errorSubmit && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl">
+                <strong>Error:</strong> {errorSubmit}
+              </div>
+            )}
             </div>
           )}
 
