@@ -12,6 +12,9 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
   const [laboratorios, setLaboratorios] = useState([]);
   const [docentes, setDocentes] = useState([]);
   const [recursosDB, setRecursosDB] = useState([]);
+  const [actividades, setActividades] = useState([]);
+  const [actividadPlantilla, setActividadPlantilla] = useState("");
+  const [cargandoSugerencias, setCargandoSugerencias] = useState(false);
   const [errorSubmit, setErrorSubmit] = useState("");
   const [estadoEnvio, setEstadoEnvio] = useState(null);
   const [errores, setErrores] = useState({});
@@ -45,12 +48,17 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
     const fetchData = async () => {
       try {
         // Promise.allSettled evita que si una falla, todo el form colapse
-        const [labsRes, usersRes, equiposRes, itemsRes] = await Promise.allSettled([
+        const [labsRes, usersRes, equiposRes, itemsRes, actividadesRes] = await Promise.allSettled([
           api.get("/laboratorio"),
           api.get("/usuarios"),
           api.get("/equipo"),
-          api.get("/items")
+          api.get("/items"),
+          api.get("/actividades")
         ]);
+
+        if (actividadesRes.status === "fulfilled") {
+          setActividades(actividadesRes.value.data);
+        }
 
         if (labsRes.status === "fulfilled") setLaboratorios(labsRes.value.data);
         
@@ -187,7 +195,7 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
           ...prev,
           recursos: [
             ...prev.recursos,
-            { ...recurso, cantidad: 1 },
+            { ...recurso, cantidad: 1, deLaPlantilla: false },
           ],
         };
       }
@@ -199,11 +207,77 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
       ...prev,
       recursos: prev.recursos.map((r) => 
         (r._id || r.id) === idRecurso 
-          ? { ...r, cantidad: Number(nuevaCantidad) } 
+          ? { ...r, cantidad: Number(nuevaCantidad), deLaPlantilla: false } 
           : r
       )
     }));
   };
+
+  // Aplica una actividad como plantilla: trae los recursos sugeridos para su
+  // tipo y los pre-selecciona (con su cantidad sugerida) en el formulario,
+  // sin perder la posibilidad de seguir editando manualmente después.
+  // Al cambiar de plantilla (o volver a "Sin plantilla"), se quitan los
+  // recursos que habían sido agregados por la plantilla anterior, pero se
+  // respetan los que el usuario agregó o ajustó manualmente.
+  const aplicarPlantilla = async (actividadId) => {
+    setActividadPlantilla(actividadId);
+
+    // Quitar siempre lo que trajo la plantilla anterior (si la había)
+    setForm((prev) => ({
+      ...prev,
+      recursos: prev.recursos.filter((r) => !r.deLaPlantilla),
+    }));
+
+    if (!actividadId) return;
+
+    setCargandoSugerencias(true);
+    try {
+      const { data } = await api.get(`/actividades/${actividadId}/sugerencias`);
+
+      const recursosSugeridos = [
+        ...(data.items || []).map((s) => ({
+          ...s.item,
+          tipoRecurso: "Item",
+          tipoDetalle: s.item.tipo
+            ? s.item.tipo.charAt(0).toUpperCase() + s.item.tipo.slice(1)
+            : "Material",
+          cantidad: s.cantidadSugerida,
+          deLaPlantilla: true,
+        })),
+        ...(data.equipos || [])
+          .filter((s) => s.disponible)
+          .map((s) => ({
+            ...s.equipo,
+            tipoRecurso: "Equipo",
+            tipoDetalle: "Equipo",
+            cantidad: s.cantidadSugerida,
+            deLaPlantilla: true,
+          })),
+      ];
+
+      setForm((prev) => {
+        // No pisar recursos que el usuario ya haya agregado/ajustado a mano
+        const recursosManuales = prev.recursos.filter((r) => !r.deLaPlantilla);
+
+        const sugeridosSinDuplicar = recursosSugeridos.filter(
+          (rs) =>
+            !recursosManuales.some(
+              (r) => (r._id || r.id) === (rs._id || rs.id)
+            )
+        );
+
+        return {
+          ...prev,
+          recursos: [...recursosManuales, ...sugeridosSinDuplicar],
+        };
+      });
+    } catch (error) {
+      console.error("Error al cargar sugerencias de la actividad:", error);
+    } finally {
+      setCargandoSugerencias(false);
+    }
+  };
+
 
   const handleSiguiente = () => {
     if (step === 0) {
@@ -261,13 +335,6 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
     }
 
     if (step === 1) {
-      if (form.recursos.length === 0) {
-        setErrores({
-          recursos: "Debes seleccionar al menos un recurso"
-        });
-        return;
-      }
-
       setErrores({});
     }
 
@@ -520,8 +587,34 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
           {step === 1 && (
             <div className="space-y-4">
               <p className="text-zinc-500 text-sm italic">
-                Seleccionar recursos requeridos e indicar cantidad:
+                Seleccionar recursos requeridos e indicar cantidad (opcional, por ejemplo en una clase teórica puede no necesitarse ninguno):
               </p>
+
+              {actividades.length > 0 && (
+                <div className="bg-emerald-50/60 border border-emerald-100 rounded-xl px-4 py-3">
+                  <label className="block text-sm font-medium text-zinc-600 mb-1">
+                    Usar actividad como plantilla (opcional)
+                  </label>
+                  <select
+                    value={actividadPlantilla}
+                    onChange={(e) => aplicarPlantilla(e.target.value)}
+                    className="w-full bg-white border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all"
+                  >
+                    <option value="">Sin plantilla...</option>
+                    {actividades.map((a) => (
+                      <option key={a._id || a.id} value={a._id || a.id}>
+                        {a.nombre} ({a.tipo})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-zinc-400 mt-1">
+                    Precarga los recursos sugeridos para el tipo de actividad elegido. Podés seguir agregando, quitando o ajustando cantidades después.
+                  </p>
+                  {cargandoSugerencias && (
+                    <p className="text-xs text-emerald-600 mt-1">Cargando recursos sugeridos...</p>
+                  )}
+                </div>
+              )}
 
               {errores.recursos && (
                 <div className="p-3 rounded-xl bg-red-50 border border-red-200">
@@ -595,12 +688,16 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
               {/* Desglose de recursos en el resumen */}
               <div className="pt-2">
                 <span className="text-zinc-500 text-sm block mb-2">Recursos ({form.recursos.length}):</span>
-                {form.recursos.map((r, i) => (
-                  <div key={i} className="flex justify-between items-center text-xs py-1">
-                    <span className="text-zinc-600">- {r.nombre}</span>
-                    <span className="font-medium text-zinc-800">x{r.cantidad}</span>
-                  </div>
-                ))}
+                {form.recursos.length === 0 ? (
+                  <p className="text-zinc-400 text-xs italic">Sin recursos solicitados.</p>
+                ) : (
+                  form.recursos.map((r, i) => (
+                    <div key={i} className="flex justify-between items-center text-xs py-1">
+                      <span className="text-zinc-600">- {r.nombre}</span>
+                      <span className="font-medium text-zinc-800">x{r.cantidad}</span>
+                    </div>
+                  ))
+                )}
               </div>
 
             {errorSubmit && (
