@@ -429,9 +429,15 @@ function Equipamiento() {
   const [desperfectoItem, setDesperfectoItem] = useState(null);
   const [desperfectoForm, setDesperfectoForm] = useState({
     reservaId: "",
-    fecha: new Date().toISOString().split('T')[0], // Coloca el día actual por defecto
+    fecha: new Date().toISOString().split('T')[0],
     descripcion: ""
   });
+
+  // ─── MENSAJES INLINE (reemplazan alerts) ───
+  const [errorOperacion, setErrorOperacion] = useState("");   // error al eliminar
+  const [errorFormEquip, setErrorFormEquip] = useState("");   // error en modal equipo/item
+  const [erroresFormEquip, setErroresFormEquip] = useState({}); // validaciones inline
+  const [desperfectoMsg, setDesperfectoMsg] = useState("");   // éxito/error en desperfecto
 
   // Cargar datos del backend
   useEffect(() => {
@@ -486,7 +492,9 @@ function Equipamiento() {
       await recargarInventario();
     } catch (err) {
       console.error("Error al eliminar el registro:", err);
-      alert("No se pudo eliminar el registro: " + (err.response?.data?.error || err.message));
+      const msg = "No se pudo eliminar el registro: " + (err.response?.data?.error || err.message);
+      setErrorOperacion(msg);
+      setTimeout(() => setErrorOperacion(""), 5000);
     }
   };
 
@@ -540,6 +548,8 @@ function Equipamiento() {
   const closeForm = () => {
     setIsFormOpen(false);
     setEditingItem(null);
+    setErrorFormEquip("");
+    setErroresFormEquip({});
   };
 
   // ─── ACCIONES DEL FORMULARIO DE DESPERFECTOS ───
@@ -556,6 +566,7 @@ function Equipamiento() {
   const closeDesperfectoModal = () => {
     setIsDesperfectoOpen(false);
     setDesperfectoItem(null);
+    setDesperfectoMsg("");
   };
 
   const handleDesperfectoChange = (e) => {
@@ -565,15 +576,15 @@ function Equipamiento() {
 
   const handleDesperfectoSubmit = async (e) => {
     e.preventDefault();
+    setDesperfectoMsg("");
     try {
-      // Aquí puedes mapear la llamada a tu API real, ej:
       // await equipamientoService.createDesperfecto(desperfectoItem.id, desperfectoForm);
-      alert(`Desperfecto registrado con éxito para el equipo: ${desperfectoItem.tipo}`);
-      closeDesperfectoModal();
+      setDesperfectoMsg(`ok:Desperfecto registrado con éxito para el equipo: ${desperfectoItem.tipo}`);
       await recargarInventario();
+      setTimeout(() => { closeDesperfectoModal(); setDesperfectoMsg(""); }, 2000);
     } catch (err) {
       console.error("Error al guardar desperfecto:", err);
-      alert("Error al registrar el desperfecto.");
+      setDesperfectoMsg("error:Error al registrar el desperfecto.");
     }
   };
 
@@ -592,6 +603,8 @@ function Equipamiento() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setErrorFormEquip("");
+    setErroresFormEquip({});
 
     if (activeTab === "Equipos") {
       const isFijo = formData.esFijo === true || String(formData.esFijo) === "true";
@@ -605,10 +618,11 @@ function Equipamiento() {
         laboratorioId: isFijo && formData.laboratorioId ? formData.laboratorioId : null,
       };
 
-      if (!payloadEquipo.nombre || !payloadEquipo.codigo || !payloadEquipo.tipo) {
-        alert("Por favor completa Nombre, Código y Tipo para el equipo.");
-        return;
-      }
+      const errs = {};
+      if (!payloadEquipo.nombre) errs.nombre = "El nombre es obligatorio.";
+      if (!payloadEquipo.codigo) errs.codigo = "El código es obligatorio.";
+      if (!payloadEquipo.tipo) errs.tipo = "El tipo es obligatorio.";
+      if (Object.keys(errs).length > 0) { setErroresFormEquip(errs); return; }
 
       try {
         if (editingItem) {
@@ -622,7 +636,7 @@ function Equipamiento() {
         resetForm();
       } catch (err) {
         console.error("Error al guardar equipo:", err);
-        alert("Error al guardar el equipo: " + (err.response?.data?.error || err.message));
+        setErrorFormEquip("Error al guardar el equipo: " + (err.response?.data?.error || err.message));
       }
       return; 
     }
@@ -631,10 +645,11 @@ function Equipamiento() {
     const cantidad = Number.parseInt(formData.cantidad, 10);
     const ubicacion = formData.ubicacion.trim();
     
-    if (!nombre || Number.isNaN(cantidad) || cantidad < 1 || !ubicacion) {
-      alert("Por favor completa todos los campos");
-      return;
-    }
+    const errs = {};
+    if (!nombre) errs.nombre = "El nombre es obligatorio.";
+    if (Number.isNaN(cantidad) || cantidad < 1) errs.cantidad = "Ingresá una cantidad válida (mínimo 1).";
+    if (!ubicacion) errs.ubicacion = "La ubicación es obligatoria.";
+    if (Object.keys(errs).length > 0) { setErroresFormEquip(errs); return; }
 
     try {
       if (editingItem) {
@@ -677,7 +692,7 @@ function Equipamiento() {
       resetForm();
     } catch (err) {
       console.error("Error al guardar item/lote:", err);
-      alert("Error al guardar el ítem: " + (err.response?.data?.error || err.message));
+      setErrorFormEquip("Error al guardar el ítem: " + (err.response?.data?.error || err.message));
     }
   };
 
@@ -731,6 +746,14 @@ function Equipamiento() {
     <div className="min-h-screen text-slate-800">
       <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
         <PageHeader title="Equipamiento" />
+
+        {/* Banner error de operación (ej: no se pudo eliminar) */}
+        {errorOperacion && (
+          <div className="mb-4 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+            <span><strong>Error:</strong> {errorOperacion}</span>
+            <button onClick={() => setErrorOperacion("")} className="ml-4 font-bold text-red-400 hover:text-red-600">✕</button>
+          </div>
+        )}
 
         {/* Stats Card */}
         <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -1095,6 +1118,20 @@ function Equipamiento() {
               </div>
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+              {/* Errores de validación y backend del formulario */}
+              {Object.keys(erroresFormEquip).length > 0 && (
+                <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 space-y-1">
+                  {Object.values(erroresFormEquip).map((msg, i) => (
+                    <p key={i} className="text-sm text-red-600">• {msg}</p>
+                  ))}
+                </div>
+              )}
+              {errorFormEquip && (
+                <div className="mb-4 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+                  <span><strong>Error:</strong> {errorFormEquip}</span>
+                  <button onClick={() => setErrorFormEquip("")} className="ml-4 font-bold text-red-400 hover:text-red-600">✕</button>
+                </div>
+              )}
               {activeTab === "Equipos" ? (
                 <FormularioEquipo formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} />
               ) : (
@@ -1113,6 +1150,15 @@ function Equipamiento() {
               <h2 className="text-lg font-bold text-slate-900">Registrar desperfecto</h2>
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+              {desperfectoMsg && (
+                <div className={`mb-4 rounded-xl border p-3 text-sm ${
+                  desperfectoMsg.startsWith("ok:")
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-red-200 bg-red-50 text-red-600"
+                }`}>
+                  {desperfectoMsg.replace(/^(ok|error):/, "")}
+                </div>
+              )}
               <FormularioDesperfecto
                 desperfectoItem={desperfectoItem}
                 desperfectoForm={desperfectoForm}
