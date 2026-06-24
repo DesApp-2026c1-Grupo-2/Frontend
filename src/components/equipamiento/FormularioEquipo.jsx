@@ -3,9 +3,16 @@ export default function FormularioEquipo({
   handleChange,
   handleSubmit,
   cerrarModal,
+  errores = {},
 }) {
-  // Evaluamos si el equipo es fijo para mostrar u ocultar la asignación de espacios
   const isFijo = formData.esFijo === true || String(formData.esFijo) === "true";
+
+  const inputClass = (campo) =>
+    `w-full px-3 py-2 rounded-lg border bg-white text-slate-800 focus:outline-none focus:ring-2 transition ${
+      errores[campo]
+        ? "border-red-400 focus:ring-red-100 focus:border-red-400"
+        : "border-slate-200 focus:ring-emerald-200 focus:border-emerald-300"
+    }`;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 px-3 py-3">
@@ -21,9 +28,9 @@ export default function FormularioEquipo({
           value={formData.nombre || ""}
           onChange={handleChange}
           placeholder="Ej. Espectrómetro de masas"
-          required
-          className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
+          className={inputClass("nombre")}
         />
+        {errores.nombre && <p className="text-red-500 text-xs mt-1">{errores.nombre}</p>}
       </div>
 
       {/* CÓDIGO Y TIPO */}
@@ -38,9 +45,9 @@ export default function FormularioEquipo({
             value={formData.codigo || ""}
             onChange={handleChange}
             placeholder="Ej. EQ-001"
-            required
-            className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
+            className={inputClass("codigo")}
           />
+          {errores.codigo && <p className="text-red-500 text-xs mt-1">{errores.codigo}</p>}
         </div>
 
         <div>
@@ -53,9 +60,9 @@ export default function FormularioEquipo({
             value={formData.tipo || ""}
             onChange={handleChange}
             placeholder="Ej. Analítico, Medición, Soporte"
-            required
-            className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
+            className={inputClass("tipo")}
           />
+          {errores.tipo && <p className="text-red-500 text-xs mt-1">{errores.tipo}</p>}
         </div>
       </div>
 
@@ -109,7 +116,6 @@ export default function FormularioEquipo({
               value={formData.edificioId || ""}
               onChange={handleChange}
               placeholder="ID o nombre del edificio"
-              required={isFijo}
               className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
             />
           </div>
