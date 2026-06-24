@@ -1092,7 +1092,6 @@ function Equipamiento() {
                   </h2>
                   <p className="mt-1 text-sm text-slate-500">{editingItem ? "Actualiza los campos y guarda los cambios." : "Completa el formulario para registrar el ítem."}</p>
                 </div>
-                <button type="button" onClick={closeForm} className="rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900">Cerrar</button>
               </div>
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
