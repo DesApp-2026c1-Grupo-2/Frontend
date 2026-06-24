@@ -1111,7 +1111,12 @@ function Equipamiento() {
                 <div>
                   <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">Registro</div>
                   <h2 className="text-lg font-bold text-slate-900 sm:text-xl">
-                    {editingItem ? `Editar ${editingItem.tipo}` : `Nuevo ${activeTab.slice(0, -1).toLowerCase()}`}
+                    {editingItem ? `Editar ${editingItem.tipo}` : {
+                      "Equipos": "Nuevo equipo",
+                      "Materiales": "Nuevo material",
+                      "Reactivos": "Nuevo reactivo",
+                      "Sustancias basicas": "Nueva sustancia básica",
+                    }[activeTab] || "Nuevo ítem"}
                   </h2>
                   <p className="mt-1 text-sm text-slate-500">{editingItem ? "Actualiza los campos y guarda los cambios." : "Completa el formulario para registrar el ítem."}</p>
                 </div>
@@ -1119,13 +1124,6 @@ function Equipamiento() {
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
               {/* Errores de validación y backend del formulario */}
-              {Object.keys(erroresFormEquip).length > 0 && (
-                <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 space-y-1">
-                  {Object.values(erroresFormEquip).map((msg, i) => (
-                    <p key={i} className="text-sm text-red-600">• {msg}</p>
-                  ))}
-                </div>
-              )}
               {errorFormEquip && (
                 <div className="mb-4 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-600">
                   <span><strong>Error:</strong> {errorFormEquip}</span>
@@ -1133,9 +1131,9 @@ function Equipamiento() {
                 </div>
               )}
               {activeTab === "Equipos" ? (
-                <FormularioEquipo formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} />
+                <FormularioEquipo formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} errores={erroresFormEquip} />
               ) : (
-                <FormularioEquipamiento formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} statusOptions={statusOptions} />
+                <FormularioEquipamiento formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} statusOptions={statusOptions} errores={erroresFormEquip} />
               )}
             </div>
           </div>
