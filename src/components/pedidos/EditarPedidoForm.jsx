@@ -15,6 +15,7 @@ export default function EditarPedidoForm({ pedido, onClose, onGuardar }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [laboratorios, setLaboratorios] = useState([]);
+  const [docentes, setDocentes] = useState([]);
   const [recursosDB, setRecursosDB] = useState([]);
   const [errores, setErrores] = useState({});
   const [errorGuardar, setErrorGuardar] = useState("");
@@ -48,6 +49,7 @@ export default function EditarPedidoForm({ pedido, onClose, onGuardar }) {
 
   const [form, setForm] = useState({
     materia: pedido.materia || "",
+    docente: typeof pedido.docente === "object" ? (pedido.docente._id || pedido.docente.id) : pedido.docente || "",
     alumnos: String(pedido.alumnos || ""),
     fecha: extraerFecha(pedido.fechaHora),
     hora: horaInicio,
@@ -60,13 +62,29 @@ export default function EditarPedidoForm({ pedido, onClose, onGuardar }) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [labsRes, equiposRes, itemsRes] = await Promise.allSettled([
+        const [labsRes, usersRes, equiposRes, itemsRes] = await Promise.allSettled([
           api.get("/laboratorio"),
+          api.get("/usuarios"),
           api.get("/equipo"),
           api.get("/items"),
         ]);
 
         if (labsRes.status === "fulfilled") setLaboratorios(labsRes.value.data);
+
+        // Cargar docentes para poder autocompletar/seleccionar el docente solicitante
+        if (usersRes?.status === "fulfilled") {
+          const data = usersRes.value.data;
+          const usuariosArray = Array.isArray(data) ? data : (data.usuarios || []);
+          let docs = usuariosArray.filter((u) => u.rol === "DOCENTE");
+
+          // Asegurar que el docente que vino en `pedido` esté en la lista
+          const pedidoDocenteId = typeof pedido.docente === "object" ? (pedido.docente._id || pedido.docente.id) : pedido.docente;
+          if (pedidoDocenteId && !docs.some(d => (d._id || d.id) === pedidoDocenteId)) {
+            docs.push({ _id: pedidoDocenteId, nombre: pedido.docente?.nombre || pedido.docente?.email || "Docente", apellido: pedido.docente?.apellido || "" });
+          }
+
+          setDocentes(docs);
+        }
 
         let recopilados = [];
         if (equiposRes.status === "fulfilled") {
@@ -157,6 +175,7 @@ export default function EditarPedidoForm({ pedido, onClose, onGuardar }) {
     setErrorGuardar("");
 
     const nuevosErrores = {};
+    if (!form.docente) nuevosErrores.docente = "Seleccioná un docente.";
     if (!form.materia) nuevosErrores.materia = "La materia es obligatoria.";
     if (!form.alumnos) nuevosErrores.alumnos = "Ingresá la cantidad de alumnos.";
     if (Number(form.alumnos) <= 0) nuevosErrores.alumnos = "La cantidad de alumnos debe ser mayor a 0.";
@@ -178,6 +197,7 @@ export default function EditarPedidoForm({ pedido, onClose, onGuardar }) {
     // ⚠️  SOLO mandamos IDs — nunca objetos poblados — para que normalize() funcione
     const payload = {
       materia: form.materia,
+      docente: form.docente || null,
       alumnos: Number(form.alumnos),
       fecha: form.fecha,
       hora: form.hora,
@@ -196,6 +216,9 @@ export default function EditarPedidoForm({ pedido, onClose, onGuardar }) {
     try {
       await onGuardar(payload);
     } catch (err) {
+      console.log("STATUS:", err.response?.status);
+      console.log("DATA:", err.response?.data);
+      console.log("PAYLOAD:", payload);   //eliminaraaaaaaaaaaaaaaaaaaaaaaaaaa   
       console.error("Error al guardar:", err);
       setErrorGuardar(err.response?.data?.error || "Error al actualizar el pedido.");
     } finally {
@@ -247,6 +270,16 @@ export default function EditarPedidoForm({ pedido, onClose, onGuardar }) {
                   className={`w-full bg-zinc-50 border rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 ${errores.materia ? "border-red-400" : "border-zinc-200"}`}
                 />
                 {errores.materia && <p className="text-red-500 text-xs mt-1">{errores.materia}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-zinc-600 mb-1">Docente solicitante</label>
+                <select value={form.docente} onChange={set("docente")}
+                  className={`w-full bg-zinc-50 border rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none transition-all ${errores.docente ? "border-red-400" : "border-zinc-200"}`}>
+                  <option value="">Seleccionar docente...</option>
+                  {docentes.map(d => <option key={d._id || d.id} value={d._id || d.id}>{d.nombre} {d.apellido}</option>)}
+                </select>
+                {errores.docente && <p className="text-red-500 text-xs mt-1">{errores.docente}</p>}
               </div>
 
               <div>
