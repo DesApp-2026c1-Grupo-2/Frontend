@@ -4,7 +4,15 @@ export default function FormularioEquipamiento({
   handleSubmit,
   cerrarModal,
   statusOptions = ["Disponible", "Reservado", "En uso", "Descartado"],
+  errores = {},
 }) {
+  const inputClass = (campo) =>
+    `w-full px-3 py-2 rounded-lg border bg-white text-slate-800 focus:outline-none focus:ring-2 transition ${
+      errores[campo]
+        ? "border-red-400 focus:ring-red-100 focus:border-red-400"
+        : "border-slate-200 focus:ring-emerald-200 focus:border-emerald-300"
+    }`;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4 px-3 py-3">
 
@@ -13,16 +21,15 @@ export default function FormularioEquipamiento({
         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
           Nombre
         </label>
-
         <input
           type="text"
           name="nombre"
           value={formData.nombre}
           onChange={handleChange}
           placeholder="Ej. Micropipeta digital"
-          required
-          className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
+          className={inputClass("nombre")}
         />
+        {errores.nombre && <p className="text-red-500 text-xs mt-1">{errores.nombre}</p>}
       </div>
 
       {/* CANTIDAD + UNIDAD */}
@@ -37,9 +44,9 @@ export default function FormularioEquipamiento({
             min="1"
             value={formData.cantidad}
             onChange={handleChange}
-            required
-            className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
+            className={inputClass("cantidad")}
           />
+          {errores.cantidad && <p className="text-red-500 text-xs mt-1">{errores.cantidad}</p>}
         </div>
 
         <div>
@@ -52,7 +59,6 @@ export default function FormularioEquipamiento({
             value={formData.unidad}
             onChange={handleChange}
             placeholder="unidad, ml, g"
-            required
             className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
           />
         </div>
@@ -63,16 +69,15 @@ export default function FormularioEquipamiento({
         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
           Ubicación
         </label>
-
         <input
           type="text"
           name="ubicacion"
           value={formData.ubicacion}
           onChange={handleChange}
           placeholder="Ej. Lab 1 / Edif. A"
-          required
-          className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
+          className={inputClass("ubicacion")}
         />
+        {errores.ubicacion && <p className="text-red-500 text-xs mt-1">{errores.ubicacion}</p>}
       </div>
 
       {/* MOVILIDAD */}
@@ -111,7 +116,6 @@ export default function FormularioEquipamiento({
 
       {/* BOTONES */}
       <div className="flex justify-end gap-3 pt-2">
-
         <button
           type="button"
           onClick={cerrarModal}
@@ -126,7 +130,6 @@ export default function FormularioEquipamiento({
         >
           Guardar
         </button>
-
       </div>
 
     </form>

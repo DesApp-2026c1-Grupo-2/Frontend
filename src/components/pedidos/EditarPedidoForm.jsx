@@ -15,7 +15,10 @@ export default function EditarPedidoForm({ pedido, onClose, onGuardar }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [laboratorios, setLaboratorios] = useState([]);
+  const [docentes, setDocentes] = useState([]);
   const [recursosDB, setRecursosDB] = useState([]);
+  const [errores, setErrores] = useState({});
+  const [errorGuardar, setErrorGuardar] = useState("");
 
   // ─── Extraer valores iniciales del pedido poblado ────────────────────────────
   const extraerHora = (fechaHoraStr) => {
@@ -46,6 +49,7 @@ export default function EditarPedidoForm({ pedido, onClose, onGuardar }) {
 
   const [form, setForm] = useState({
     materia: pedido.materia || "",
+    docente: typeof pedido.docente === "object" ? (pedido.docente._id || pedido.docente.id) : pedido.docente || "",
     alumnos: String(pedido.alumnos || ""),
     fecha: extraerFecha(pedido.fechaHora),
     hora: horaInicio,
@@ -58,13 +62,29 @@ export default function EditarPedidoForm({ pedido, onClose, onGuardar }) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [labsRes, equiposRes, itemsRes] = await Promise.allSettled([
+        const [labsRes, usersRes, equiposRes, itemsRes] = await Promise.allSettled([
           api.get("/laboratorio"),
+          api.get("/usuarios"),
           api.get("/equipo"),
           api.get("/items"),
         ]);
 
         if (labsRes.status === "fulfilled") setLaboratorios(labsRes.value.data);
+
+        // Cargar docentes para poder autocompletar/seleccionar el docente solicitante
+        if (usersRes?.status === "fulfilled") {
+          const data = usersRes.value.data;
+          const usuariosArray = Array.isArray(data) ? data : (data.usuarios || []);
+          let docs = usuariosArray.filter((u) => u.rol === "DOCENTE");
+
+          // Asegurar que el docente que vino en `pedido` esté en la lista
+          const pedidoDocenteId = typeof pedido.docente === "object" ? (pedido.docente._id || pedido.docente.id) : pedido.docente;
+          if (pedidoDocenteId && !docs.some(d => (d._id || d.id) === pedidoDocenteId)) {
+            docs.push({ _id: pedidoDocenteId, nombre: pedido.docente?.nombre || pedido.docente?.email || "Docente", apellido: pedido.docente?.apellido || "" });
+          }
+
+          setDocentes(docs);
+        }
 
         let recopilados = [];
         if (equiposRes.status === "fulfilled") {
@@ -117,7 +137,10 @@ export default function EditarPedidoForm({ pedido, onClose, onGuardar }) {
   }, []);
 
   // ─── Helpers ─────────────────────────────────────────────────────────────────
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const set = (k) => (e) => {
+    setForm((f) => ({ ...f, [k]: e.target.value }));
+    if (errores[k]) setErrores((prev) => ({ ...prev, [k]: undefined }));
+  };
 
   const calcularDuracion = (inicio, fin) => {
     if (!inicio || !fin) return null;
@@ -149,25 +172,32 @@ export default function EditarPedidoForm({ pedido, onClose, onGuardar }) {
 
   // ─── Submit — solo manda IDs, nunca objetos poblados ─────────────────────────
   const handleGuardar = async () => {
-    if (!form.materia || !form.alumnos || !form.fecha || !form.hora || !form.horaFin) {
-      alert("Faltan completar datos obligatorios.");
-      return;
-    }
+    setErrorGuardar("");
+
+    const nuevosErrores = {};
+    if (!form.docente) nuevosErrores.docente = "Seleccioná un docente.";
+    if (!form.materia) nuevosErrores.materia = "La materia es obligatoria.";
+    if (!form.alumnos) nuevosErrores.alumnos = "Ingresá la cantidad de alumnos.";
+    if (Number(form.alumnos) <= 0) nuevosErrores.alumnos = "La cantidad de alumnos debe ser mayor a 0.";
+    if (!form.fecha) nuevosErrores.fecha = "Seleccioná una fecha.";
+    if (!form.hora) nuevosErrores.hora = "Seleccioná una hora de inicio.";
+    if (!form.horaFin) nuevosErrores.horaFin = "Seleccioná una hora de finalización.";
 
     const duracionClase = calcularDuracion(form.hora, form.horaFin);
-    if (!duracionClase) {
-      alert("La hora de finalización debe ser posterior a la hora de inicio.");
-      return;
+    if (form.hora && form.horaFin && !duracionClase) {
+      nuevosErrores.horaFin = "La hora de finalización debe ser posterior a la hora de inicio.";
     }
 
-    if (form.recursos.length === 0) {
-      alert("Debés seleccionar al menos un recurso.");
+    if (Object.keys(nuevosErrores).length > 0) {
+      setErrores(nuevosErrores);
       return;
     }
+    setErrores({});
 
     // ⚠️  SOLO mandamos IDs — nunca objetos poblados — para que normalize() funcione
     const payload = {
       materia: form.materia,
+      docente: form.docente || null,
       alumnos: Number(form.alumnos),
       fecha: form.fecha,
       hora: form.hora,
@@ -186,8 +216,11 @@ export default function EditarPedidoForm({ pedido, onClose, onGuardar }) {
     try {
       await onGuardar(payload);
     } catch (err) {
+      console.log("STATUS:", err.response?.status);
+      console.log("DATA:", err.response?.data);
+      console.log("PAYLOAD:", payload);   //eliminaraaaaaaaaaaaaaaaaaaaaaaaaaa   
       console.error("Error al guardar:", err);
-      alert(err.response?.data?.error || "Error al actualizar el pedido.");
+      setErrorGuardar(err.response?.data?.error || "Error al actualizar el pedido.");
     } finally {
       setSaving(false);
     }
@@ -234,8 +267,19 @@ export default function EditarPedidoForm({ pedido, onClose, onGuardar }) {
                   type="text"
                   value={form.materia}
                   onChange={set("materia")}
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500"
+                  className={`w-full bg-zinc-50 border rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 ${errores.materia ? "border-red-400" : "border-zinc-200"}`}
                 />
+                {errores.materia && <p className="text-red-500 text-xs mt-1">{errores.materia}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-zinc-600 mb-1">Docente solicitante</label>
+                <select value={form.docente} onChange={set("docente")}
+                  className={`w-full bg-zinc-50 border rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none transition-all ${errores.docente ? "border-red-400" : "border-zinc-200"}`}>
+                  <option value="">Seleccionar docente...</option>
+                  {docentes.map(d => <option key={d._id || d.id} value={d._id || d.id}>{d.nombre} {d.apellido}</option>)}
+                </select>
+                {errores.docente && <p className="text-red-500 text-xs mt-1">{errores.docente}</p>}
               </div>
 
               <div>
@@ -245,8 +289,9 @@ export default function EditarPedidoForm({ pedido, onClose, onGuardar }) {
                   value={form.alumnos}
                   onChange={set("alumnos")}
                   min="1"
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500"
+                  className={`w-full bg-zinc-50 border rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 ${errores.alumnos ? "border-red-400" : "border-zinc-200"}`}
                 />
+                {errores.alumnos && <p className="text-red-500 text-xs mt-1">{errores.alumnos}</p>}
               </div>
 
               <div>
@@ -256,8 +301,9 @@ export default function EditarPedidoForm({ pedido, onClose, onGuardar }) {
                   value={form.fecha}
                   onChange={set("fecha")}
                   min={new Date().toISOString().split("T")[0]}
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500"
+                  className={`w-full bg-zinc-50 border rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 ${errores.fecha ? "border-red-400" : "border-zinc-200"}`}
                 />
+                {errores.fecha && <p className="text-red-500 text-xs mt-1">{errores.fecha}</p>}
               </div>
 
               <div>
@@ -266,8 +312,9 @@ export default function EditarPedidoForm({ pedido, onClose, onGuardar }) {
                   type="time"
                   value={form.hora}
                   onChange={set("hora")}
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500"
+                  className={`w-full bg-zinc-50 border rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 ${errores.hora ? "border-red-400" : "border-zinc-200"}`}
                 />
+                {errores.hora && <p className="text-red-500 text-xs mt-1">{errores.hora}</p>}
               </div>
 
               <div>
@@ -276,8 +323,9 @@ export default function EditarPedidoForm({ pedido, onClose, onGuardar }) {
                   type="time"
                   value={form.horaFin}
                   onChange={set("horaFin")}
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500"
+                  className={`w-full bg-zinc-50 border rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 ${errores.horaFin ? "border-red-400" : "border-zinc-200"}`}
                 />
+                {errores.horaFin && <p className="text-red-500 text-xs mt-1">{errores.horaFin}</p>}
               </div>
 
               <div className="col-span-2">
@@ -357,20 +405,27 @@ export default function EditarPedidoForm({ pedido, onClose, onGuardar }) {
         </div>
 
         {/* Footer */}
-        <div className="flex justify-between px-8 py-5 border-t border-zinc-100 bg-zinc-50/50 rounded-b-2xl flex-shrink-0">
-          <button
-            onClick={onClose}
-            className="px-5 py-2 rounded-xl text-sm font-medium text-zinc-600 border border-zinc-200 bg-white hover:bg-zinc-50 transition-all"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={handleGuardar}
-            disabled={saving}
-            className="px-6 py-2 rounded-xl text-sm bg-emerald-500 text-white font-bold hover:bg-emerald-600 transition-all disabled:opacity-60"
-          >
-            {saving ? "Guardando..." : "Guardar cambios"}
-          </button>
+        <div className="flex flex-col gap-2 px-8 py-5 border-t border-zinc-100 bg-zinc-50/50 rounded-b-2xl flex-shrink-0">
+          {errorGuardar && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl">
+              <strong>Error:</strong> {errorGuardar}
+            </div>
+          )}
+          <div className="flex justify-between">
+            <button
+              onClick={onClose}
+              className="px-5 py-2 rounded-xl text-sm font-medium text-zinc-600 border border-zinc-200 bg-white hover:bg-zinc-50 transition-all"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleGuardar}
+              disabled={saving}
+              className="px-6 py-2 rounded-xl text-sm bg-emerald-500 text-white font-bold hover:bg-emerald-600 transition-all disabled:opacity-60"
+            >
+              {saving ? "Guardando..." : "Guardar cambios"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

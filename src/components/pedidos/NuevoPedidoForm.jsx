@@ -299,37 +299,33 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
 
       const alumnos = Number(form.alumnos);
 
-      //validar alumnos negativos o 0
+      const erroresExtra = {};
+
       if (alumnos <= 0) {
-        alert("Error: La cantidad de alumnos debe ser mayor a 0.");
-        return;
+        erroresExtra.alumnos = "La cantidad de alumnos debe ser mayor a 0.";
       }
 
-      // validar horario de finalización posterior al de inicio
       if (!calcularDuracionClase(form.hora, form.horaFin)) {
-        alert("Error: La hora de finalización debe ser posterior a la hora de inicio.");
-        return;
+        erroresExtra.horaFin = "La hora de finalización debe ser posterior a la hora de inicio.";
       }
 
-      // validar fecha
       const hoy = new Date();
       hoy.setHours(0, 0, 0, 0);
-
       const [year, month, day] = form.fecha.split("-").map(Number);
       const fechaSeleccionada = new Date(year, month - 1, day);
-
       if (fechaSeleccionada < hoy) {
-        alert("Error: La fecha no puede ser anterior a hoy.");
-        return;
+        erroresExtra.fecha = "La fecha no puede ser anterior a hoy.";
       }
 
-      // validar capacidad laboratorio
       const labSeleccionado = laboratorios.find(
         (l) => (l._id || l.id) === form.laboratorio
       );
-
       if (labSeleccionado && alumnos > labSeleccionado.capacidad) {
-        alert("Error: El laboratorio no tiene capacidad suficiente.");
+        erroresExtra.laboratorio = "El laboratorio no tiene capacidad suficiente para la cantidad de alumnos.";
+      }
+
+      if (Object.keys(erroresExtra).length > 0) {
+        setErrores(erroresExtra);
         return;
       }
     }
@@ -580,6 +576,9 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
                 <p className="text-xs text-zinc-400 mt-1">
                   Si no seleccionás un laboratorio, el equipo de gestión asignará uno disponible antes de aprobar el pedido.
                 </p>
+                {errores.laboratorio && (
+                  <p className="text-red-500 text-xs mt-1">{errores.laboratorio}</p>
+                )}
               </div>
             </div>
           )}

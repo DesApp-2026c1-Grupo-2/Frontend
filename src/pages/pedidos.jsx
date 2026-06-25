@@ -62,6 +62,7 @@ export default function PedidosLaboratorio() {
   const [tab, setTab] = useState("todos");
   const [showNuevo, setShowNuevo] = useState(false);
   const [pedidoEditando, setPedidoEditando] = useState(null);
+  const [errorOperacion, setErrorOperacion] = useState("");
 
   const pendientes = pedidos.filter((p) => PENDING_STATES.includes(p.estado));
   const lista = tab === "pendientes" ? pendientes : pedidos;
@@ -102,7 +103,11 @@ export default function PedidosLaboratorio() {
       setPedidos((prev) => prev.filter((p) => (p._id || p.id) !== id));
     } catch (error) {
       console.error("Error al eliminar pedido:", error.response?.data || error);
-      alert("No tenés permisos para eliminar este pedido");
+      const msg = error.response?.status === 403
+        ? "No tenés permisos para eliminar este pedido."
+        : error.response?.data?.error || "No se pudo eliminar el pedido.";
+      setErrorOperacion(msg);
+      setTimeout(() => setErrorOperacion(""), 4000);
     }
   };
 
@@ -138,6 +143,14 @@ export default function PedidosLaboratorio() {
           + Nuevo pedido
         </button>
       </div>
+
+      {/* ERROR DE OPERACIÓN (ej: no se pudo eliminar) */}
+      {errorOperacion && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl flex justify-between items-center">
+          <span><strong>Error:</strong> {errorOperacion}</span>
+          <button onClick={() => setErrorOperacion("")} className="ml-4 text-red-400 hover:text-red-600 font-bold">✕</button>
+        </div>
+      )}
 
       {/* MÉTRICAS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">

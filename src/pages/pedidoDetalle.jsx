@@ -219,6 +219,7 @@ export default function PedidoDetalle() {
   const [loading, setLoading] = useState(true);
   const [nuevoComentario, setNuevoComentario] = useState("");
   const [nombresRecursos, setNombresRecursos] = useState({});
+  const [errorAccion, setErrorAccion] = useState("");
 
   const tieneConflictos = conflictos.length > 0;
 
@@ -270,6 +271,7 @@ export default function PedidoDetalle() {
 
   const aprobar = async () => {
     if (tieneConflictos) return;
+    setErrorAccion("");
     try {
       const res = await api.patch(`/pedido/${id}/aprobar`);
       setPedido(res.data.pedido);
@@ -277,22 +279,24 @@ export default function PedidoDetalle() {
     } catch (err) {
       console.error(err);
       if (err.response?.data?.conflictos) setConflictos(err.response.data.conflictos);
-      alert(err.response?.data?.error || "No se pudo aprobar el pedido");
+      setErrorAccion(err.response?.data?.error || "No se pudo aprobar el pedido.");
     }
   };
 
   const rechazar = async () => {
+    setErrorAccion("");
     try {
       const res = await api.patch(`/pedido/${id}/estado`, { estado: "Rechazado" });
       setPedido(res.data);
     } catch (err) {
       console.error(err);
-      alert("No se pudo rechazar el pedido");
+      setErrorAccion(err.response?.data?.error || "No se pudo rechazar el pedido.");
     }
   };
 
   const enviarComentario = async () => {
     if (!nuevoComentario.trim()) return;
+    setErrorAccion("");
     try {
       const res = await api.post(`/pedido/${id}/comentarios`, {
         mensaje: nuevoComentario,
@@ -304,7 +308,7 @@ export default function PedidoDetalle() {
       setNuevoComentario("");
     } catch (err) {
       console.error(err);
-      alert("No se pudo agregar el comentario");
+      setErrorAccion(err.response?.data?.error || "No se pudo agregar el comentario.");
     }
   };
 
@@ -622,29 +626,37 @@ export default function PedidoDetalle() {
 
         {/* ACCIONES */}
         {PENDING_STATES.includes(pedido.estado) && (
-          <div className="flex gap-3">
-            <button
-              onClick={aprobar}
-              disabled={tieneConflictos}
-              title={
-                tieneConflictos
-                  ? "No se puede aprobar mientras existan conflictos"
-                  : "Aprobar pedido"
-              }
-              className={`px-4 py-2 text-white rounded-lg transition-colors ${
-                tieneConflictos
-                  ? "bg-gray-400 cursor-not-allowed opacity-70"
-                  : "bg-emerald-500 hover:bg-emerald-600"
-              }`}
-            >
-              Aprobar
-            </button>
-            <button
-              onClick={rechazar}
-              className="px-4 py-2 border border-red-300 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            >
-              Rechazar
-            </button>
+          <div className="flex flex-col gap-2">
+            {errorAccion && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl flex justify-between items-center">
+                <span><strong>Error:</strong> {errorAccion}</span>
+                <button onClick={() => setErrorAccion("")} className="ml-4 text-red-400 hover:text-red-600 font-bold">✕</button>
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={aprobar}
+                disabled={tieneConflictos}
+                title={
+                  tieneConflictos
+                    ? "No se puede aprobar mientras existan conflictos"
+                    : "Aprobar pedido"
+                }
+                className={`px-4 py-2 text-white rounded-lg transition-colors ${
+                  tieneConflictos
+                    ? "bg-gray-400 cursor-not-allowed opacity-70"
+                    : "bg-emerald-500 hover:bg-emerald-600"
+                }`}
+              >
+                Aprobar
+              </button>
+              <button
+                onClick={rechazar}
+                className="px-4 py-2 border border-red-300 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                Rechazar
+              </button>
+            </div>
           </div>
         )}
       </div>
