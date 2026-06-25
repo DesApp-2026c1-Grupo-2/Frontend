@@ -1,5 +1,6 @@
 // pages/Landing.jsx
 import { useNavigate } from "react-router-dom";
+import logo from "../assets/logo.png";
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -7,17 +8,29 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-cyan-50">
       {/* Navbar simple */}
-      <nav className="border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-0 z-40">
-        <div className="mx-auto max-w-7xl px-4 py-4 flex items-center justify-between sm:px-6 lg:px-8">
-          <div className="text-xl font-bold text-emerald-700">SysLab</div>
-          <button
-            onClick={() => navigate("/logIn")}
-            className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition"
-          >
-            Iniciar sesión
-          </button>
-        </div>
-      </nav>
+      <div className="border-b border-slate-200 bg-white">
+                        <div className="w-full px-8 lg:px-20 py-4 flex items-center justify-between">
+            
+                            <img
+                            src={logo}
+                            alt="Universidad Nacional de Hurlingham"
+                            className="h-[42px] w-auto object-contain"
+                            />
+            
+                            <button
+                            onClick={() => navigate("/login")}
+                            className="
+                                text-sm
+                                text-emerald-600
+                                hover:text-emerald-700
+                                hover:underline
+                                "
+                            >
+                            Iniciar sesión
+                            </button>
+            
+                        </div>
+                    </div>
 
       {/* Hero Section */}
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
@@ -26,10 +39,10 @@ export default function Landing() {
           <div className="space-y-6">
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700">
-                ✨ Sistema de gestión
+                Sistema de gestión
               </div>
               <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
-                Gestión de Equipamiento y Laboratorios
+                Gestión de Laboratorios
               </h1>
               <p className="text-xl text-slate-600">
                 Controla tu inventario de equipos, materiales y reactivos de forma centralizada y eficiente.
@@ -123,11 +136,10 @@ export default function Landing() {
         </div>
       </div>
 
-
       {/* Footer */}
       <div className="border-t border-slate-200 bg-white/50 backdrop-blur-sm py-8 mt-16">
         <div className="mx-auto max-w-7xl px-4 text-center text-sm text-slate-600 sm:px-6 lg:px-8">
-          <p>© 2024 SysLab. Todos los derechos reservados.</p>
+          <p>© 2026. Todos los derechos reservados.</p>
         </div>
       </div>
     </div>
