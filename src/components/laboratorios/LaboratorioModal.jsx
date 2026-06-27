@@ -5,6 +5,7 @@ export default function LaboratorioModal({
   mostrar,
   cerrarModal,
   formData,
+  errores,
   handleChange,
   handleSubmit,
   esEdicion,
@@ -28,6 +29,7 @@ export default function LaboratorioModal({
         ) : (
           <NuevoLaboratorioForm
             formData={formData}
+            errores={errores}
             handleChange={handleChange}
             handleSubmit={handleSubmit}
             cerrarModal={cerrarModal}

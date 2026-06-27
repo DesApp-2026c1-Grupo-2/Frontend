@@ -1,5 +1,6 @@
 export default function FormularioEdificio({
   formData,
+  errores,
   handleChange,
   handleSubmit,
   cerrarModal,
@@ -19,17 +20,23 @@ export default function FormularioEdificio({
           value={formData.nombre}
           onChange={handleChange}
           placeholder="Edificio Central"
-          required
-          className="
+          className={`
             w-full px-4 py-3 rounded-xl
-            border border-slate-200
             bg-white text-slate-800
-            focus:outline-none
-            focus:ring-2 focus:ring-emerald-200
-            focus:border-emerald-300
-            transition
-          "
+            focus:outline-none transition
+            ${
+              errores?.nombre
+                ? "border border-red-400 focus:border-red-500"
+                : "border border-slate-200 focus:border-emerald-300"
+            }
+          `}
         />
+
+        {errores?.nombre && (
+          <p className="text-red-500 text-xs mt-1">
+            {errores.nombre}
+          </p>
+        )}
       </div>
 
       {/* DIRECCION */}
@@ -44,17 +51,23 @@ export default function FormularioEdificio({
           value={formData.direccion}
           onChange={handleChange}
           placeholder="Av. Siempre Viva 123"
-          required
-          className="
+          className={`
             w-full px-4 py-3 rounded-xl
-            border border-slate-200
             bg-white text-slate-800
-            focus:outline-none
-            focus:ring-2 focus:ring-emerald-200
-            focus:border-emerald-300
-            transition
-          "
+            focus:outline-none transition
+            ${
+              errores?.direccion
+                ? "border border-red-400 focus:border-red-500"
+                : "border border-slate-200 focus:border-emerald-300"
+            }
+          `}
         />
+
+        {errores?.direccion && (
+          <p className="text-red-500 text-xs mt-1">
+            {errores.direccion}
+          </p>
+        )}
       </div>
 
       {/* BOTONES */}

@@ -44,6 +44,8 @@ export default function Edificios() {
     direccion: "",
   });
 
+  const [errores, setErrores] = useState({});
+
   /*
     =========================
     OBTENER EDIFICIOS, equipos fijos y pedidos
@@ -109,6 +111,13 @@ export default function Edificios() {
       ...formData,
       [e.target.name]: e.target.value,
     });
+
+    if (errores[e.target.name]) {
+      setErrores((prev) => ({
+        ...prev,
+        [e.target.name]: undefined,
+      }));
+    }
   };
 
   /*
@@ -119,6 +128,23 @@ export default function Edificios() {
   const handleCrearEdificio = async (e) => {
 
     e.preventDefault();
+
+    const nuevosErrores = {};
+
+    if (!formData.nombre.trim()) {
+      nuevosErrores.nombre = "El nombre es obligatorio";
+    }
+
+    if (!formData.direccion.trim()) {
+      nuevosErrores.direccion = "La dirección es obligatoria";
+    }
+
+    if (Object.keys(nuevosErrores).length > 0) {
+      setErrores(nuevosErrores);
+      return;
+    }
+
+    setErrores({});
 
     try {
 
@@ -150,6 +176,7 @@ export default function Edificios() {
         direccion: "",
       });
 
+      setErrores({});
       setEdificioEditando(null);
       setMostrarModal(false);
 
@@ -466,8 +493,12 @@ export default function Edificios() {
       {/* MODAL */}
       <CrearEdificioModal
         mostrar={mostrarModal}
-        cerrarModal={() => setMostrarModal(false)}
+        cerrarModal={() => {
+          setMostrarModal(false);
+          setErrores({});
+        }}
         formData={formData}
+        errores={errores}
         handleChange={handleChange}
         handleSubmit={handleCrearEdificio}
       />

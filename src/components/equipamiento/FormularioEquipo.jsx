@@ -1,68 +1,36 @@
-import { useState, useEffect } from "react";
-import api from "../../api/axios";
-
 export default function FormularioEquipo({
   formData,
   handleChange,
   handleSubmit,
   cerrarModal,
+  errores = {},
 }) {
-  // Verificamos si el equipo es fijo. Esto ayuda a manejar la regla condicional del laboratorioId.
-  // Dependiendo de cómo manejes el state, el valor podría ser el booleano literal o un string.
   const isFijo = formData.esFijo === true || String(formData.esFijo) === "true";
 
-  const [edificios, setEdificios] = useState([]);
-  const [laboratorios, setLaboratorios] = useState([]);
-
-  // Cargar lista de edificios al inicializar
-  useEffect(() => {
-    const fetchEdificios = async () => {
-      try {
-        const res = await api.get("/edificio");
-        setEdificios(res.data);
-      } catch (error) {
-        console.error("Error al cargar los edificios:", error);
-      }
-    };
-    fetchEdificios();
-  }, []);
-
-  // Cargar laboratorios cuando cambia el edificio seleccionado (y el equipo es fijo)
-  useEffect(() => {
-    if (isFijo && formData.edificioId && formData.edificioId !== "") {
-      const fetchLaboratorios = async () => {
-        try {
-          const res = await api.get(`/laboratorio/edificio/${formData.edificioId}`);
-          setLaboratorios(res.data);
-        } catch (error) {
-          console.error("Error al cargar los laboratorios:", error);
-        }
-      };
-      fetchLaboratorios();
-    } else {
-      setLaboratorios([]);
-    }
-  }, [formData.edificioId, isFijo]);
+  const inputClass = (campo) =>
+    `w-full px-3 py-2 rounded-lg border bg-white text-slate-800 focus:outline-none focus:ring-2 transition ${
+      errores[campo]
+        ? "border-red-400 focus:ring-red-100 focus:border-red-400"
+        : "border-slate-200 focus:ring-emerald-200 focus:border-emerald-300"
+    }`;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 px-3 py-3">
-
+      
       {/* NOMBRE */}
       <div>
         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-          Nombre
+          Nombre del Equipo
         </label>
         <input
           type="text"
           name="nombre"
           value={formData.nombre || ""}
           onChange={handleChange}
-          placeholder="Ej. Microscopio Binocular"
-          required
-          minLength={2}
-          maxLength={100}
-          className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
+          placeholder="Ej. Espectrómetro de masas"
+          className={inputClass("nombre")}
         />
+        {errores.nombre && <p className="text-red-500 text-xs mt-1">{errores.nombre}</p>}
       </div>
 
       {/* CÓDIGO Y TIPO */}
@@ -76,25 +44,25 @@ export default function FormularioEquipo({
             name="codigo"
             value={formData.codigo || ""}
             onChange={handleChange}
-            placeholder="Ej. EQ-LAB-001"
-            required
-            className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
+            placeholder="Ej. EQ-001"
+            className={inputClass("codigo")}
           />
+          {errores.codigo && <p className="text-red-500 text-xs mt-1">{errores.codigo}</p>}
         </div>
 
         <div>
           <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-            Tipo
+            Tipo de Equipo
           </label>
           <input
             type="text"
             name="tipo"
             value={formData.tipo || ""}
             onChange={handleChange}
-            placeholder="Ej. Medición, Refrigeración..."
-            required
-            className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
+            placeholder="Ej. Analítico, Medición, Soporte"
+            className={inputClass("tipo")}
           />
+          {errores.tipo && <p className="text-red-500 text-xs mt-1">{errores.tipo}</p>}
         </div>
       </div>
 
@@ -106,14 +74,12 @@ export default function FormularioEquipo({
           </label>
           <select
             name="esFijo"
-            value={formData.esFijo !== undefined ? formData.esFijo : ""}
+            value={String(formData.esFijo)}
             onChange={handleChange}
-            required
             className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
           >
-            <option value="" disabled>Seleccione...</option>
-            <option value={true}>Equipo Fijo</option>
-            <option value={false}>Equipo Móvil</option>
+            <option value="false">Movible</option>
+            <option value="true">Fija (Asignado a un espacio)</option>
           </select>
         </div>
 
@@ -128,73 +94,50 @@ export default function FormularioEquipo({
             className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
           >
             <option value="disponible">Disponible</option>
+            <option value="reservado">Reservado</option>
+            <option value="en_uso">En uso</option>
             <option value="mantenimiento">Mantenimiento</option>
-            <option value="fuera de servicio">Fuera de Servicio</option>
+            <option value="fuera_de_servicio">Fuera de servicio</option>
+            <option value="descartado">Descartado</option>
           </select>
         </div>
       </div>
 
-      {/* EDIFICIO Y LABORATORIO */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <label className={`block text-xs font-semibold uppercase tracking-wider mb-2 ${!isFijo ? 'text-slate-400' : 'text-slate-500'}`}>
-            Edificio
-          </label>
-          <select
-            name="edificioId"
-            value={!isFijo ? "" : (formData.edificioId || "")}
-            onChange={handleChange}
-            disabled={!isFijo}
-            required={isFijo}
-            className={`w-full px-3 py-2 rounded-lg border transition ${
-              !isFijo
-                ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed"
-                : "border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300"
-            }`}
-          >
-            <option value="">{!isFijo ? "No aplica a equipos móviles" : "Seleccione un edificio"}</option>
-            {edificios.map((edif) => (
-              <option key={edif.id || edif._id} value={edif.id || edif._id}>
-                {edif.nombre}
-              </option>
-            ))}
-          </select>
-        </div>
+      {/* UBICACIÓN CONDICIONAL (EDIFICIO Y LABORATORIO) */}
+      {isFijo && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 p-3 bg-slate-50 rounded-xl border border-slate-100 transition-all duration-300">
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+              ID Edificio
+            </label>
+            <input
+              type="text"
+              name="edificioId"
+              value={formData.edificioId || ""}
+              onChange={handleChange}
+              placeholder="ID o nombre del edificio"
+              className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
+            />
+          </div>
 
-        <div>
-          <label className={`block text-xs font-semibold uppercase tracking-wider mb-2 ${!isFijo ? 'text-slate-400' : 'text-slate-500'}`}>
-            Laboratorio
-          </label>
-          <select
-            name="laboratorioId"
-            value={!isFijo ? "" : (formData.laboratorioId || "")}
-            onChange={handleChange}
-            required={isFijo}
-            disabled={!isFijo || !formData.edificioId}
-            className={`w-full px-3 py-2 rounded-lg border transition ${
-              !isFijo || !formData.edificioId
-                ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed"
-                : "border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300"
-            }`}
-          >
-            <option value="">
-              {!isFijo
-                ? "No aplica a equipos móviles"
-                : !formData.edificioId
-                ? "Seleccione un edificio primero"
-                : "Seleccione un laboratorio"}
-            </option>
-            {laboratorios.map((lab) => (
-              <option key={lab.id || lab._id} value={lab.id || lab._id}>
-                {lab.nombre}
-              </option>
-            ))}
-          </select>
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+              ID Laboratorio
+            </label>
+            <input
+              type="text"
+              name="laboratorioId"
+              value={formData.laboratorioId || ""}
+              onChange={handleChange}
+              placeholder="ID o nombre del laboratorio"
+              className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* BOTONES */}
-      <div className="flex justify-end gap-3 pt-4">
+      <div className="flex justify-end gap-3 pt-2">
         <button
           type="button"
           onClick={cerrarModal}
