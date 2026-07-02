@@ -19,6 +19,7 @@ import { GiMaterialsScience } from "react-icons/gi"; // Materiales reactivos
 import { MdScience } from "react-icons/md";        // Matraz para sustancias
 import { AiOutlinePlus } from "react-icons/ai"; // Icono de suma para nuevo registro
 import { MdOutlineManageSearch } from "react-icons/md"; // Icono para estadísticas de busqueda
+import { FiX } from "react-icons/fi";
 
 const tabs = [
   { label: "Equipos", icon: DeviceTabIcon },
@@ -1120,6 +1121,15 @@ function Equipamiento() {
                   </h2>
                   <p className="mt-1 text-sm text-slate-500">{editingItem ? "Actualiza los campos y guarda los cambios." : "Completa el formulario para registrar el ítem."}</p>
                 </div>
+                <button
+                  type="button"
+                  onClick={closeForm}
+                  aria-label="Cerrar formulario"
+                  title="Cerrar formulario"
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
+                >
+                  <FiX className="h-4 w-4" aria-hidden="true" />
+                </button>
               </div>
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
