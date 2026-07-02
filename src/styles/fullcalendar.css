@@ -1,0 +1,31 @@
+/* Bordes generales */
+.fc {
+    --fc-border-color: #e2e8f0;
+    /* slate-200 */
+}
+
+/* Eventos */
+.fc-event {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* El contenedor interno tampoco pinta azul */
+.fc-event-main {
+    padding: 0 !important;
+}
+
+/* Hoy */
+.fc .fc-day-today {
+    background: #e8ebed !important;
+}
+
+/* Línea de la hora actual */
+.fc .fc-timegrid-now-indicator-line {
+    border-color: #059669;
+}
+
+.fc .fc-timegrid-now-indicator-arrow {
+    border-left-color: #059669;
+}
