@@ -1,0 +1,53 @@
+.fc-theme-standard td,
+.fc-theme-standard th {
+    border-color: #e5e7eb;
+}
+
+.fc-scrollgrid {
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.fc-timegrid-slot {
+    height: 60px;
+}
+
+.fc-timegrid-axis {
+    font-size: 13px;
+    color: #64748b;
+}
+
+.fc-col-header-cell {
+    padding: 10px 0;
+}
+
+.fc-col-header-cell-cushion {
+    color: #475569;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.fc-daygrid-day-number {
+    color: #0f172a;
+    font-weight: 600;
+}
+
+.fc-daygrid-day {
+    background: white;
+}
+
+.fc-daygrid-day:hover {
+    background: #f8fafc;
+}
+
+.fc .fc-day-today {
+    background: transparent !important;
+}
+
+.fc .fc-timegrid-col.fc-day-today {
+    background: white !important;
+}
+
+.fc .fc-daygrid-day.fc-day-today {
+    background: white !important;
+}
