@@ -58,6 +58,12 @@ function Navbar() {
             Dashboard
           </button>
 
+          <button
+            onClick={() => navigate("/calendario")}
+            className={navButtonClass("/calendario")}
+          >
+            Calendario
+          </button>
 
           {canViewAdminSections && (
             <>
@@ -183,7 +189,6 @@ function Navbar() {
                   Edificios
                 </button>
 
-
                 <button
                   onClick={() => {
                     navigate("/equipamiento");
@@ -196,6 +201,15 @@ function Navbar() {
               </>
             )}
 
+            <button
+              onClick={() => {
+                  navigate("/calendario");
+                  setMenuOpen(false);
+                }}
+                className={navButtonClass("/calendario")}
+              >
+                Calendario
+            </button>
 
             <button
               onClick={() => {
