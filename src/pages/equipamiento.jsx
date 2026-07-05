@@ -783,7 +783,7 @@ function Equipamiento() {
                     Registro activo
                   </div>
                   <h2 className="mt-3 font-['Playfair_Display',serif] text-2xl font-bold leading-tight text-emerald-950 sm:text-[2rem]">
-                    Últimos movimientos de stock
+                    Stock
                   </h2>
                   <p className="mt-2 max-w-2xl text-sm text-slate-500">Usa tus filtros para ver por categoría los registros cargados.</p>
                 </div>
