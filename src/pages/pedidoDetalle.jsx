@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
-import EstadoBadge from "../components/EstadoBadge";
-import { PageHeader } from "../components/SharedUi";
 
 const PENDING_STATES = ["Pendiente", "En Revisión"];
 
@@ -359,27 +357,26 @@ export default function PedidoDetalle() {
   return (
     <div className="min-h-screen text-slate-800 px-4 sm:px-6 lg:px-8 py-6">
       <div className="max-w-4xl mx-auto">
-        {/* HEADER CON PAGE HEADER */}
-        <PageHeader 
-          preTitle="Detalles"
-          title={`Pedido #${(pedido._id || pedido.id || "").slice(-6)}`}
-          description={pedido.materia}
-        />
-        
-        <div className="flex justify-end mb-6">
-          <button
-            onClick={() => navigate(-1)}
-            className="text-sm text-slate-500 hover:text-slate-800 font-medium"
-          >
-            ← Volver
-          </button>
-        </div>
-
         {/* CONTENEDOR PRINCIPAL CON DECORACIONES */}
         <div className="relative">
           <div className="absolute bottom-0 left-0 w-full h-40 bg-emerald-100 opacity-20 rounded-[2rem]" />
           <div className="relative z-10 bg-white border border-slate-100 rounded-[2rem] shadow-lg p-6 sm:p-8">
             <div className="absolute -top-5 left-10 right-10 h-6 bg-emerald-500 rounded-t-[1.5rem]" />
+            
+            {/* HEADER DENTRO DEL CARD */}
+            <div className="flex justify-between items-start mb-6 pb-4 border-b border-slate-200">
+              <div className="flex-1">
+                <p className="text-emerald-600 font-semibold text-xs tracking-widest uppercase mb-2">Detalles del Pedido</p>
+                <h1 className="text-3xl font-bold text-slate-800">{`Pedido #${(pedido._id || pedido.id || "").slice(-6)}`}</h1>
+                <p className="text-slate-500 mt-2">{pedido.materia}</p>
+              </div>
+              <button
+                onClick={() => navigate(-1)}
+                className="px-3 py-2 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition font-medium text-sm whitespace-nowrap"
+              >
+                ← Volver
+              </button>
+            </div>
 
         {/* INFO */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mb-8">
@@ -403,7 +400,17 @@ export default function PedidoDetalle() {
           </div>
           <div>
             <p className="text-slate-400 mb-1">Estado</p>
-            <EstadoBadge estado={pedido.estado} />
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
+              pedido.estado === "Aprobado" || pedido.estado === "Aceptado"
+                ? "bg-emerald-100 text-emerald-700"
+                : pedido.estado === "Rechazado"
+                ? "bg-red-100 text-red-700"
+                : pedido.estado === "Finalizado"
+                ? "bg-slate-200 text-slate-700"
+                : "bg-yellow-100 text-yellow-700"
+            }`}>
+              {pedido.estado === "Aceptado" ? "Aprobado" : pedido.estado}
+            </span>
           </div>
         </div>
 
@@ -629,35 +636,50 @@ export default function PedidoDetalle() {
         <div className="mb-8">
           <h2 className="font-semibold text-lg text-emerald-700 mb-4">💬 Comentarios</h2>
           <div className="space-y-3 mb-6">
-            {pedido.comentarios?.map((comentario) => (
+            {pedido.comentarios?.map((comentario) => {
+              const esMotivRechazo = comentario.mensaje?.includes("Motivo de rechazo");
+              return (
               <div
                 key={comentario._id}
-                className="border border-slate-200 rounded-xl p-4 bg-gradient-to-br from-white to-slate-50 hover:shadow-md transition-all"
+                className={`border rounded-xl p-4 hover:shadow-md transition-all ${
+                  esMotivRechazo 
+                    ? "border-red-300 bg-gradient-to-br from-red-50 to-orange-50" 
+                    : "border-slate-200 bg-gradient-to-br from-white to-slate-50"
+                }`}
               >
                 <div className="flex justify-between items-start mb-2 gap-2 flex-wrap">
                   <div className="flex items-center gap-2">
                     <span
                       className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
-                        comentario.usuario?.rol === "ADMIN"
+                        esMotivRechazo
+                          ? "bg-red-200 text-red-700"
+                          : comentario.usuario?.rol === "ADMIN"
                           ? "bg-purple-100 text-purple-700"
                           : comentario.usuario?.rol === "PERSONAL"
                           ? "bg-blue-100 text-blue-700"
                           : "bg-emerald-100 text-emerald-700"
                       }`}
                     >
-                      {comentario.usuario?.rol}
+                      {esMotivRechazo ? "⚠️ RECHAZO" : comentario.usuario?.rol}
                     </span>
-                    <span className="font-semibold text-slate-800">
+                    <span className={`font-semibold ${
+                      esMotivRechazo ? "text-red-700" : "text-slate-800"
+                    }`}>
                       {comentario.usuario?.nombre} {comentario.usuario?.apellido}
                     </span>
                   </div>
-                  <span className="text-xs text-slate-400">
+                  <span className={`text-xs ${
+                    esMotivRechazo ? "text-red-400" : "text-slate-400"
+                  }`}>
                     {new Date(comentario.createdAt).toLocaleString()}
                   </span>
                 </div>
-                <p className="text-sm text-slate-700 leading-relaxed">{comentario.mensaje}</p>
+                <p className={`text-sm leading-relaxed font-medium ${
+                  esMotivRechazo ? "text-red-700" : "text-slate-700"
+                }`}>{comentario.mensaje}</p>
               </div>
-            ))}
+            );
+            })}
           </div>
 
           <div className="border border-emerald-200 rounded-xl p-4 bg-emerald-50">
