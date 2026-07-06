@@ -193,107 +193,118 @@ export default function PedidosLaboratorio() {
         <div className="relative z-10 bg-white/80 backdrop-blur-sm border border-slate-100 rounded-[2.5rem] shadow-lg p-8 md:p-10">
           <div className="absolute -top-5 left-10 right-10 h-6 rounded-t-[2rem] bg-stone-700 rounded-sm" />
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {lista.map((p) => {
-              const id = p._id || p.id;
-              const estado = normalizarEstado(p.estado);
-              const esPropio =
-                p.docente?._id === user?.id || p.docente?.id === user?.id;
+            
+            {/* INICIO DE LA VALIDACIÓN */}
+            {lista.length === 0 ? (
+              <div className="col-span-full flex flex-col items-center justify-center py-12 text-slate-500">
+                <p className="text-xl font-bold text-emerald-700">Sin pedidos</p>
+                <p className="text-sm mt-2">No hay pedidos para mostrar en esta vista.</p>
+              </div>
+            ) : (
+              lista.map((p) => {
+                const id = p._id || p.id;
+                const estado = normalizarEstado(p.estado);
+                const esPropio =
+                  p.docente?._id === user?.id || p.docente?.id === user?.id;
 
-              const puedeEditar =
-                p.estado === "Pendiente" &&
-                (
-                  user?.rol === "ADMIN" ||
-                  user?.rol === "PERSONAL" ||
-                  (user?.rol === "DOCENTE" && esPropio)
-                );
+                const puedeEditar =
+                  p.estado === "Pendiente" &&
+                  (
+                    user?.rol === "ADMIN" ||
+                    user?.rol === "PERSONAL" ||
+                    (user?.rol === "DOCENTE" && esPropio)
+                  );
 
-              return (
-                <div
-                  key={id}
-                  className="relative bg-white border border-slate-200 rounded-3xl p-5 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all"
-                >
-                  <div className="flex justify-between items-start">
-                    <h2 className="text-lg font-bold text-slate-800">
-                      Pedido: {id?.slice(-6)}
-                    </h2>
-                    <div className="flex items-center gap-2">
-                      {p.tieneComentariosNuevos && (
-                        <span className="relative">
-                          <FiMessageCircle className="text-blue-600" size={18} />
-                          <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
-                        </span>
-                      )}
-                      <div className="flex gap-2 text-slate-500">
-                        {puedeEditar && (
-                          <button
-                            title="Editar pedido"
-                            onClick={() => setPedidoEditando(p)}
-                            className="p-1 rounded-lg hover:bg-emerald-50 text-emerald-700 transition"
-                          >
-                            <FiEdit2 size={16} />
-                          </button>
+                return (
+                  <div
+                    key={id}
+                    className="relative bg-white border border-slate-200 rounded-3xl p-5 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all"
+                  >
+                    <div className="flex justify-between items-start">
+                      <h2 className="text-lg font-bold text-slate-800">
+                        Pedido: {id?.slice(-6)}
+                      </h2>
+                      <div className="flex items-center gap-2">
+                        {p.tieneComentariosNuevos && (
+                          <span className="relative">
+                            <FiMessageCircle className="text-blue-600" size={18} />
+                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                          </span>
                         )}
-                        {user?.rol !== "DOCENTE" && (
-                          <button
-                            title="Eliminar pedido"
-                            onClick={() => handleEliminar(id)}
-                            className="p-1 rounded-lg hover:bg-red-50 text-red-600 transition"
-                          >
-                            <FiTrash2 size={16} />
-                          </button>
-                        )}
+                        <div className="flex gap-2 text-slate-500">
+                          {puedeEditar && (
+                            <button
+                              title="Editar pedido"
+                              onClick={() => setPedidoEditando(p)}
+                              className="p-1 rounded-lg hover:bg-emerald-50 text-emerald-700 transition"
+                            >
+                              <FiEdit2 size={16} />
+                            </button>
+                          )}
+                          {user?.rol !== "DOCENTE" && (
+                            <button
+                              title="Eliminar pedido"
+                              onClick={() => handleEliminar(id)}
+                              className="p-1 rounded-lg hover:bg-red-50 text-red-600 transition"
+                            >
+                              <FiTrash2 size={16} />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <p className="text-sm text-emerald-700 mt-1 font-medium">{p.materia}</p>
+                    <p className="text-sm text-emerald-700 mt-1 font-medium">{p.materia}</p>
 
-                  <div className="mt-3 space-y-1 text-sm text-slate-600">
-                    <p className="flex items-center gap-2">
-                      <FiUser className="text-slate-500" />
-                      {formatDocente(p.docente)}
-                    </p>
-                    <p className="flex items-center gap-2">
-                      <FiHome className="text-slate-500" />
-                      {formatLaboratorio(p.laboratorio)}
-                    </p>
-                    <p className="flex items-center gap-2">
-                      <FiUsers className="text-slate-500" />
-                      {p.alumnos} alumnos
-                    </p>
-                    <p className="flex items-center gap-2">
-                      <FiCalendar className="text-slate-500" />
-                      {formatRangoHorario(p)}
-                    </p>
-                  </div>
+                    <div className="mt-3 space-y-1 text-sm text-slate-600">
+                      <p className="flex items-center gap-2">
+                        <FiUser className="text-slate-500" />
+                        {formatDocente(p.docente)}
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <FiHome className="text-slate-500" />
+                        {formatLaboratorio(p.laboratorio)}
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <FiUsers className="text-slate-500" />
+                        {p.alumnos} alumnos
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <FiCalendar className="text-slate-500" />
+                        {formatRangoHorario(p)}
+                      </p>
+                    </div>
 
-                  <div className="flex justify-between items-center mt-4">
-                    <button
-                      onClick={() => navigate(`/pedidos/${id}`)}
-                      className="px-4 py-2 text-xs rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition"
-                    >
-                      Inspeccionar
-                    </button>
-                    <span
-                    className={`
-                      px-3 py-1 rounded-full text-xs font-medium capitalize
-                      ${
-                        estado === "Aprobado"
-                          ? "bg-emerald-100 text-emerald-700"
-                          : estado === "Rechazado"
-                          ? "bg-red-100 text-red-700"
-                          : estado === "Finalizado"
-                          ? "bg-slate-200 text-slate-700"
-                          : "bg-yellow-100 text-yellow-700"
-                      }
-                    `}
-                  >
-                    {estado}
-                  </span>
+                    <div className="flex justify-between items-center mt-4">
+                      <button
+                        onClick={() => navigate(`/pedidos/${id}`)}
+                        className="px-4 py-2 text-xs rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition"
+                      >
+                        Inspeccionar
+                      </button>
+                      <span
+                        className={`
+                          px-3 py-1 rounded-full text-xs font-medium capitalize
+                          ${
+                            estado === "Aprobado"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : estado === "Rechazado"
+                              ? "bg-red-100 text-red-700"
+                              : estado === "Finalizado"
+                              ? "bg-slate-200 text-slate-700"
+                              : "bg-yellow-100 text-yellow-700"
+                          }
+                        `}
+                      >
+                        {estado}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
+            {/* FIN DE LA VALIDACIÓN */}
+
           </div>
         </div>
       </div>
