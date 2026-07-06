@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import EstadoBadge from "../components/EstadoBadge";
+import { PageHeader } from "../components/SharedUi";
 
 const PENDING_STATES = ["Pendiente", "En Revisión"];
 
@@ -357,23 +358,28 @@ export default function PedidoDetalle() {
 
   return (
     <div className="min-h-screen text-slate-800 px-4 sm:px-6 lg:px-8 py-6">
-      <div className="max-w-3xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
-
-        {/* HEADER */}
-        <div className="flex justify-between items-start border-b border-slate-200 pb-4 mb-6">
-          <div>
-            <h1 className="text-xl font-semibold text-slate-800">
-              Pedido #{(pedido._id || pedido.id || "").slice(-6)}
-            </h1>
-            <p className="text-slate-500 mt-1">{pedido.materia}</p>
-          </div>
+      <div className="max-w-4xl mx-auto">
+        {/* HEADER CON PAGE HEADER */}
+        <PageHeader 
+          preTitle="Detalles"
+          title={`Pedido #${(pedido._id || pedido.id || "").slice(-6)}`}
+          description={pedido.materia}
+        />
+        
+        <div className="flex justify-end mb-6">
           <button
             onClick={() => navigate(-1)}
-            className="text-sm text-slate-500 hover:text-slate-800"
+            className="text-sm text-slate-500 hover:text-slate-800 font-medium"
           >
             ← Volver
           </button>
         </div>
+
+        {/* CONTENEDOR PRINCIPAL CON DECORACIONES */}
+        <div className="relative">
+          <div className="absolute bottom-0 left-0 w-full h-40 bg-emerald-100 opacity-20 rounded-[2rem]" />
+          <div className="relative z-10 bg-white border border-slate-100 rounded-[2rem] shadow-lg p-6 sm:p-8">
+            <div className="absolute -top-5 left-10 right-10 h-6 bg-emerald-500 rounded-t-[1.5rem]" />
 
         {/* INFO */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mb-8">
@@ -403,8 +409,8 @@ export default function PedidoDetalle() {
 
         {/* RECURSOS */}
         <div className="mb-8">
-          <h2 className="font-semibold text-sm text-slate-700 mb-3">
-            Materiales solicitados
+          <h2 className="font-semibold text-lg text-emerald-700 mb-4">
+            🛠️ Materiales solicitados
           </h2>
           <div className="space-y-2">
             {pedido.recursos?.map((r, i) => {
@@ -438,15 +444,15 @@ export default function PedidoDetalle() {
 
         {/* CONFLICTOS — alerta general */}
         {!tieneConflictos ? (
-          <div className="mb-8 border border-green-200 bg-green-50 rounded-lg p-4">
-            <p className="font-semibold text-green-700">✓ Pedido satisfacible</p>
-            <p className="text-sm text-green-600 mt-1">
+          <div className="mb-8 border border-emerald-300 bg-emerald-50 rounded-xl p-4 shadow-sm">
+            <p className="font-semibold text-emerald-700">✅ Pedido satisfacible</p>
+            <p className="text-sm text-emerald-600 mt-1">
               El laboratorio, materiales y equipos se encuentran disponibles.
             </p>
           </div>
         ) : (
-          <div className="mb-8 border border-red-200 bg-red-50 rounded-lg p-4">
-            <p className="font-semibold text-red-700">⚠ Pedido con conflictos</p>
+          <div className="mb-8 border border-red-300 bg-red-50 rounded-xl p-4 shadow-sm">
+            <p className="font-semibold text-red-700">⚠️ Pedido con conflictos</p>
             <p className="text-sm text-red-600 mt-1">
               Existen problemas que impiden satisfacer este pedido.
             </p>
@@ -463,7 +469,7 @@ export default function PedidoDetalle() {
               {conflictos.map((c, i) => (
                 <div
                   key={i}
-                  className="border border-red-200 bg-red-50 rounded-lg p-3"
+                  className="border border-red-300 bg-red-50 rounded-lg p-3"
                 >
                   <p className="text-sm text-red-700">{c.mensaje}</p>
                 </div>
@@ -474,8 +480,8 @@ export default function PedidoDetalle() {
 
         {/* CHECKLIST */}
         <div className="mb-8">
-          <h2 className="font-semibold text-sm text-slate-700 mb-3">
-            Checklist de seguimiento
+          <h2 className="font-semibold text-lg text-emerald-700 mb-4">
+            ✓ Checklist de seguimiento
           </h2>
           {pedido.checklist?.length > 0 ? (
             <div className="space-y-3">
@@ -530,15 +536,15 @@ export default function PedidoDetalle() {
         </div>
 
         {/* ─────────────────────────────────────────────────────
-            HISTORIAL DE ACTIVIDAD — versión con desplegable
+            HISTORIAL DE ACTIVIDAD — versión timeline
         ───────────────────────────────────────────────────── */}
         <div className="mb-8">
           <button
             onClick={() => setHistorialExpandido(!historialExpandido)}
-            className="flex items-center gap-2 w-full text-left mb-3 p-2 hover:bg-slate-100 rounded-lg transition"
+            className="flex items-center gap-2 w-full text-left mb-4 p-3 hover:bg-emerald-50 rounded-lg transition"
           >
-            <span className="font-semibold text-sm text-slate-700">Historial de actividad</span>
-            <span className={`text-slate-400 transition-transform ml-auto ${
+            <span className="font-semibold text-lg text-emerald-700">📋 Historial de actividad</span>
+            <span className={`text-emerald-600 transition-transform ml-auto text-xl ${
               historialExpandido ? "rotate-180" : ""
             }`}>
               ▼
@@ -547,60 +553,70 @@ export default function PedidoDetalle() {
 
           {historialExpandido && (
             Array.isArray(pedido.historial) && pedido.historial.length > 0 ? (
-              <div className="space-y-3 animate-in fade-in duration-200">
-                {[...pedido.historial]
-                  .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                  .map((evento, index) => (
-                    <div
-                      key={index}
-                      className="border border-slate-200 rounded-lg p-3 bg-slate-50 hover:bg-slate-100 transition"
-                    >
-                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-                        <div className="flex-1 min-w-0">
-                          {/* Acción + descripción */}
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {evento.accion && (
-                              <span
-                                className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                                  ACCION_ESTILO[evento.accion] ||
-                                  "bg-slate-100 text-slate-600"
-                                }`}
-                              >
-                                {evento.accion}
-                              </span>
-                            )}
-                            <p className="font-medium text-slate-700 text-sm break-words">
-                              {evento.descripcion}
-                            </p>
+              <div className="relative">
+                {/* Línea vertical */}
+                <div className="absolute left-6 top-0 bottom-0 w-1 bg-gradient-to-b from-emerald-400 to-emerald-200" />
+                
+                <div className="space-y-4">
+                  {[...pedido.historial]
+                    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                    .map((evento, index) => (
+                      <div
+                        key={index}
+                        className="pl-16 animate-in fade-in slide-in-from-left duration-300"
+                      >
+                        {/* Punto en la línea */}
+                        <div className="absolute left-1.5 top-2 w-10 h-10 bg-white border-4 border-emerald-400 rounded-full flex items-center justify-center shadow-md">
+                          <div className="w-4 h-4 bg-emerald-400 rounded-full" />
+                        </div>
+
+                        {/* Tarjeta de evento */}
+                        <div className="border border-slate-200 rounded-xl p-4 bg-white hover:shadow-md transition-all">
+                          <div className="flex items-start justify-between mb-2 gap-2">
+                            <div className="flex items-center gap-2 flex-wrap flex-1">
+                              {evento.accion && (
+                                <span
+                                  className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${
+                                    ACCION_ESTILO[evento.accion] ||
+                                    "bg-slate-100 text-slate-600"
+                                  }`}
+                                >
+                                  {evento.accion}
+                                </span>
+                              )}
+                              <p className="font-semibold text-slate-800 break-words">
+                                {evento.descripcion}
+                              </p>
+                            </div>
+                            <span className="text-xs text-slate-400 whitespace-nowrap ml-2">
+                              {evento.createdAt
+                                ? new Date(evento.createdAt).toLocaleString()
+                                : "—"}
+                            </span>
                           </div>
 
                           {/* Usuario */}
-                          <p className="text-xs text-slate-500 mt-1">
-                            {evento.usuario?.nombre} {evento.usuario?.apellido}
+                          <p className="text-xs text-slate-500 mb-3 font-medium">
+                            👤 {evento.usuario?.nombre} {evento.usuario?.apellido}
                             {evento.usuario?.rol && (
-                              <> · {evento.usuario.rol}</>
+                              <span className="text-emerald-600 ml-1">· {evento.usuario.rol}</span>
                             )}
                           </p>
 
                           {/* Cambios */}
                           {evento.cambios &&
                             Object.keys(evento.cambios).length > 0 && (
-                              <RenderCambios cambios={evento.cambios} />
+                              <div className="mt-3 pt-3 border-t border-slate-200">
+                                <RenderCambios cambios={evento.cambios} />
+                              </div>
                             )}
                         </div>
-
-                        {/* Fecha */}
-                        <span className="text-xs text-slate-400 whitespace-nowrap shrink-0 sm:text-right">
-                          {evento.createdAt
-                            ? new Date(evento.createdAt).toLocaleString()
-                            : "—"}
-                        </span>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                </div>
               </div>
             ) : (
-              <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
+              <div className="border border-slate-200 rounded-lg p-6 bg-slate-50 text-center">
                 <p className="text-sm text-slate-500">
                   No hay actividad registrada.
                 </p>
@@ -611,29 +627,27 @@ export default function PedidoDetalle() {
 
         {/* COMENTARIOS */}
         <div className="mb-8">
-          <h2 className="font-semibold text-sm text-slate-700 mb-3">
-            Comentarios
-          </h2>
-          <div className="space-y-3">
+          <h2 className="font-semibold text-lg text-emerald-700 mb-4">💬 Comentarios</h2>
+          <div className="space-y-3 mb-6">
             {pedido.comentarios?.map((comentario) => (
               <div
                 key={comentario._id}
-                className="border border-slate-200 rounded-lg p-3"
+                className="border border-slate-200 rounded-xl p-4 bg-gradient-to-br from-white to-slate-50 hover:shadow-md transition-all"
               >
-                <div className="flex justify-between mb-2">
+                <div className="flex justify-between items-start mb-2 gap-2 flex-wrap">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`text-xs px-2 py-1 rounded-full font-semibold ${
+                      className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
                         comentario.usuario?.rol === "ADMIN"
                           ? "bg-purple-100 text-purple-700"
                           : comentario.usuario?.rol === "PERSONAL"
                           ? "bg-blue-100 text-blue-700"
-                          : "bg-green-100 text-green-700"
+                          : "bg-emerald-100 text-emerald-700"
                       }`}
                     >
                       {comentario.usuario?.rol}
                     </span>
-                    <span className="font-medium text-slate-700">
+                    <span className="font-semibold text-slate-800">
                       {comentario.usuario?.nombre} {comentario.usuario?.apellido}
                     </span>
                   </div>
@@ -641,22 +655,23 @@ export default function PedidoDetalle() {
                     {new Date(comentario.createdAt).toLocaleString()}
                   </span>
                 </div>
-                <p className="text-sm text-slate-600">{comentario.mensaje}</p>
+                <p className="text-sm text-slate-700 leading-relaxed">{comentario.mensaje}</p>
               </div>
             ))}
           </div>
 
-          <div className="mt-4">
+          <div className="border border-emerald-200 rounded-xl p-4 bg-emerald-50">
+            <p className="text-sm font-semibold text-emerald-900 mb-3">Agregar comentario</p>
             <textarea
               value={nuevoComentario}
               onChange={(e) => setNuevoComentario(e.target.value)}
               rows={3}
               placeholder="Escribí un comentario..."
-              className="w-full border border-slate-300 rounded-lg p-3 text-sm text-slate-800 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-emerald-300 rounded-lg p-3 text-sm text-slate-800 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
             />
             <button
               onClick={enviarComentario}
-              className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+              className="mt-3 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors"
             >
               Comentar
             </button>
@@ -665,28 +680,28 @@ export default function PedidoDetalle() {
 
         {/* ACCIONES */}
         {PENDING_STATES.includes(pedido.estado) && (
-          <div className="flex flex-col gap-2">
+          <div className="border-t border-slate-200 pt-6 flex flex-col gap-3">
             {errorAccion && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl flex justify-between items-center">
-                <span><strong>Error:</strong> {errorAccion}</span>
-                <button onClick={() => setErrorAccion("")} className="ml-4 text-red-400 hover:text-red-600 font-bold">✕</button>
+              <div className="p-4 bg-red-50 border border-red-300 text-red-600 text-sm rounded-xl flex justify-between items-start">
+                <span><strong>⚠️ Error:</strong> {errorAccion}</span>
+                <button onClick={() => setErrorAccion("")} className="ml-4 text-red-400 hover:text-red-600 font-bold text-lg">✕</button>
               </div>
             )}
             
             {mostrarMotivRechazo && (
-              <div className="border border-red-200 bg-red-50 rounded-lg p-4 space-y-3">
-                <p className="text-sm font-medium text-red-700">¿Por qué está rechazando este pedido?</p>
+              <div className="border border-red-300 bg-red-50 rounded-xl p-4 space-y-3">
+                <p className="text-sm font-semibold text-red-700">¿Por qué está rechazando este pedido?</p>
                 <textarea
                   value={motivRechazo}
                   onChange={(e) => setMotivRechazo(e.target.value)}
                   rows={3}
                   placeholder="Escribí el motivo del rechazo..."
-                  className="w-full border border-red-300 rounded-lg p-2 text-sm text-slate-800 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full border border-red-300 rounded-lg p-3 text-sm text-slate-800 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
                 />
                 <div className="flex gap-2">
                   <button
                     onClick={rechazar}
-                    className="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium"
+                    className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-semibold shadow-md"
                   >
                     Rechazar con motivo
                   </button>
@@ -695,7 +710,7 @@ export default function PedidoDetalle() {
                       setMostrarMotivRechazo(false);
                       setMotivRechazo("");
                     }}
-                    className="flex-1 px-3 py-2 border border-slate-300 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors text-sm font-medium"
+                    className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors text-sm font-semibold"
                   >
                     Cancelar
                   </button>
@@ -713,24 +728,26 @@ export default function PedidoDetalle() {
                       ? "No se puede aprobar mientras existan conflictos"
                       : "Aprobar pedido"
                   }
-                  className={`px-4 py-2 text-white rounded-lg transition-colors ${
+                  className={`flex-1 px-4 py-2.5 text-white rounded-lg transition-all font-semibold shadow-md ${
                     tieneConflictos
-                      ? "bg-gray-400 cursor-not-allowed opacity-70"
-                      : "bg-emerald-500 hover:bg-emerald-600"
+                      ? "bg-gray-400 cursor-not-allowed opacity-60"
+                      : "bg-emerald-600 hover:bg-emerald-700 hover:shadow-lg"
                   }`}
                 >
-                  Aprobar
+                  ✅ Aprobar
                 </button>
                 <button
                   onClick={rechazar}
-                  className="px-4 py-2 border border-red-300 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  className="flex-1 px-4 py-2.5 border-2 border-red-400 text-red-600 hover:bg-red-50 rounded-lg transition-all font-semibold"
                 >
-                  Rechazar
+                  ❌ Rechazar
                 </button>
               </div>
             )}
           </div>
         )}
+          </div>
+        </div>
       </div>
     </div>
   );
