@@ -103,15 +103,18 @@ const CambioRecursos = ({ antes, despues }) => {
     if (!Array.isArray(lista) || lista.length === 0)
       return <span className="text-slate-400 italic">sin recursos</span>;
     return (
-      <ul className={`list-disc list-inside space-y-0.5 ${color}`}>
+      <ul className={`space-y-1 ${color}`}>
         {lista.map((r, i) => {
           const id =
             typeof r.recursoId === "object"
               ? r.recursoId?.nombre || r.recursoId?._id
               : r.recursoId;
           return (
-            <li key={i} className="text-xs">
-              {r.tipoRecurso} — {id || "recurso"} ×{r.cantidad}
+            <li key={i} className="text-xs flex items-start gap-1 break-words">
+              <span className="font-bold shrink-0">•</span>
+              <span className="flex-1">
+                <span className="font-medium">{r.tipoRecurso}</span> — <span className="break-all">{id || "recurso"}</span> ×{r.cantidad}
+              </span>
             </li>
           );
         })}
@@ -122,13 +125,13 @@ const CambioRecursos = ({ antes, despues }) => {
   return (
     <div className="text-sm py-0.5">
       <span className="font-medium text-slate-700">Materiales/equipos:</span>
-      <div className="grid grid-cols-2 gap-2 mt-1 border border-slate-200 rounded-lg p-2 bg-slate-50">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1 border border-slate-200 rounded-lg p-3 bg-slate-50">
         <div>
-          <p className="text-xs text-slate-400 mb-1">Antes</p>
+          <p className="text-xs text-slate-400 mb-2 font-semibold">Antes</p>
           {renderLista(antes, "text-slate-500")}
         </div>
         <div>
-          <p className="text-xs text-slate-400 mb-1">Después</p>
+          <p className="text-xs text-slate-400 mb-2 font-semibold">Después</p>
           {renderLista(despues, "text-slate-700")}
         </div>
       </div>
@@ -220,6 +223,9 @@ export default function PedidoDetalle() {
   const [nuevoComentario, setNuevoComentario] = useState("");
   const [nombresRecursos, setNombresRecursos] = useState({});
   const [errorAccion, setErrorAccion] = useState("");
+  const [historialExpandido, setHistorialExpandido] = useState(true);
+  const [mostrarMotivRechazo, setMostrarMotivRechazo] = useState(false);
+  const [motivRechazo, setMotivRechazo] = useState("");
 
   const tieneConflictos = conflictos.length > 0;
 
@@ -284,10 +290,33 @@ export default function PedidoDetalle() {
   };
 
   const rechazar = async () => {
+    if (!mostrarMotivRechazo) {
+      setMostrarMotivRechazo(true);
+      return;
+    }
+    
+    if (!motivRechazo.trim()) {
+      setErrorAccion("Debe proporcionar un motivo de rechazo.");
+      return;
+    }
+    
     setErrorAccion("");
     try {
+      // Primero rechazamos el pedido
       const res = await api.patch(`/pedido/${id}/estado`, { estado: "Rechazado" });
       setPedido(res.data);
+      
+      // Luego agregamos el comentario con el motivo
+      await api.post(`/pedido/${id}/comentarios`, {
+        mensaje: `**Motivo de rechazo:** ${motivRechazo}`,
+      });
+      
+      // Refrescamos para obtener el historial actualizado
+      const resActualizado = await api.get(`/pedido/${id}`);
+      setPedido(resActualizado.data);
+      
+      setMostrarMotivRechazo(false);
+      setMotivRechazo("");
     } catch (err) {
       console.error(err);
       setErrorAccion(err.response?.data?.error || "No se pudo rechazar el pedido.");
@@ -327,7 +356,7 @@ export default function PedidoDetalle() {
   if (!pedido) return <div className="p-6">Pedido no encontrado</div>;
 
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-6">
+    <div className="min-h-screen text-slate-800 px-4 sm:px-6 lg:px-8 py-6">
       <div className="max-w-3xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
 
         {/* HEADER */}
@@ -501,72 +530,82 @@ export default function PedidoDetalle() {
         </div>
 
         {/* ─────────────────────────────────────────────────────
-            HISTORIAL DE ACTIVIDAD — versión corregida
+            HISTORIAL DE ACTIVIDAD — versión con desplegable
         ───────────────────────────────────────────────────── */}
         <div className="mb-8">
-          <h2 className="font-semibold text-sm text-slate-700 mb-3">
-            Historial de actividad
-          </h2>
+          <button
+            onClick={() => setHistorialExpandido(!historialExpandido)}
+            className="flex items-center gap-2 w-full text-left mb-3 p-2 hover:bg-slate-100 rounded-lg transition"
+          >
+            <span className="font-semibold text-sm text-slate-700">Historial de actividad</span>
+            <span className={`text-slate-400 transition-transform ml-auto ${
+              historialExpandido ? "rotate-180" : ""
+            }`}>
+              ▼
+            </span>
+          </button>
 
-          {Array.isArray(pedido.historial) && pedido.historial.length > 0 ? (
-            <div className="space-y-3">
-              {[...pedido.historial]
-                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                .map((evento, index) => (
-                  <div
-                    key={index}
-                    className="border border-slate-200 rounded-lg p-3 bg-slate-50"
-                  >
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="flex-1 min-w-0">
-                        {/* Acción + descripción */}
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {evento.accion && (
-                            <span
-                              className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                                ACCION_ESTILO[evento.accion] ||
-                                "bg-slate-100 text-slate-600"
-                              }`}
-                            >
-                              {evento.accion}
-                            </span>
-                          )}
-                          <p className="font-medium text-slate-700 text-sm">
-                            {evento.descripcion}
+          {historialExpandido && (
+            Array.isArray(pedido.historial) && pedido.historial.length > 0 ? (
+              <div className="space-y-3 animate-in fade-in duration-200">
+                {[...pedido.historial]
+                  .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                  .map((evento, index) => (
+                    <div
+                      key={index}
+                      className="border border-slate-200 rounded-lg p-3 bg-slate-50 hover:bg-slate-100 transition"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          {/* Acción + descripción */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {evento.accion && (
+                              <span
+                                className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                  ACCION_ESTILO[evento.accion] ||
+                                  "bg-slate-100 text-slate-600"
+                                }`}
+                              >
+                                {evento.accion}
+                              </span>
+                            )}
+                            <p className="font-medium text-slate-700 text-sm break-words">
+                              {evento.descripcion}
+                            </p>
+                          </div>
+
+                          {/* Usuario */}
+                          <p className="text-xs text-slate-500 mt-1">
+                            {evento.usuario?.nombre} {evento.usuario?.apellido}
+                            {evento.usuario?.rol && (
+                              <> · {evento.usuario.rol}</>
+                            )}
                           </p>
+
+                          {/* Cambios */}
+                          {evento.cambios &&
+                            Object.keys(evento.cambios).length > 0 && (
+                              <RenderCambios cambios={evento.cambios} />
+                            )}
                         </div>
 
-                        {/* Usuario */}
-                        <p className="text-xs text-slate-500 mt-1">
-                          {evento.usuario?.nombre} {evento.usuario?.apellido}
-                          {evento.usuario?.rol && (
-                            <> · {evento.usuario.rol}</>
-                          )}
-                        </p>
-
-                        {/* Cambios */}
-                        {evento.cambios &&
-                          Object.keys(evento.cambios).length > 0 && (
-                            <RenderCambios cambios={evento.cambios} />
-                          )}
+                        {/* Fecha */}
+                        <span className="text-xs text-slate-400 whitespace-nowrap shrink-0 sm:text-right">
+                          {evento.createdAt
+                            ? new Date(evento.createdAt).toLocaleString()
+                            : "—"}
+                        </span>
                       </div>
-
-                      {/* Fecha */}
-                      <span className="text-xs text-slate-400 whitespace-nowrap shrink-0">
-                        {evento.createdAt
-                          ? new Date(evento.createdAt).toLocaleString()
-                          : "—"}
-                      </span>
                     </div>
-                  </div>
-                ))}
-            </div>
-          ) : (
-            <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
-              <p className="text-sm text-slate-500">
-                No hay actividad registrada.
-              </p>
-            </div>
+                  ))}
+              </div>
+            ) : (
+              <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                <p className="text-sm text-slate-500">
+                  No hay actividad registrada.
+                </p>
+              </div>
+            )
           )}
         </div>
 
@@ -633,30 +672,63 @@ export default function PedidoDetalle() {
                 <button onClick={() => setErrorAccion("")} className="ml-4 text-red-400 hover:text-red-600 font-bold">✕</button>
               </div>
             )}
-            <div className="flex gap-3">
-              <button
-                onClick={aprobar}
-                disabled={tieneConflictos}
-                title={
-                  tieneConflictos
-                    ? "No se puede aprobar mientras existan conflictos"
-                    : "Aprobar pedido"
-                }
-                className={`px-4 py-2 text-white rounded-lg transition-colors ${
-                  tieneConflictos
-                    ? "bg-gray-400 cursor-not-allowed opacity-70"
-                    : "bg-emerald-500 hover:bg-emerald-600"
-                }`}
-              >
-                Aprobar
-              </button>
-              <button
-                onClick={rechazar}
-                className="px-4 py-2 border border-red-300 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              >
-                Rechazar
-              </button>
-            </div>
+            
+            {mostrarMotivRechazo && (
+              <div className="border border-red-200 bg-red-50 rounded-lg p-4 space-y-3">
+                <p className="text-sm font-medium text-red-700">¿Por qué está rechazando este pedido?</p>
+                <textarea
+                  value={motivRechazo}
+                  onChange={(e) => setMotivRechazo(e.target.value)}
+                  rows={3}
+                  placeholder="Escribí el motivo del rechazo..."
+                  className="w-full border border-red-300 rounded-lg p-2 text-sm text-slate-800 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={rechazar}
+                    className="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium"
+                  >
+                    Rechazar con motivo
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMostrarMotivRechazo(false);
+                      setMotivRechazo("");
+                    }}
+                    className="flex-1 px-3 py-2 border border-slate-300 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors text-sm font-medium"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {!mostrarMotivRechazo && (
+              <div className="flex gap-3">
+                <button
+                  onClick={aprobar}
+                  disabled={tieneConflictos}
+                  title={
+                    tieneConflictos
+                      ? "No se puede aprobar mientras existan conflictos"
+                      : "Aprobar pedido"
+                  }
+                  className={`px-4 py-2 text-white rounded-lg transition-colors ${
+                    tieneConflictos
+                      ? "bg-gray-400 cursor-not-allowed opacity-70"
+                      : "bg-emerald-500 hover:bg-emerald-600"
+                  }`}
+                >
+                  Aprobar
+                </button>
+                <button
+                  onClick={rechazar}
+                  className="px-4 py-2 border border-red-300 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  Rechazar
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
