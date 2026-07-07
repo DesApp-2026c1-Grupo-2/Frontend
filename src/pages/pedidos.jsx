@@ -16,7 +16,7 @@ import {
   FiMessageCircle,
 } from "react-icons/fi";
 
-const PENDING_STATES = ["Pendiente", "En Revisión"];
+const PENDING_STATES = ["Pendiente"];
 
 const formatDocente = (doc) => {
   if (!doc) return "—";
@@ -49,7 +49,9 @@ const normalizarEstado = (estado) => {
   if (!estado) return "Pendiente";
   switch (estado) {
     case "Aceptado": return "Aprobado";
-    case "En revisión": return "En Revisión";
+    // Añadimos traducciones/formatos para los nuevos si hiciera falta:
+    case "Cancelado": return "Cancelado";
+    case "Expirado": return "Expirado";
     default: return estado;
   }
 };
