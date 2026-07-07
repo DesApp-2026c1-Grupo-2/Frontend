@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 
-const PENDING_STATES = ["Pendiente", "En Revisión"];
+const PENDING_STATES = ["Pendiente"];
 
 const formatDocente = (doc) => {
   if (!doc) return "—";
