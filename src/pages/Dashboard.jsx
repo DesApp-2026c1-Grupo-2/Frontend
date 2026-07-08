@@ -6,7 +6,6 @@ import { useCalendarReservas } from "../services/useCalendarReservas";
 import { usePedidos, useEquipamiento, useMateriales } from "../services/useDashboardData";
 import { useAuth } from "../context/AuthContext";
 
-
 import {
   Package,
   CheckCircle,

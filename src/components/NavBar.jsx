@@ -15,6 +15,7 @@ function Navbar() {
 
 
   const canViewAdminSections = user?.rol?.toUpperCase() === "ADMIN" || user?.rol?.toUpperCase() === "PERSONAL";
+  const isAdmin = user?.rol?.toUpperCase() === "ADMIN";
 
 
   const handleLogout = () => {
@@ -82,6 +83,15 @@ function Navbar() {
                 Equipamiento
               </button>
             </>
+          )}
+
+          {isAdmin && (
+            <button
+              onClick={() => navigate("/aprobacion-usuarios")}
+              className={navButtonClass("/aprobacion-usuarios")}
+            >
+              Usuarios
+            </button>
           )}
 
 
@@ -199,6 +209,18 @@ function Navbar() {
                   Equipamiento
                 </button>
               </>
+            )}
+
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  navigate("/aprobacion-usuarios");
+                  setMenuOpen(false);
+                }}
+                className={navButtonClass("/aprobacion-usuarios")}
+              >
+                Usuarios
+              </button>
             )}
 
             <button
