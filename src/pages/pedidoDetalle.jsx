@@ -215,6 +215,10 @@ export default function PedidoDetalle() {
   const [mostrarMotivRechazo, setMostrarMotivRechazo] = useState(false);
   const [motivRechazo, setMotivRechazo] = useState("");
 
+  const [mostrarFinalizar, setMostrarFinalizar] = useState(false);
+  // (Opcional) Acá guardarías los descartes/desperfectos si armás un mini-form.
+  // Por ahora lo dejamos listo para disparar.
+
   const tieneConflictos = conflictos.length > 0;
 
   useEffect(() => {
@@ -297,6 +301,33 @@ export default function PedidoDetalle() {
     } catch (err) {
       console.error(err);
       setErrorAccion(err.response?.data?.error || "No se pudo rechazar el pedido.");
+    }
+  };
+
+  const cancelarPedido = async () => {
+    if (!window.confirm("¿Seguro que querés cancelar este pedido? Se liberarán las reservas.")) return;
+    setErrorAccion("");
+    try {
+      const res = await api.patch(`/pedido/${id}/estado`, { estado: "Cancelado" });
+      setPedido(res.data);
+    } catch (err) {
+      setErrorAccion(err.response?.data?.error || "Error al cancelar el pedido.");
+    }
+  };
+
+  const ejecutarFinalizacion = async () => {
+    // Si hacés un form para descartes, validalo acá antes de enviar.
+    setErrorAccion("");
+    try {
+      const payload = {
+        descartes: [], // Reemplazar con el state de tu form si hay descartes
+        desperfectos: [] // Reemplazar con el state de tu form si hay desperfectos
+      };
+      const res = await api.patch(`/pedido/${id}/finalizar`, payload);
+      setPedido(res.data);
+      setMostrarFinalizar(false);
+    } catch (err) {
+      setErrorAccion(err.response?.data?.error || "Error al finalizar el pedido.");
     }
   };
 
@@ -634,8 +665,16 @@ export default function PedidoDetalle() {
               </div>
             </div>
 
-            {/* ACCIONES DE ESTADO PENDIENTE */}
-            {PENDING_STATES.includes(pedido.estado) && (
+            {/* MOTIVO DE RECHAZO */}
+            {pedido.estado === "Rechazado" && pedido.motivoRechazo && (
+              <div className="mb-8 border border-red-300 bg-red-50 rounded-xl p-4 shadow-sm">
+                <p className="font-semibold text-red-700">❌ Pedido Rechazado</p>
+                <p className="text-sm text-red-600 mt-1"><strong>Motivo:</strong> {pedido.motivoRechazo}</p>
+              </div>
+            )}
+
+            {/* PANEL DE ACCIONES (Pendientes y Aceptados) */}
+            {["Pendiente", "Aceptado"].includes(pedido.estado) && (
               <div className="border-t border-slate-200 pt-6 flex flex-col gap-3">
                 {errorAccion && (
                   <div className="p-4 bg-red-50 border border-red-300 text-red-600 text-sm rounded-xl flex justify-between items-start">
@@ -644,56 +683,70 @@ export default function PedidoDetalle() {
                   </div>
                 )}
                 
+                {/* INLINE FORM: RECHAZO */}
                 {mostrarMotivRechazo && (
                   <div className="border border-red-300 bg-red-50 rounded-xl p-4 space-y-3">
                     <p className="text-sm font-semibold text-red-700">¿Por qué está rechazando este pedido?</p>
                     <textarea
                       value={motivRechazo}
                       onChange={(e) => setMotivRechazo(e.target.value)}
-                      rows={3}
-                      placeholder="Escribí el motivo del rechazo..."
-                      className="w-full border border-red-300 rounded-lg p-3 text-sm text-slate-800 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+                      rows={2}
+                      placeholder="Escribí el motivo..."
+                      className="w-full border border-red-300 rounded-lg p-3 text-sm resize-none"
                     />
                     <div className="flex gap-2">
-                      <button
-                        onClick={ejecutarRechazo}
-                        className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-semibold shadow-md"
-                      >
-                        Rechazar con motivo
-                      </button>
-                      <button
-                        onClick={() => {
-                          setMostrarMotivRechazo(false);
-                          setMotivRechazo("");
-                        }}
-                        className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors text-sm font-semibold"
-                      >
-                        Cancelar
-                      </button>
+                      <button onClick={ejecutarRechazo} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold">Confirmar Rechazo</button>
+                      <button onClick={() => setMostrarMotivRechazo(false)} className="flex-1 px-4 py-2 border border-slate-300 hover:bg-slate-100 rounded-lg text-sm font-semibold">Cancelar</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* INLINE FORM: FINALIZACIÓN */}
+                {mostrarFinalizar && (
+                  <div className="border border-blue-300 bg-blue-50 rounded-xl p-4 space-y-3">
+                    <p className="text-sm font-semibold text-blue-800">Finalizar pedido e informar descartes/desperfectos</p>
+                    {/* Acá a futuro podés meter tu form de descartes */}
+                    <p className="text-xs text-blue-600">Por ahora, al confirmar, la API dejará los recursos listos para otro pedido.</p>
+                    
+                    <div className="flex gap-2">
+                      <button onClick={ejecutarFinalizacion} className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold">Confirmar Finalización</button>
+                      <button onClick={() => setMostrarFinalizar(false)} className="flex-1 px-4 py-2 border border-slate-300 hover:bg-slate-100 rounded-lg text-sm font-semibold">Volver</button>
                     </div>
                   </div>
                 )}
                 
-                {!mostrarMotivRechazo && (
-                  <div className="flex gap-3">
-                    <button
-                      onClick={aprobar}
-                      disabled={tieneConflictos}
-                      title={tieneConflictos ? "No se puede aprobar mientras existan conflictos" : "Aprobar pedido"}
-                      className={`flex-1 px-4 py-2.5 text-white rounded-lg transition-all font-semibold shadow-md ${
-                        tieneConflictos
-                          ? "bg-gray-400 cursor-not-allowed opacity-60"
-                          : "bg-emerald-600 hover:bg-emerald-700 hover:shadow-lg"
-                      }`}
-                    >
-                      ✅ Aprobar
+                {/* BOTONES PRIMARIOS */}
+                {!mostrarMotivRechazo && !mostrarFinalizar && (
+                  <div className="flex flex-wrap gap-3">
+                    
+                    {pedido.estado === "Pendiente" && (
+                      <>
+                        <button
+                          onClick={aprobar}
+                          disabled={tieneConflictos}
+                          className={`flex-1 px-4 py-2.5 text-white rounded-lg font-semibold shadow-md ${
+                            tieneConflictos ? "bg-gray-400 cursor-not-allowed opacity-60" : "bg-emerald-600 hover:bg-emerald-700"
+                          }`}
+                        >
+                          ✅ Aprobar
+                        </button>
+                        <button onClick={() => setMostrarMotivRechazo(true)} className="flex-1 px-4 py-2.5 border-2 border-red-400 text-red-600 hover:bg-red-50 rounded-lg font-semibold">
+                          ❌ Rechazar
+                        </button>
+                      </>
+                    )}
+
+                    {pedido.estado === "Aceptado" && (
+                      <button onClick={() => setMostrarFinalizar(true)} className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-md">
+                        🏁 Finalizar Pedido
+                      </button>
+                    )}
+
+                    {/* El botón Cancelar siempre aparece si está Pendiente o Aceptado */}
+                    <button onClick={cancelarPedido} className="w-full sm:w-auto px-4 py-2.5 border border-slate-300 text-slate-600 hover:bg-slate-100 hover:text-slate-800 rounded-lg font-semibold transition-colors">
+                      🚫 Cancelar
                     </button>
-                    <button
-                      onClick={() => setMostrarMotivRechazo(true)}
-                      className="flex-1 px-4 py-2.5 border-2 border-red-400 text-red-600 hover:bg-red-50 rounded-lg transition-all font-semibold"
-                    >
-                      ❌ Rechazar
-                    </button>
+
                   </div>
                 )}
               </div>
