@@ -294,7 +294,11 @@ export default function PedidosLaboratorio() {
                               ? "bg-red-100 text-red-700"
                               : estado === "Finalizado"
                               ? "bg-slate-200 text-slate-700"
-                              : "bg-yellow-100 text-yellow-700"
+                              : estado === "Cancelado" 
+                              ? "bg-orange-100 text-orange-700" // Color para cancelado
+                              : estado === "Expirado"
+                              ? "bg-gray-200 text-gray-600" // Color para expirado
+                              : "bg-yellow-100 text-yellow-700" // Pendiente queda acá
                           }
                         `}
                       >
