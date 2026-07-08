@@ -285,16 +285,13 @@ export default function PedidoDetalle() {
     
     setErrorAccion("");
     try {
-      const res = await api.patch(`/pedido/${id}/estado`, { estado: "Rechazado" });
-      setPedido(res.data);
-      
-      await api.post(`/pedido/${id}/comentarios`, {
-        mensaje: `**Motivo de rechazo:** ${motivRechazo}`,
+      // Magia pura: mandamos el motivo directamente en el estado
+      const res = await api.patch(`/pedido/${id}/estado`, { 
+        estado: "Rechazado",
+        motivoRechazo: motivRechazo 
       });
       
-      const resActualizado = await api.get(`/pedido/${id}`);
-      setPedido(resActualizado.data);
-      
+      setPedido(res.data);
       setMostrarMotivRechazo(false);
       setMotivRechazo("");
     } catch (err) {
