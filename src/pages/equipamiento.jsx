@@ -745,7 +745,7 @@ function Equipamiento() {
 
   return (
     <div className="min-h-screen text-slate-800">
-      <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
+      <div className="px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
         <PageHeader title="Equipamiento" />
 
         {/* Banner error de operación (ej: no se pudo eliminar) */}
