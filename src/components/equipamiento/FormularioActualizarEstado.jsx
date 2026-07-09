@@ -3,8 +3,8 @@ import { useMemo, useState } from "react";
 // Estado que muestra el frontend (mapearEstado) -> string exacto del backend.
 // El backend solo acepta estos tres valores para un equipo.
 const estadoDisplayToBackend = {
-  Disponible: "disponible",
-  Mantenimiento: "mantenimiento",
+   Disponible: "disponible",
+   Mantenimiento: "mantenimiento",
   "Fuera de servicio": "fuera de servicio",
 };
 
