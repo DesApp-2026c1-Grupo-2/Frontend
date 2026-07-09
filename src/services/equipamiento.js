@@ -213,3 +213,30 @@ export const deleteEquipo = async (equipoId) => {
     throw error;
   }
 };
+
+// --- Mantenimiento de equipos (deja traza en el historial) ---
+
+// Registrar mantenimiento: pone el equipo en "mantenimiento" y crea el registro
+// de historial. Body: { tipo: "preventivo"|"correctivo", descripcion?, fecha? }.
+// El responsableId lo toma el backend del JWT.
+export const registrarMantenimiento = async (equipoId, data) => {
+  try {
+    const response = await api.post(`/equipos/${equipoId}/mantenimientos`, data);
+    return response.data;
+  } catch (error) {
+    console.error(`Error al registrar mantenimiento del equipo ${equipoId}:`, error);
+    throw error;
+  }
+};
+
+// Finalizar mantenimiento: devuelve el equipo a "disponible" y cierra el
+// mantenimiento abierto. Body opcional: { fecha } (fecha de fin, no futura).
+export const finalizarMantenimiento = async (equipoId, data = {}) => {
+  try {
+    const response = await api.patch(`/equipos/${equipoId}/mantenimientos/finalizar`, data);
+    return response.data;
+  } catch (error) {
+    console.error(`Error al finalizar mantenimiento del equipo ${equipoId}:`, error);
+    throw error;
+  }
+};

@@ -8,6 +8,7 @@ import Landing from "../pages/Landing"; // ← NUEVA pantalla de inicio
 import Dashboard from "../pages/Dashboard"; /*PRUEBA */
 import Pedidos from "../pages/pedidos";
 import Equipamiento from "../pages/equipamiento";
+import Historial from "../pages/historial";
 import LogIn from "../pages/logIn";
 import RegistroForm from "../pages/RegistroForm";
 import Edificios from "../pages/edificios";
@@ -43,6 +44,7 @@ function AppRouter() {
                 <Route path="/calendario" element={<Calendario />} />
                 <Route path="/edificios" element={<Edificios />} />
                 <Route path="/equipamiento" element={<Equipamiento />} />
+                <Route path="/historial" element={<Historial />} />
               </Route>
 
               {/* RUTA SOLO ADMIN */}

@@ -2,7 +2,7 @@ export default function FormularioEquipamiento({
   formData,
   handleChange,
   handleSubmit,
-  statusOptions = ["Disponible", "Reservado", "En uso", "Descartado"],
+  statusOptions = ["Disponible", "Descartado"],
   errores = {},
 }) {
   const inputClass = (campo) =>

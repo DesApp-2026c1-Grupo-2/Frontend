@@ -2,7 +2,7 @@ export default function FormularioSustancia({
   formData,
   handleChange,
   handleSubmit,
-  statusOptions = ["Disponible", "Reservado", "En uso", "Descartado"],
+  statusOptions = ["Disponible", "Descartado"],
   errores = {},
 }) {
   const inputClass = (campo) =>
@@ -88,6 +88,11 @@ export default function FormularioSustancia({
             <option key={opt} value={opt}>{opt}</option>
           ))}
         </select>
+        {formData.estado === "Descartado" && (
+          <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            Descartar genera una <strong>baja de stock</strong>: el lote deja de estar disponible.
+          </p>
+        )}
       </div>
 
       {/* ─── Datos adicionales (opcional, pendiente de confirmar en backend) ─── */}
