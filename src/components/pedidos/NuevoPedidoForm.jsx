@@ -168,6 +168,13 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
   };
 
   const toggleRecurso = (recurso) => {
+    if (recurso?.esFijo && !form.laboratorio) {
+      setErrores((prev) => ({
+        ...prev,
+        laboratorio: "Seleccioná un laboratorio antes de agregar un equipo fijo.",
+      }));
+      return;
+    }
 
     if (errores.recursos) {
       setErrores((prev) => ({
@@ -626,6 +633,7 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
               <div className="max-h-[40vh] overflow-y-auto grid grid-cols-1 gap-2 pr-2">
                 {recursosDB.map((r, i) => {
                   const seleccionado = form.recursos.find(rec => (rec._id || rec.id) === (r._id || r.id));
+                  const bloqueado = r?.esFijo && !form.laboratorio;
                   
                   return (
                     <div key={i} className="flex items-center justify-between bg-white hover:bg-emerald-50 rounded-xl px-4 py-3 border border-zinc-200 hover:border-emerald-200 transition-colors group">
@@ -636,13 +644,16 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
                           type="checkbox" 
                           className="accent-emerald-500 w-4 h-4"
                           checked={!!seleccionado}
+                          disabled={bloqueado}
                           onChange={() => toggleRecurso(r)}
                         />
                         <div className="flex flex-col">
-                          <span className="text-zinc-700 text-sm font-medium group-hover:text-emerald-800">
+                          <span className={`text-sm font-medium ${bloqueado ? "text-zinc-400" : "text-zinc-700 group-hover:text-emerald-800"}`}>
                             {r.nombre} {r.tipoRecurso === 'Equipo' ? '(Disponible)' : ''}
+                            {r?.esFijo ? " • Fijo" : ""}
                           </span>
                           <span className="text-zinc-400 text-xs">{r.tipoDetalle}</span>
+                          {bloqueado && <span className="text-xs text-amber-600">Seleccioná un laboratorio primero</span>}
                         </div>
                       </label>
 

@@ -1,7 +1,7 @@
 export const PEDIDOS = [
   {
     id: "#PED-041", docente: "Dr. Herrera", fecha: "22/04", hora: "10:00",
-    lab: "Lab 5", alumnos: 28, estado: "En evaluación",
+    lab: "Lab 5", alumnos: 28, estado: "Pendiente", // Cambiado de "En evaluación"
     laboratorio: "Lab 5 — Bioquímica", duracion: "2 horas",
     actividad: "Extracción de ADN", observaciones: "",
     conflictos: [{ equipo: "EQ-004 Espectrofotómetro UV", motivo: "Fuera de servicio", alternativa: "EQ-007 en Lab 5. Requiere aprobación manual." }],
@@ -20,7 +20,7 @@ export const PEDIDOS = [
   },
   {
     id: "#PED-043", docente: "Dra. Rojas", fecha: "25/04", hora: "09:00",
-    lab: "Lab 2", alumnos: 30, estado: "Modificado",
+    lab: "Lab 2", alumnos: 30, estado: "Pendiente", // Cambiado de "Modificado"
     laboratorio: "Lab 2 — Química", duracion: "2 horas",
     actividad: "Titulación ácido-base", observaciones: "",
     conflictos: [],
@@ -65,20 +65,10 @@ export const PEDIDOS = [
 ];
 
 export const ESTADO_STYLES = {
-  "En evaluación": { 
+  "Pendiente": { 
     bg: "bg-amber-100", 
     text: "text-amber-800", 
     dot: "bg-amber-500" 
-  },
-  "Pendiente": { 
-    bg: "bg-zinc-100", 
-    text: "text-zinc-700", 
-    dot: "bg-zinc-500" 
-  },
-  "Modificado": { 
-    bg: "bg-blue-100", 
-    text: "text-blue-800", 
-    dot: "bg-blue-600" 
   },
   "Aceptado": { 
     bg: "bg-emerald-100", 
@@ -90,9 +80,24 @@ export const ESTADO_STYLES = {
     text: "text-red-800", 
     dot: "bg-red-600" 
   },
+  "Finalizado": { 
+    bg: "bg-blue-100", 
+    text: "text-blue-800", 
+    dot: "bg-blue-600" 
+  },
+  "Cancelado": { 
+    bg: "bg-slate-100", 
+    text: "text-slate-700", 
+    dot: "bg-slate-500" 
+  },
+  "Expirado": { 
+    bg: "bg-orange-100", 
+    text: "text-orange-800", 
+    dot: "bg-orange-500" 
+  }
 };
 
-export const PENDING_STATES = ["En evaluación", "Pendiente", "Modificado"];
+export const PENDING_STATES = ["Pendiente"];
 
 export const ACTIVIDADES = ["Extracción de ADN", "Microscopía óptica", "Titulación ácido-base", "Disección animal", "Síntesis de nylon", "Experimentos de óptica"];
 export const LABS = ["Lab 1 — General (40 alumnos)", "Lab 2 — Química (30 alumnos)", "Lab 3 — Física (32 alumnos)", "Lab 5 — Bioquímica (35 alumnos)"];

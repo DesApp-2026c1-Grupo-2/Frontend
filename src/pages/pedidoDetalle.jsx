@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
-import EstadoBadge from "../components/EstadoBadge";
+import { ResumenValorHistorial } from "../utils/historialFormat";
 
-const PENDING_STATES = ["Pendiente", "En Revisión"];
+const PENDING_STATES = ["Pendiente"];
 
 const formatDocente = (doc) => {
   if (!doc) return "—";
@@ -44,11 +44,11 @@ const ETIQUETAS_CAMPO = {
   horario: "Horario",
   recursos: "Materiales/equipos",
   estado: "Estado",
+  reporteFinal: "Reporte final",
 };
 
 const formatValorSimple = (valor) => {
   if (valor === null || valor === undefined) return "—";
-  // Si parece una fecha ISO la formateamos
   if (typeof valor === "string" && /^\d{4}-\d{2}-\d{2}T/.test(valor)) {
     const d = new Date(valor);
     if (!isNaN(d.getTime())) {
@@ -59,22 +59,51 @@ const formatValorSimple = (valor) => {
     }
   }
   if (typeof valor === "object" && valor !== null) {
-    // ObjectId u objeto poblado → intentar extraer un nombre legible
     return valor.nombre || valor.email || valor._id?.toString() || JSON.stringify(valor);
   }
   return String(valor);
 };
 
-const CambioCampoSimple = ({ campo, antes, despues }) => (
-  <div className="flex flex-wrap items-center gap-1 text-sm py-0.5">
-    <span className="font-medium text-slate-700">
-      {ETIQUETAS_CAMPO[campo] || campo}:
-    </span>
-    <span className="text-slate-500 line-through">{formatValorSimple(antes)}</span>
-    <span className="text-slate-400 mx-1">→</span>
-    <span className="text-slate-800">{formatValorSimple(despues)}</span>
-  </div>
-);
+const CambioCampoSimple = ({ campo, antes, despues }) => {
+  const renderValor = (valor) => {
+    if (valor === null || valor === undefined) {
+      return <span className="text-slate-400">—</span>;
+    }
+    if (typeof valor === "object") {
+      return <ResumenValorHistorial valor={valor} />;
+    }
+    return <span>{formatValorSimple(valor)}</span>;
+  };
+
+  return (
+    <div className="space-y-2 text-sm py-0.5">
+      <div className="flex flex-wrap items-center gap-1">
+        <span className="font-medium text-slate-700">
+          {ETIQUETAS_CAMPO[campo] || campo}:
+        </span>
+        {typeof antes !== "object" && (
+          <span className="text-slate-500 line-through">{formatValorSimple(antes)}</span>
+        )}
+        <span className="text-slate-400 mx-1">→</span>
+        {typeof despues !== "object" && (
+          <span className="text-slate-800">{formatValorSimple(despues)}</span>
+        )}
+      </div>
+      {typeof antes === "object" && (
+        <div className="mt-2">
+          <div className="text-xs text-slate-400 uppercase tracking-wide mb-1">Antes</div>
+          {renderValor(antes)}
+        </div>
+      )}
+      {typeof despues === "object" && (
+        <div className="mt-2">
+          <div className="text-xs text-slate-400 uppercase tracking-wide mb-1">Después</div>
+          {renderValor(despues)}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const CambioHorario = ({ antes, despues }) => {
   const fmtRango = (obj) => {
@@ -103,15 +132,18 @@ const CambioRecursos = ({ antes, despues }) => {
     if (!Array.isArray(lista) || lista.length === 0)
       return <span className="text-slate-400 italic">sin recursos</span>;
     return (
-      <ul className={`list-disc list-inside space-y-0.5 ${color}`}>
+      <ul className={`space-y-1 ${color}`}>
         {lista.map((r, i) => {
           const id =
             typeof r.recursoId === "object"
               ? r.recursoId?.nombre || r.recursoId?._id
               : r.recursoId;
           return (
-            <li key={i} className="text-xs">
-              {r.tipoRecurso} — {id || "recurso"} ×{r.cantidad}
+            <li key={id || i} className="text-xs flex items-start gap-1 break-words">
+              <span className="font-bold shrink-0">•</span>
+              <span className="flex-1">
+                <span className="font-medium">{r.tipoRecurso}</span> — <span className="break-all">{id || "recurso"}</span> ×{r.cantidad}
+              </span>
             </li>
           );
         })}
@@ -122,13 +154,13 @@ const CambioRecursos = ({ antes, despues }) => {
   return (
     <div className="text-sm py-0.5">
       <span className="font-medium text-slate-700">Materiales/equipos:</span>
-      <div className="grid grid-cols-2 gap-2 mt-1 border border-slate-200 rounded-lg p-2 bg-slate-50">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1 border border-slate-200 rounded-lg p-3 bg-slate-50">
         <div>
-          <p className="text-xs text-slate-400 mb-1">Antes</p>
+          <p className="text-xs text-slate-400 mb-2 font-semibold">Antes</p>
           {renderLista(antes, "text-slate-500")}
         </div>
         <div>
-          <p className="text-xs text-slate-400 mb-1">Después</p>
+          <p className="text-xs text-slate-400 mb-2 font-semibold">Después</p>
           {renderLista(despues, "text-slate-700")}
         </div>
       </div>
@@ -136,17 +168,12 @@ const CambioRecursos = ({ antes, despues }) => {
   );
 };
 
-/**
- * Renderiza todos los cambios de un evento del historial.
- * Soporta: campos simples, horario (objeto anidado) y recursos (array).
- */
 const RenderCambios = ({ cambios }) => {
   if (!cambios || Object.keys(cambios).length === 0) return null;
 
   return (
     <div className="mt-2 border-t border-slate-200 pt-2 space-y-1">
       {Object.entries(cambios).map(([campo, valor]) => {
-        // Horario — objeto con {inicio, fin}
         if (campo === "horario") {
           return (
             <CambioHorario
@@ -157,7 +184,6 @@ const RenderCambios = ({ cambios }) => {
           );
         }
 
-        // Recursos — arrays
         if (campo === "recursos" && (Array.isArray(valor?.antes) || Array.isArray(valor?.despues))) {
           return (
             <CambioRecursos
@@ -168,7 +194,6 @@ const RenderCambios = ({ cambios }) => {
           );
         }
 
-        // Campos simples con estructura {antes, despues}
         if (valor !== null && typeof valor === "object" && "antes" in valor && "despues" in valor) {
           return (
             <CambioCampoSimple
@@ -180,13 +205,14 @@ const RenderCambios = ({ cambios }) => {
           );
         }
 
-        // Fallback — valor plano
         return (
           <div key={campo} className="text-sm py-0.5">
             <span className="font-medium text-slate-700">
               {ETIQUETAS_CAMPO[campo] || campo}:
             </span>{" "}
-            <span className="text-slate-700">{formatValorSimple(valor)}</span>
+            <div className="mt-1 text-slate-700">
+              <ResumenValorHistorial valor={valor} />
+            </div>
           </div>
         );
       })}
@@ -194,7 +220,6 @@ const RenderCambios = ({ cambios }) => {
   );
 };
 
-// Etiqueta de color por acción
 const ACCION_ESTILO = {
   CREACION: "bg-emerald-100 text-emerald-700",
   MODIFICACION: "bg-blue-100 text-blue-700",
@@ -220,6 +245,13 @@ export default function PedidoDetalle() {
   const [nuevoComentario, setNuevoComentario] = useState("");
   const [nombresRecursos, setNombresRecursos] = useState({});
   const [errorAccion, setErrorAccion] = useState("");
+  const [historialExpandido, setHistorialExpandido] = useState(true);
+  const [mostrarMotivRechazo, setMostrarMotivRechazo] = useState(false);
+  const [motivRechazo, setMotivRechazo] = useState("");
+
+  const [mostrarFinalizar, setMostrarFinalizar] = useState(false);
+  const [formFinalizacion, setFormFinalizacion] = useState({ recursos: [] });
+  const [recursosFinalizacion, setRecursosFinalizacion] = useState([]);
 
   const tieneConflictos = conflictos.length > 0;
 
@@ -283,15 +315,76 @@ export default function PedidoDetalle() {
     }
   };
 
-  const rechazar = async () => {
+  const ejecutarRechazo = async () => {
+    if (!motivRechazo.trim()) {
+      setErrorAccion("Debe proporcionar un motivo de rechazo.");
+      return;
+    }
+    
     setErrorAccion("");
     try {
-      const res = await api.patch(`/pedido/${id}/estado`, { estado: "Rechazado" });
+      // Magia pura: mandamos el motivo directamente en el estado
+      const res = await api.patch(`/pedido/${id}/estado`, { 
+        estado: "Rechazado",
+        motivoRechazo: motivRechazo 
+      });
+      
       setPedido(res.data);
+      setMostrarMotivRechazo(false);
+      setMotivRechazo("");
     } catch (err) {
       console.error(err);
       setErrorAccion(err.response?.data?.error || "No se pudo rechazar el pedido.");
     }
+  };
+
+  const cancelarPedido = async () => {
+    if (!window.confirm("¿Seguro que querés cancelar este pedido? Se liberarán las reservas.")) return;
+    setErrorAccion("");
+    try {
+      const res = await api.patch(`/pedido/${id}/estado`, { estado: "Cancelado" });
+      setPedido(res.data);
+    } catch (err) {
+      setErrorAccion(err.response?.data?.error || "Error al cancelar el pedido.");
+    }
+  };
+
+  const ejecutarFinalizacion = async () => {
+    setErrorAccion("");
+    try {
+      const descartes = formFinalizacion.recursos
+        .filter((recurso) => recurso.registrarDescarte && recurso.tipo !== "Equipo")
+        .map((recurso) => ({
+          tipo: recurso.tipoDetalle?.toLowerCase() === "reactivo" ? "reactivo" : "material",
+          itemId: recurso.recursoId,
+          cantidad: Number(recurso.cantidadDescartada || 0),
+          motivo: recurso.motivo || "Finalización de pedido",
+        }));
+
+      const desperfectos = formFinalizacion.recursos
+        .filter((recurso) => recurso.registrarDefecto && recurso.tipo === "Equipo")
+        .map((recurso) => ({
+          equipoId: recurso.recursoId,
+          motivo: recurso.motivoDefecto || "Desperfecto informado al finalizar el pedido",
+        }));
+
+      const payload = { descartes, desperfectos };
+      const res = await api.patch(`/pedido/${id}/finalizar`, payload);
+      setPedido(res.data.pedido || res.data);
+      setMostrarFinalizar(false);
+      setFormFinalizacion({ recursos: [] });
+    } catch (err) {
+      setErrorAccion(err.response?.data?.error || "Error al finalizar el pedido.");
+    }
+  };
+
+  const actualizarRecursoFinalizacion = (recursoId, cambios) => {
+    setFormFinalizacion((prev) => ({
+      ...prev,
+      recursos: prev.recursos.map((recurso) =>
+        recurso.recursoId === recursoId ? { ...recurso, ...cambios } : recurso
+      ),
+    }));
   };
 
   const enviarComentario = async () => {
@@ -312,6 +405,61 @@ export default function PedidoDetalle() {
     }
   };
 
+  const toggleEstadoTarea = async (index) => {
+    if (!pedido || !pedido.checklist) return;
+    
+    setErrorAccion("");
+    const nuevaChecklist = [...pedido.checklist];
+    const estadoActual = nuevaChecklist[index].estado;
+    const nuevoEstado = estadoActual === "Completada" ? "Pendiente" : "Completada";
+    
+    nuevaChecklist[index] = { ...nuevaChecklist[index], estado: nuevoEstado };
+
+    try {
+      // Intentamos actualizarlo en el backend (ajustá el endpoint según tu backend)
+      const res = await api.patch(`/pedido/${id}/checklist`, { checklist: nuevaChecklist });
+      setPedido(res.data);
+    } catch (err) {
+      console.error(err);
+      setErrorAccion("No se pudo actualizar el estado de la tarea.");
+    }
+  };
+
+  useEffect(() => {
+    if (!pedido?.recursos?.length) return;
+    const recursos = pedido.recursos
+      .filter((r) => r?.recursoId)
+      .map((r) => {
+        const recursoId = typeof r.recursoId === "object" ? r.recursoId?._id : r.recursoId;
+        const tipoBase = r.tipoRecurso || r.tipo || "Item";
+        return {
+          id: recursoId,
+          recursoId,
+          nombre: r.recursoId?.nombre || r.nombre || "Recurso",
+          tipo: tipoBase === "Equipo" ? "Equipo" : "Item",
+          tipoDetalle: r.recursoId?.tipo || r.tipoDetalle || (tipoBase === "Equipo" ? "Equipo" : "Material"),
+          cantidadSolicitada: Number(r.cantidad || 1),
+        };
+      });
+
+    setRecursosFinalizacion(recursos);
+    setFormFinalizacion((prev) => ({
+      ...prev,
+      recursos: recursos.map((recurso) => {
+        const existente = prev.recursos?.find((entry) => entry.recursoId === recurso.recursoId);
+        return {
+          ...existente,
+          ...recurso,
+          registrarDescarte: existente?.registrarDescarte || false,
+          cantidadDescartada: existente?.cantidadDescartada ?? recurso.cantidadSolicitada,
+          motivo: existente?.motivo || "",
+          registrarDefecto: existente?.registrarDefecto || false,
+          motivoDefecto: existente?.motivoDefecto || "",
+        };
+      }),
+    }));
+  }, [pedido]);
+
   useEffect(() => {
     const marcarVisto = async () => {
       try {
@@ -327,338 +475,447 @@ export default function PedidoDetalle() {
   if (!pedido) return <div className="p-6">Pedido no encontrado</div>;
 
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-6">
-      <div className="max-w-3xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
-
-        {/* HEADER */}
-        <div className="flex justify-between items-start border-b border-slate-200 pb-4 mb-6">
-          <div>
-            <h1 className="text-xl font-semibold text-slate-800">
-              Pedido #{(pedido._id || pedido.id || "").slice(-6)}
-            </h1>
-            <p className="text-slate-500 mt-1">{pedido.materia}</p>
-          </div>
-          <button
-            onClick={() => navigate(-1)}
-            className="text-sm text-slate-500 hover:text-slate-800"
-          >
-            ← Volver
-          </button>
-        </div>
-
-        {/* INFO */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mb-8">
-          <div>
-            <p className="text-slate-400 mb-1">Docente</p>
-            <p className="text-slate-700">{formatDocente(pedido.docente)}</p>
-          </div>
-          <div>
-            <p className="text-slate-400 mb-1">Fecha</p>
-            <p className="text-slate-700">
-              {formatFechaHora(pedido.fechaHora || pedido.fecha)}
-            </p>
-          </div>
-          <div>
-            <p className="text-slate-400 mb-1">Laboratorio</p>
-            <p className="text-slate-700">{formatLaboratorio(pedido.laboratorio)}</p>
-          </div>
-          <div>
-            <p className="text-slate-400 mb-1">Alumnos</p>
-            <p className="text-slate-700">{pedido.alumnos}</p>
-          </div>
-          <div>
-            <p className="text-slate-400 mb-1">Estado</p>
-            <EstadoBadge estado={pedido.estado} />
-          </div>
-        </div>
-
-        {/* RECURSOS */}
-        <div className="mb-8">
-          <h2 className="font-semibold text-sm text-slate-700 mb-3">
-            Materiales solicitados
-          </h2>
-          <div className="space-y-2">
-            {pedido.recursos?.map((r, i) => {
-              const recId =
-                typeof r.recursoId === "object" ? r.recursoId?._id : r.recursoId;
-              const nombreRecurso =
-                r.recursoId?.nombre ||
-                r.recurso?.nombre ||
-                nombresRecursos[recId] ||
-                r.nombre ||
-                "Recurso";
-              return (
-                <div
-                  key={i}
-                  className="flex items-center justify-between border border-slate-200 rounded-lg p-3 bg-slate-50"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-slate-700">{nombreRecurso}</p>
-                    <p className="text-xs text-slate-400 mt-1">
-                      {r.tipo || r.tipoRecurso || "—"}
-                    </p>
-                  </div>
-                  <span className="text-xs font-bold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-md">
-                    x{r.cantidad}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* CONFLICTOS — alerta general */}
-        {!tieneConflictos ? (
-          <div className="mb-8 border border-green-200 bg-green-50 rounded-lg p-4">
-            <p className="font-semibold text-green-700">✓ Pedido satisfacible</p>
-            <p className="text-sm text-green-600 mt-1">
-              El laboratorio, materiales y equipos se encuentran disponibles.
-            </p>
-          </div>
-        ) : (
-          <div className="mb-8 border border-red-200 bg-red-50 rounded-lg p-4">
-            <p className="font-semibold text-red-700">⚠ Pedido con conflictos</p>
-            <p className="text-sm text-red-600 mt-1">
-              Existen problemas que impiden satisfacer este pedido.
-            </p>
-          </div>
-        )}
-
-        {/* CONFLICTOS — detalle */}
-        {tieneConflictos && (
-          <div className="mb-8">
-            <h2 className="font-semibold text-sm text-red-600 mb-3">
-              Conflictos detectados
-            </h2>
-            <div className="space-y-2">
-              {conflictos.map((c, i) => (
-                <div
-                  key={i}
-                  className="border border-red-200 bg-red-50 rounded-lg p-3"
-                >
-                  <p className="text-sm text-red-700">{c.mensaje}</p>
-                </div>
-              ))}
+    <div className="min-h-screen text-slate-800 px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-4xl mx-auto">
+        <div className="relative">
+          <div className="absolute bottom-0 left-0 w-full h-40 bg-emerald-100 opacity-20 rounded-[2rem]" />
+          <div className="relative z-10 bg-white border border-slate-100 rounded-[2rem] shadow-lg p-6 sm:p-8">
+            <div className="absolute -top-5 left-10 right-10 h-6 bg-emerald-500 rounded-t-[1.5rem]" />
+            
+            {/* HEADER */}
+            <div className="flex justify-between items-start mb-6 pb-4 border-b border-slate-200">
+              <div className="flex-1">
+                <p className="text-emerald-600 font-semibold text-xs tracking-widest uppercase mb-2">Detalles del Pedido</p>
+                <h1 className="text-3xl font-bold text-slate-800">{`Pedido #${(pedido._id || pedido.id || "").slice(-6)}`}</h1>
+                <p className="text-slate-500 mt-2">{pedido.materia}</p>
+              </div>
+              <button
+                onClick={() => navigate(-1)}
+                className="px-3 py-2 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition font-medium text-sm whitespace-nowrap"
+              >
+                ← Volver
+              </button>
             </div>
-          </div>
-        )}
 
-        {/* CHECKLIST */}
-        <div className="mb-8">
-          <h2 className="font-semibold text-sm text-slate-700 mb-3">
-            Checklist de seguimiento
-          </h2>
-          {pedido.checklist?.length > 0 ? (
-            <div className="space-y-3">
-              {pedido.checklist.map((tarea, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between border border-slate-200 rounded-lg p-3 bg-slate-50"
-                >
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={tarea.estado === "Completada"}
-                      readOnly
-                      className="h-4 w-4 accent-emerald-600"
-                    />
-                    <div>
-                      <p
-                        className={`text-sm font-medium ${
-                          tarea.estado === "Completada"
-                            ? "text-slate-500 line-through"
-                            : "text-slate-700"
-                        }`}
-                      >
-                        {tarea.descripcion}
-                      </p>
-                      <p className="text-xs text-slate-400 mt-1">
-                        Tipo: {tarea.tipo}
-                      </p>
-                    </div>
-                  </div>
-                  <span
-                    className={`text-xs font-semibold px-2 py-1 rounded-md ${
-                      tarea.estado === "Completada"
-                        ? "bg-green-100 text-green-700"
-                        : tarea.estado === "En Proceso"
-                        ? "bg-yellow-100 text-yellow-700"
-                        : "bg-slate-200 text-slate-700"
-                    }`}
-                  >
-                    {tarea.estado}
-                  </span>
-                </div>
-              ))}
+            {/* INFO */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mb-8">
+              <div>
+                <p className="text-slate-400 mb-1">Docente</p>
+                <p className="text-slate-700">{formatDocente(pedido.docente)}</p>
+              </div>
+              <div>
+                <p className="text-slate-400 mb-1">Fecha</p>
+                <p className="text-slate-700">{formatFechaHora(pedido.fechaHora || pedido.fecha)}</p>
+              </div>
+              <div>
+                <p className="text-slate-400 mb-1">Laboratorio</p>
+                <p className="text-slate-700">{formatLaboratorio(pedido.laboratorio)}</p>
+              </div>
+              <div>
+                <p className="text-slate-400 mb-1">Alumnos</p>
+                <p className="text-slate-700">{pedido.alumnos}</p>
+              </div>
+              <div>
+                <p className="text-slate-400 mb-1">Estado</p>
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
+                  pedido.estado === "Aprobado" || pedido.estado === "Aceptado"
+                    ? "bg-emerald-100 text-emerald-700"
+                    : pedido.estado === "Rechazado"
+                    ? "bg-red-100 text-red-700"
+                    : pedido.estado === "Finalizado"
+                    ? "bg-slate-200 text-slate-700"
+                    : "bg-yellow-100 text-yellow-700"
+                }`}>
+                  {pedido.estado === "Aceptado" ? "Aprobado" : pedido.estado}
+                </span>
+              </div>
             </div>
-          ) : (
-            <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
-              <p className="text-sm text-slate-500">
-                No hay tareas generadas para este pedido.
-              </p>
-            </div>
-          )}
-        </div>
 
-        {/* ─────────────────────────────────────────────────────
-            HISTORIAL DE ACTIVIDAD — versión corregida
-        ───────────────────────────────────────────────────── */}
-        <div className="mb-8">
-          <h2 className="font-semibold text-sm text-slate-700 mb-3">
-            Historial de actividad
-          </h2>
-
-          {Array.isArray(pedido.historial) && pedido.historial.length > 0 ? (
-            <div className="space-y-3">
-              {[...pedido.historial]
-                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                .map((evento, index) => (
-                  <div
-                    key={index}
-                    className="border border-slate-200 rounded-lg p-3 bg-slate-50"
-                  >
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="flex-1 min-w-0">
-                        {/* Acción + descripción */}
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {evento.accion && (
-                            <span
-                              className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                                ACCION_ESTILO[evento.accion] ||
-                                "bg-slate-100 text-slate-600"
-                              }`}
-                            >
-                              {evento.accion}
-                            </span>
-                          )}
-                          <p className="font-medium text-slate-700 text-sm">
-                            {evento.descripcion}
-                          </p>
-                        </div>
-
-                        {/* Usuario */}
-                        <p className="text-xs text-slate-500 mt-1">
-                          {evento.usuario?.nombre} {evento.usuario?.apellido}
-                          {evento.usuario?.rol && (
-                            <> · {evento.usuario.rol}</>
-                          )}
-                        </p>
-
-                        {/* Cambios */}
-                        {evento.cambios &&
-                          Object.keys(evento.cambios).length > 0 && (
-                            <RenderCambios cambios={evento.cambios} />
-                          )}
+            {/* RECURSOS */}
+            <div className="mb-8">
+              <h2 className="font-semibold text-lg text-emerald-700 mb-4">🛠️ Materiales solicitado</h2>
+              <div className="space-y-2">
+                {pedido.recursos?.map((r, i) => {
+                  const recId = typeof r.recursoId === "object" ? r.recursoId?._id : r.recursoId;
+                  const nombreRecurso =
+                    r.recursoId?.nombre ||
+                    r.recurso?.nombre ||
+                    nombresRecursos[recId] ||
+                    r.nombre ||
+                    "Recurso";
+                  return (
+                    <div
+                      key={recId || i}
+                      className="flex items-center justify-between border border-slate-200 rounded-lg p-3 bg-slate-50"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-slate-700">{nombreRecurso}</p>
+                        <p className="text-xs text-slate-400 mt-1">{r.tipo || r.tipoRecurso || "—"}</p>
                       </div>
-
-                      {/* Fecha */}
-                      <span className="text-xs text-slate-400 whitespace-nowrap shrink-0">
-                        {evento.createdAt
-                          ? new Date(evento.createdAt).toLocaleString()
-                          : "—"}
+                      <span className="text-xs font-bold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-md">
+                        x{r.cantidad}
                       </span>
                     </div>
-                  </div>
-                ))}
-            </div>
-          ) : (
-            <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
-              <p className="text-sm text-slate-500">
-                No hay actividad registrada.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* COMENTARIOS */}
-        <div className="mb-8">
-          <h2 className="font-semibold text-sm text-slate-700 mb-3">
-            Comentarios
-          </h2>
-          <div className="space-y-3">
-            {pedido.comentarios?.map((comentario) => (
-              <div
-                key={comentario._id}
-                className="border border-slate-200 rounded-lg p-3"
-              >
-                <div className="flex justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`text-xs px-2 py-1 rounded-full font-semibold ${
-                        comentario.usuario?.rol === "ADMIN"
-                          ? "bg-purple-100 text-purple-700"
-                          : comentario.usuario?.rol === "PERSONAL"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-green-100 text-green-700"
-                      }`}
-                    >
-                      {comentario.usuario?.rol}
-                    </span>
-                    <span className="font-medium text-slate-700">
-                      {comentario.usuario?.nombre} {comentario.usuario?.apellido}
-                    </span>
-                  </div>
-                  <span className="text-xs text-slate-400">
-                    {new Date(comentario.createdAt).toLocaleString()}
-                  </span>
-                </div>
-                <p className="text-sm text-slate-600">{comentario.mensaje}</p>
+                  );
+                })}
               </div>
-            ))}
-          </div>
+            </div>
 
-          <div className="mt-4">
-            <textarea
-              value={nuevoComentario}
-              onChange={(e) => setNuevoComentario(e.target.value)}
-              rows={3}
-              placeholder="Escribí un comentario..."
-              className="w-full border border-slate-300 rounded-lg p-3 text-sm text-slate-800 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button
-              onClick={enviarComentario}
-              className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
-            >
-              Comentar
-            </button>
-          </div>
-        </div>
-
-        {/* ACCIONES */}
-        {PENDING_STATES.includes(pedido.estado) && (
-          <div className="flex flex-col gap-2">
-            {errorAccion && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl flex justify-between items-center">
-                <span><strong>Error:</strong> {errorAccion}</span>
-                <button onClick={() => setErrorAccion("")} className="ml-4 text-red-400 hover:text-red-600 font-bold">✕</button>
+            {/* ALERTAS DE CONFLICTOS */}
+            {!tieneConflictos ? (
+              <div className="mb-8 border border-emerald-300 bg-emerald-50 rounded-xl p-4 shadow-sm">
+                <p className="font-semibold text-emerald-700">✅ Pedido satisfacible</p>
+                <p className="text-sm text-emerald-600 mt-1">El laboratorio, materiales y equipos se encuentran disponibles.</p>
+              </div>
+            ) : (
+              <div className="mb-8 border border-red-300 bg-red-50 rounded-xl p-4 shadow-sm">
+                <p className="font-semibold text-red-700">⚠️ Pedido con conflictos</p>
+                <p className="text-sm text-red-600 mt-1">Existen problemas que impiden satisfacer este pedido.</p>
               </div>
             )}
-            <div className="flex gap-3">
-              <button
-                onClick={aprobar}
-                disabled={tieneConflictos}
-                title={
-                  tieneConflictos
-                    ? "No se puede aprobar mientras existan conflictos"
-                    : "Aprobar pedido"
-                }
-                className={`px-4 py-2 text-white rounded-lg transition-colors ${
-                  tieneConflictos
-                    ? "bg-gray-400 cursor-not-allowed opacity-70"
-                    : "bg-emerald-500 hover:bg-emerald-600"
-                }`}
-              >
-                Aprobar
-              </button>
-              <button
-                onClick={rechazar}
-                className="px-4 py-2 border border-red-300 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              >
-                Rechazar
-              </button>
+
+            {/* DETALLE CONFLICTOS */}
+            {tieneConflictos && (
+              <div className="mb-8">
+                <h2 className="font-semibold text-sm text-red-600 mb-3">Conflictos detectados</h2>
+                <div className="space-y-2">
+                  {conflictos.map((c, i) => (
+                    <div key={i} className="border border-red-300 bg-red-50 rounded-lg p-3">
+                      <p className="text-sm text-red-700">{c.mensaje}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* CHECKLIST */}
+            <div className="mb-8">
+              <h2 className="font-semibold text-lg text-emerald-700 mb-4">✓ Checklist de seguimiento</h2>
+              {pedido.checklist?.length > 0 ? (
+                <div className="space-y-3">
+                  {pedido.checklist.map((tarea, index) => (
+                    <div
+                      key={tarea._id || index}
+                      className="flex items-center justify-between border border-slate-200 rounded-lg p-3 bg-slate-50"
+                    >
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={tarea.estado === "Completada"}
+                          onChange={() => toggleEstadoTarea(index)}
+                          className="h-4 w-4 accent-emerald-600 cursor-pointer"
+                        />
+                        <div>
+                          <p className={`text-sm font-medium ${tarea.estado === "Completada" ? "text-slate-500 line-through" : "text-slate-700"}`}>
+                            {tarea.descripcion}
+                          </p>
+                          <p className="text-xs text-slate-400 mt-1">Tipo: {tarea.tipo}</p>
+                        </div>
+                      </div>
+                      <span className={`text-xs font-semibold px-2 py-1 rounded-md ${
+                        tarea.estado === "Completada"
+                          ? "bg-green-100 text-green-700"
+                          : tarea.estado === "En Proceso"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-slate-200 text-slate-700"
+                      }`}>
+                        {tarea.estado}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                  <p className="text-sm text-slate-500">No hay tareas generadas para este pedido.</p>
+                </div>
+              )}
             </div>
+
+            {/* HISTORIAL */}
+            <div className="mb-8">
+              <button
+                onClick={() => setHistorialExpandido(!historialExpandido)}
+                className="flex items-center gap-2 w-full text-left mb-4 p-3 hover:bg-emerald-50 rounded-lg transition"
+              >
+                <span className="font-semibold text-lg text-emerald-700">📋 Historial de actividad</span>
+                <span className={`text-emerald-600 transition-transform ml-auto text-xl ${historialExpandido ? "rotate-180" : ""}`}>▼</span>
+              </button>
+
+              {historialExpandido && (
+                Array.isArray(pedido.historial) && pedido.historial.length > 0 ? (
+                  <div className="relative">
+                    <div className="absolute left-6 top-0 bottom-0 w-1 bg-gradient-to-b from-emerald-400 to-emerald-200" />
+                    <div className="space-y-4">
+                      {[...pedido.historial]
+                        .sort((a, b) => {
+                          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                          return dateB - dateA;
+                        })
+                        .map((evento, index) => (
+                          <div key={evento._id || index} className="pl-16 relative">
+                            <div className="absolute left-1.5 top-2 w-10 h-10 bg-white border-4 border-emerald-400 rounded-full flex items-center justify-center shadow-md">
+                              <div className="w-4 h-4 bg-emerald-400 rounded-full" />
+                            </div>
+
+                            <div className="border border-slate-200 rounded-xl p-4 bg-white hover:shadow-md transition-all">
+                              <div className="flex items-start justify-between mb-2 gap-2">
+                                <div className="flex items-center gap-2 flex-wrap flex-1">
+                                  {evento.accion && (
+                                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${ACCION_ESTILO[evento.accion] || "bg-slate-100 text-slate-600"}`}>
+                                      {evento.accion}
+                                    </span>
+                                  )}
+                                  <p className="font-semibold text-slate-800 break-words">{evento.descripcion}</p>
+                                </div>
+                                <span className="text-xs text-slate-400 whitespace-nowrap ml-2">
+                                  {evento.createdAt ? new Date(evento.createdAt).toLocaleString() : "—"}
+                                </span>
+                              </div>
+
+                              <p className="text-xs text-slate-500 mb-3 font-medium">
+                                👤 {evento.usuario?.nombre} {evento.usuario?.apellido}
+                                {evento.usuario?.rol && <span className="text-emerald-600 ml-1">· {evento.usuario.rol}</span>}
+                              </p>
+
+                              {evento.cambios && Object.keys(evento.cambios).length > 0 && (
+                                <div className="mt-3 pt-3 border-t border-slate-200">
+                                  <RenderCambios cambios={evento.cambios} />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="border border-slate-200 rounded-lg p-6 bg-slate-50 text-center">
+                    <p className="text-sm text-slate-500">No hay actividad registrada.</p>
+                  </div>
+                )
+              )}
+            </div>
+
+            {/* COMENTARIOS */}
+            <div className="mb-8">
+              <h2 className="font-semibold text-lg text-emerald-700 mb-4">💬 Comentarios</h2>
+              <div className="space-y-3 mb-6">
+                {pedido.comentarios?.map((comentario) => {
+                  const esMotivRechazo = comentario.mensaje?.includes("Motivo de rechazo");
+                  return (
+                    <div
+                      key={comentario._id}
+                      className={`border rounded-xl p-4 hover:shadow-md transition-all ${
+                        esMotivRechazo 
+                          ? "border-red-300 bg-gradient-to-br from-red-50 to-orange-50" 
+                          : "border-slate-200 bg-gradient-to-br from-white to-slate-50"
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-2 gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
+                            esMotivRechazo
+                              ? "bg-red-200 text-red-700"
+                              : comentario.usuario?.rol === "ADMIN"
+                              ? "bg-purple-100 text-purple-700"
+                              : comentario.usuario?.rol === "PERSONAL"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-emerald-100 text-emerald-700"
+                          }`}>
+                            {esMotivRechazo ? "⚠️ RECHAZO" : comentario.usuario?.rol}
+                          </span>
+                          <span className={`font-semibold ${esMotivRechazo ? "text-red-700" : "text-slate-800"}`}>
+                            {comentario.usuario?.nombre} {comentario.usuario?.apellido}
+                          </span>
+                        </div>
+                        <span className={`text-xs ${esMotivRechazo ? "text-red-400" : "text-slate-400"}`}>
+                          {new Date(comentario.createdAt).toLocaleString()}
+                        </span>
+                      </div>
+                      <p className={`text-sm leading-relaxed font-medium ${esMotivRechazo ? "text-red-700" : "text-slate-700"}`}>{comentario.mensaje}</p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="border border-emerald-200 rounded-xl p-4 bg-emerald-50">
+                <p className="text-sm font-semibold text-emerald-900 mb-3">Agregar comentario</p>
+                <textarea
+                  value={nuevoComentario}
+                  onChange={(e) => setNuevoComentario(e.target.value)}
+                  rows={3}
+                  placeholder="Escribí un comentario..."
+                  className="w-full border border-emerald-300 rounded-lg p-3 text-sm text-slate-800 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                />
+                <button
+                  onClick={enviarComentario}
+                  className="mt-3 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  Comentar
+                </button>
+              </div>
+            </div>
+
+            {/* MOTIVO DE RECHAZO */}
+            {pedido.estado === "Rechazado" && pedido.motivoRechazo && (
+              <div className="mb-8 border border-red-300 bg-red-50 rounded-xl p-4 shadow-sm">
+                <p className="font-semibold text-red-700">❌ Pedido Rechazado</p>
+                <p className="text-sm text-red-600 mt-1"><strong>Motivo:</strong> {pedido.motivoRechazo}</p>
+              </div>
+            )}
+
+            {/* PANEL DE ACCIONES (Pendientes y Aceptados) */}
+            {["Pendiente", "Aceptado"].includes(pedido.estado) && (
+              <div className="border-t border-slate-200 pt-6 flex flex-col gap-3">
+                {errorAccion && (
+                  <div className="p-4 bg-red-50 border border-red-300 text-red-600 text-sm rounded-xl flex justify-between items-start">
+                    <span><strong>⚠️ Error:</strong> {errorAccion}</span>
+                    <button onClick={() => setErrorAccion("")} className="ml-4 text-red-400 hover:text-red-600 font-bold text-lg">✕</button>
+                  </div>
+                )}
+                
+                {/* INLINE FORM: RECHAZO */}
+                {mostrarMotivRechazo && (
+                  <div className="border border-red-300 bg-red-50 rounded-xl p-4 space-y-3">
+                    <p className="text-sm font-semibold text-red-700">¿Por qué está rechazando este pedido?</p>
+                    <textarea
+                      value={motivRechazo}
+                      onChange={(e) => setMotivRechazo(e.target.value)}
+                      rows={2}
+                      placeholder="Escribí el motivo..."
+                      className="w-full border border-red-300 rounded-lg p-3 text-sm resize-none"
+                    />
+                    <div className="flex gap-2">
+                      <button onClick={ejecutarRechazo} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold">Confirmar Rechazo</button>
+                      <button onClick={() => setMostrarMotivRechazo(false)} className="flex-1 px-4 py-2 border border-slate-300 hover:bg-slate-100 rounded-lg text-sm font-semibold">Cancelar</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* INLINE FORM: FINALIZACIÓN */}
+                {mostrarFinalizar && (
+                  <div className="border border-blue-300 bg-blue-50 rounded-xl p-4 space-y-4">
+                    <p className="text-sm font-semibold text-blue-800">Finalizar pedido e informar descartes/desperfectos</p>
+
+                    <div className="space-y-3">
+                      <p className="text-sm font-medium text-blue-700">Recursos solicitados</p>
+                      <div className="space-y-3">
+                        {recursosFinalizacion.map((recurso) => {
+                          const recursoForm = formFinalizacion.recursos.find((entry) => entry.recursoId === recurso.recursoId) || recurso;
+                          const esEquipo = recurso.tipo === "Equipo";
+
+                          return (
+                            <div key={recurso.recursoId} className="rounded-lg border border-blue-200 bg-white p-3 space-y-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-800">{recurso.nombre}</p>
+                                  <p className="text-xs text-slate-500">Solicitado: {recurso.cantidadSolicitada} · {recurso.tipoDetalle}</p>
+                                </div>
+                                <span className="text-xs font-medium text-blue-700">{esEquipo ? "Equipo" : "Inventario"}</span>
+                              </div>
+
+                              {!esEquipo && (
+                                <label className="flex items-center gap-2 text-sm text-slate-700">
+                                  <input
+                                    type="checkbox"
+                                    checked={!!recursoForm.registrarDescarte}
+                                    onChange={(e) => actualizarRecursoFinalizacion(recurso.recursoId, { registrarDescarte: e.target.checked, cantidadDescartada: e.target.checked ? recurso.cantidadSolicitada : 0 })}
+                                  />
+                                  Registrar descarte
+                                </label>
+                              )}
+
+                              {esEquipo ? (
+                                <label className="flex items-center gap-2 text-sm text-slate-700">
+                                  <input
+                                    type="checkbox"
+                                    checked={!!recursoForm.registrarDefecto}
+                                    onChange={(e) => actualizarRecursoFinalizacion(recurso.recursoId, { registrarDefecto: e.target.checked, motivoDefecto: e.target.checked ? recursoForm.motivoDefecto || "" : "" })}
+                                  />
+                                  Marcar como desperfecto
+                                </label>
+                              ) : recursoForm.registrarDescarte ? (
+                                <>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    max={recurso.cantidadSolicitada}
+                                    value={recursoForm.cantidadDescartada || 0}
+                                    onChange={(e) => actualizarRecursoFinalizacion(recurso.recursoId, { cantidadDescartada: Number(e.target.value) })}
+                                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                    placeholder="Cantidad descartada"
+                                  />
+                                  <input
+                                    type="text"
+                                    value={recursoForm.motivo || ""}
+                                    onChange={(e) => actualizarRecursoFinalizacion(recurso.recursoId, { motivo: e.target.value })}
+                                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                    placeholder="Motivo"
+                                  />
+                                </>
+                              ) : null}
+
+                              {esEquipo && recursoForm.registrarDefecto ? (
+                                <input
+                                  type="text"
+                                  value={recursoForm.motivoDefecto || ""}
+                                  onChange={(e) => actualizarRecursoFinalizacion(recurso.recursoId, { motivoDefecto: e.target.value })}
+                                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                  placeholder="Motivo del desperfecto"
+                                />
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button onClick={ejecutarFinalizacion} className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold">Confirmar Finalización</button>
+                      <button onClick={() => setMostrarFinalizar(false)} className="flex-1 px-4 py-2 border border-slate-300 hover:bg-slate-100 rounded-lg text-sm font-semibold">Volver</button>
+                    </div>
+                  </div>
+                )}
+                
+                {/* BOTONES PRIMARIOS */}
+                {!mostrarMotivRechazo && !mostrarFinalizar && (
+                  <div className="flex flex-wrap gap-3">
+                    
+                    {pedido.estado === "Pendiente" && (
+                      <>
+                        <button
+                          onClick={aprobar}
+                          disabled={tieneConflictos}
+                          className={`flex-1 px-4 py-2.5 text-white rounded-lg font-semibold shadow-md ${
+                            tieneConflictos ? "bg-gray-400 cursor-not-allowed opacity-60" : "bg-emerald-600 hover:bg-emerald-700"
+                          }`}
+                        >
+                          ✅ Aprobar
+                        </button>
+                        <button onClick={() => setMostrarMotivRechazo(true)} className="flex-1 px-4 py-2.5 border-2 border-red-400 text-red-600 hover:bg-red-50 rounded-lg font-semibold">
+                          ❌ Rechazar
+                        </button>
+                      </>
+                    )}
+
+                    {pedido.estado === "Aceptado" && (
+                      <button onClick={() => setMostrarFinalizar(true)} className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-md">
+                        🏁 Finalizar Pedido
+                      </button>
+                    )}
+
+                    {/* El botón Cancelar siempre aparece si está Pendiente o Aceptado */}
+                    <button onClick={cancelarPedido} className="w-full sm:w-auto px-4 py-2.5 border border-slate-300 text-slate-600 hover:bg-slate-100 hover:text-slate-800 rounded-lg font-semibold transition-colors">
+                      🚫 Cancelar
+                    </button>
+
+                  </div>
+                )}
+              </div>
+            )}
+
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
