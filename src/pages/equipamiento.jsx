@@ -4,7 +4,10 @@ import { PageHeader } from "../components/SharedUi";
 import * as equipamientoService from "../services/equipamiento";
 import FormularioEquipamiento from "../components/equipamiento/FormularioEquipamiento";
 import FormularioEquipo from "../components/equipamiento/FormularioEquipo";
-import FormularioDesperfecto from "../components/equipamiento/FormularioDesperfecto"; // <-- Importamos tu nuevo formulario
+import FormularioMaterial from "../components/equipamiento/FormularioMaterial";
+import FormularioReactivo from "../components/equipamiento/FormularioReactivo";
+import FormularioSustancia from "../components/equipamiento/FormularioSustancia";
+import FormularioDesperfecto from "../components/equipamiento/FormularioDesperfecto"; // <-- Importamos tu nuevo formulario Desoerfecto
 
 import {
   FiEdit2, // Lapiz
@@ -363,7 +366,7 @@ function InventoryCard({ item, onEdit, onDelete, onReportDesperfecto }) {
           </div>
           <p className="mt-1 text-xs text-slate-500">Código {item.codigo}</p>
         </div>
-        <MobilityPill mobility={item.movilidad} />
+        {item.categoria === "Equipos" && <MobilityPill mobility={item.movilidad} />}
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
@@ -889,7 +892,9 @@ function Equipamiento() {
                         <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Codigo</th>
                         <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Ubicacion</th>
                         <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Estado</th>
-                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Movilidad</th>
+                        {activeTab === "Equipos" && (
+                          <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Movilidad</th>
+                        )}
                         <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Acciones</th>
                       </tr>
                     </thead>
@@ -901,7 +906,9 @@ function Equipamiento() {
                           <td className="px-4 py-3 text-slate-500">{item.codigo}</td>
                           <td className="px-4 py-3 text-slate-500">{item.ubicacion}</td>
                           <td className="px-4 py-3"><StatusPill status={item.estado} /></td>
-                          <td className="px-4 py-3"><MobilityPill mobility={item.movilidad} /></td>
+                          {activeTab === "Equipos" && (
+                            <td className="px-4 py-3"><MobilityPill mobility={item.movilidad} /></td>
+                          )}
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
                               {/* Botón condicional de desperfecto para escritorio */}
@@ -1142,8 +1149,12 @@ function Equipamiento() {
               )}
               {activeTab === "Equipos" ? (
                 <FormularioEquipo formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} errores={erroresFormEquip} />
+              ) : activeTab === "Materiales" ? (
+                <FormularioMaterial formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} statusOptions={statusOptions} errores={erroresFormEquip} />
+              ) : activeTab === "Reactivos" ? (
+                <FormularioReactivo formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} statusOptions={statusOptions} errores={erroresFormEquip} />
               ) : (
-                <FormularioEquipamiento formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} statusOptions={statusOptions} errores={erroresFormEquip} />
+                <FormularioSustancia formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} statusOptions={statusOptions} errores={erroresFormEquip} />
               )}
             </div>
           </div>
