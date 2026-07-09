@@ -201,6 +201,7 @@ function AlertCard({ item }) {
     Reservado: { bg: "bg-amber-50 border-amber-200", iconColor: "text-amber-500" },
     "Fuera de servicio": { bg: "bg-rose-50 border-rose-200", iconColor: "text-rose-500" },
     Mantenimiento: { bg: "bg-yellow-50 border-yellow-200", iconColor: "text-yellow-500" },
+    Descartado: { bg: "bg-rose-50 border-rose-200", iconColor: "text-rose-500" },
   };
 
   const style = styleMap[item.estado] || { bg: "bg-slate-50 border-slate-200", iconColor: "text-slate-400" };
@@ -634,7 +635,7 @@ function Equipamiento() {
     }
   };
 
-  const alertItems = inventory.filter((i) => i.estado !== "Disponible");
+  const alertItems = inventory.filter((i) => i.estado === "Descartado");
 
   const stats = [
     { title: "Equipos registrados", value: inventory.filter(i => i.categoria === "Equipos").length, subtitle: "Inventario general", hex: "#06b6d4" },
@@ -877,10 +878,10 @@ function Equipamiento() {
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <h2 className="text-lg font-semibold text-emerald-950">Alertas de inventario</h2>
                   <span className="shrink-0 rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-bold text-rose-600">
-                    {alertItems.length} activas
+                    {alertItems.length} descartados
                   </span>
                 </div>
-                <p className="mb-0 text-sm text-slate-500">Estados que requieren revisión o mantenimiento.</p>
+                <p className="mb-0 text-sm text-slate-500">Items descartados del inventario activo.</p>
               </div>
               <div className="max-h-[36rem] overflow-y-auto p-5 pr-3">
                 <div className="flex flex-col gap-3 pr-2">
@@ -890,7 +891,7 @@ function Equipamiento() {
                     ))
                   ) : (
                     <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center text-sm leading-6 text-slate-500">
-                      No hay alertas activas.
+                      No hay descartados en inventario.
                     </p>
                   )}
                 </div>
