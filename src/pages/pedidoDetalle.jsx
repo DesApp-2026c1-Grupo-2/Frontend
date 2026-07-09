@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
+import { ResumenValorHistorial } from "../utils/historialFormat";
 
 const PENDING_STATES = ["Pendiente"];
 
@@ -43,6 +44,7 @@ const ETIQUETAS_CAMPO = {
   horario: "Horario",
   recursos: "Materiales/equipos",
   estado: "Estado",
+  reporteFinal: "Reporte final",
 };
 
 const formatValorSimple = (valor) => {
@@ -62,16 +64,46 @@ const formatValorSimple = (valor) => {
   return String(valor);
 };
 
-const CambioCampoSimple = ({ campo, antes, despues }) => (
-  <div className="flex flex-wrap items-center gap-1 text-sm py-0.5">
-    <span className="font-medium text-slate-700">
-      {ETIQUETAS_CAMPO[campo] || campo}:
-    </span>
-    <span className="text-slate-500 line-through">{formatValorSimple(antes)}</span>
-    <span className="text-slate-400 mx-1">→</span>
-    <span className="text-slate-800">{formatValorSimple(despues)}</span>
-  </div>
-);
+const CambioCampoSimple = ({ campo, antes, despues }) => {
+  const renderValor = (valor) => {
+    if (valor === null || valor === undefined) {
+      return <span className="text-slate-400">—</span>;
+    }
+    if (typeof valor === "object") {
+      return <ResumenValorHistorial valor={valor} />;
+    }
+    return <span>{formatValorSimple(valor)}</span>;
+  };
+
+  return (
+    <div className="space-y-2 text-sm py-0.5">
+      <div className="flex flex-wrap items-center gap-1">
+        <span className="font-medium text-slate-700">
+          {ETIQUETAS_CAMPO[campo] || campo}:
+        </span>
+        {typeof antes !== "object" && (
+          <span className="text-slate-500 line-through">{formatValorSimple(antes)}</span>
+        )}
+        <span className="text-slate-400 mx-1">→</span>
+        {typeof despues !== "object" && (
+          <span className="text-slate-800">{formatValorSimple(despues)}</span>
+        )}
+      </div>
+      {typeof antes === "object" && (
+        <div className="mt-2">
+          <div className="text-xs text-slate-400 uppercase tracking-wide mb-1">Antes</div>
+          {renderValor(antes)}
+        </div>
+      )}
+      {typeof despues === "object" && (
+        <div className="mt-2">
+          <div className="text-xs text-slate-400 uppercase tracking-wide mb-1">Después</div>
+          {renderValor(despues)}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const CambioHorario = ({ antes, despues }) => {
   const fmtRango = (obj) => {
@@ -178,7 +210,9 @@ const RenderCambios = ({ cambios }) => {
             <span className="font-medium text-slate-700">
               {ETIQUETAS_CAMPO[campo] || campo}:
             </span>{" "}
-            <span className="text-slate-700">{formatValorSimple(valor)}</span>
+            <div className="mt-1 text-slate-700">
+              <ResumenValorHistorial valor={valor} />
+            </div>
           </div>
         );
       })}
@@ -216,8 +250,8 @@ export default function PedidoDetalle() {
   const [motivRechazo, setMotivRechazo] = useState("");
 
   const [mostrarFinalizar, setMostrarFinalizar] = useState(false);
-  // (Opcional) Acá guardarías los descartes/desperfectos si armás un mini-form.
-  // Por ahora lo dejamos listo para disparar.
+  const [formFinalizacion, setFormFinalizacion] = useState({ recursos: [] });
+  const [recursosFinalizacion, setRecursosFinalizacion] = useState([]);
 
   const tieneConflictos = conflictos.length > 0;
 
@@ -316,19 +350,41 @@ export default function PedidoDetalle() {
   };
 
   const ejecutarFinalizacion = async () => {
-    // Si hacés un form para descartes, validalo acá antes de enviar.
     setErrorAccion("");
     try {
-      const payload = {
-        descartes: [], // Reemplazar con el state de tu form si hay descartes
-        desperfectos: [] // Reemplazar con el state de tu form si hay desperfectos
-      };
+      const descartes = formFinalizacion.recursos
+        .filter((recurso) => recurso.registrarDescarte && recurso.tipo !== "Equipo")
+        .map((recurso) => ({
+          tipo: recurso.tipoDetalle?.toLowerCase() === "reactivo" ? "reactivo" : "material",
+          itemId: recurso.recursoId,
+          cantidad: Number(recurso.cantidadDescartada || 0),
+          motivo: recurso.motivo || "Finalización de pedido",
+        }));
+
+      const desperfectos = formFinalizacion.recursos
+        .filter((recurso) => recurso.registrarDefecto && recurso.tipo === "Equipo")
+        .map((recurso) => ({
+          equipoId: recurso.recursoId,
+          motivo: recurso.motivoDefecto || "Desperfecto informado al finalizar el pedido",
+        }));
+
+      const payload = { descartes, desperfectos };
       const res = await api.patch(`/pedido/${id}/finalizar`, payload);
-      setPedido(res.data);
+      setPedido(res.data.pedido || res.data);
       setMostrarFinalizar(false);
+      setFormFinalizacion({ recursos: [] });
     } catch (err) {
       setErrorAccion(err.response?.data?.error || "Error al finalizar el pedido.");
     }
+  };
+
+  const actualizarRecursoFinalizacion = (recursoId, cambios) => {
+    setFormFinalizacion((prev) => ({
+      ...prev,
+      recursos: prev.recursos.map((recurso) =>
+        recurso.recursoId === recursoId ? { ...recurso, ...cambios } : recurso
+      ),
+    }));
   };
 
   const enviarComentario = async () => {
@@ -368,6 +424,41 @@ export default function PedidoDetalle() {
       setErrorAccion("No se pudo actualizar el estado de la tarea.");
     }
   };
+
+  useEffect(() => {
+    if (!pedido?.recursos?.length) return;
+    const recursos = pedido.recursos
+      .filter((r) => r?.recursoId)
+      .map((r) => {
+        const recursoId = typeof r.recursoId === "object" ? r.recursoId?._id : r.recursoId;
+        const tipoBase = r.tipoRecurso || r.tipo || "Item";
+        return {
+          id: recursoId,
+          recursoId,
+          nombre: r.recursoId?.nombre || r.nombre || "Recurso",
+          tipo: tipoBase === "Equipo" ? "Equipo" : "Item",
+          tipoDetalle: r.recursoId?.tipo || r.tipoDetalle || (tipoBase === "Equipo" ? "Equipo" : "Material"),
+          cantidadSolicitada: Number(r.cantidad || 1),
+        };
+      });
+
+    setRecursosFinalizacion(recursos);
+    setFormFinalizacion((prev) => ({
+      ...prev,
+      recursos: recursos.map((recurso) => {
+        const existente = prev.recursos?.find((entry) => entry.recursoId === recurso.recursoId);
+        return {
+          ...existente,
+          ...recurso,
+          registrarDescarte: existente?.registrarDescarte || false,
+          cantidadDescartada: existente?.cantidadDescartada ?? recurso.cantidadSolicitada,
+          motivo: existente?.motivo || "",
+          registrarDefecto: existente?.registrarDefecto || false,
+          motivoDefecto: existente?.motivoDefecto || "",
+        };
+      }),
+    }));
+  }, [pedido]);
 
   useEffect(() => {
     const marcarVisto = async () => {
@@ -703,11 +794,82 @@ export default function PedidoDetalle() {
 
                 {/* INLINE FORM: FINALIZACIÓN */}
                 {mostrarFinalizar && (
-                  <div className="border border-blue-300 bg-blue-50 rounded-xl p-4 space-y-3">
+                  <div className="border border-blue-300 bg-blue-50 rounded-xl p-4 space-y-4">
                     <p className="text-sm font-semibold text-blue-800">Finalizar pedido e informar descartes/desperfectos</p>
-                    {/* Acá a futuro podés meter tu form de descartes */}
-                    <p className="text-xs text-blue-600">Por ahora, al confirmar, la API dejará los recursos listos para otro pedido.</p>
-                    
+
+                    <div className="space-y-3">
+                      <p className="text-sm font-medium text-blue-700">Recursos solicitados</p>
+                      <div className="space-y-3">
+                        {recursosFinalizacion.map((recurso) => {
+                          const recursoForm = formFinalizacion.recursos.find((entry) => entry.recursoId === recurso.recursoId) || recurso;
+                          const esEquipo = recurso.tipo === "Equipo";
+
+                          return (
+                            <div key={recurso.recursoId} className="rounded-lg border border-blue-200 bg-white p-3 space-y-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-800">{recurso.nombre}</p>
+                                  <p className="text-xs text-slate-500">Solicitado: {recurso.cantidadSolicitada} · {recurso.tipoDetalle}</p>
+                                </div>
+                                <span className="text-xs font-medium text-blue-700">{esEquipo ? "Equipo" : "Inventario"}</span>
+                              </div>
+
+                              {!esEquipo && (
+                                <label className="flex items-center gap-2 text-sm text-slate-700">
+                                  <input
+                                    type="checkbox"
+                                    checked={!!recursoForm.registrarDescarte}
+                                    onChange={(e) => actualizarRecursoFinalizacion(recurso.recursoId, { registrarDescarte: e.target.checked, cantidadDescartada: e.target.checked ? recurso.cantidadSolicitada : 0 })}
+                                  />
+                                  Registrar descarte
+                                </label>
+                              )}
+
+                              {esEquipo ? (
+                                <label className="flex items-center gap-2 text-sm text-slate-700">
+                                  <input
+                                    type="checkbox"
+                                    checked={!!recursoForm.registrarDefecto}
+                                    onChange={(e) => actualizarRecursoFinalizacion(recurso.recursoId, { registrarDefecto: e.target.checked, motivoDefecto: e.target.checked ? recursoForm.motivoDefecto || "" : "" })}
+                                  />
+                                  Marcar como desperfecto
+                                </label>
+                              ) : recursoForm.registrarDescarte ? (
+                                <>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    max={recurso.cantidadSolicitada}
+                                    value={recursoForm.cantidadDescartada || 0}
+                                    onChange={(e) => actualizarRecursoFinalizacion(recurso.recursoId, { cantidadDescartada: Number(e.target.value) })}
+                                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                    placeholder="Cantidad descartada"
+                                  />
+                                  <input
+                                    type="text"
+                                    value={recursoForm.motivo || ""}
+                                    onChange={(e) => actualizarRecursoFinalizacion(recurso.recursoId, { motivo: e.target.value })}
+                                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                    placeholder="Motivo"
+                                  />
+                                </>
+                              ) : null}
+
+                              {esEquipo && recursoForm.registrarDefecto ? (
+                                <input
+                                  type="text"
+                                  value={recursoForm.motivoDefecto || ""}
+                                  onChange={(e) => actualizarRecursoFinalizacion(recurso.recursoId, { motivoDefecto: e.target.value })}
+                                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                  placeholder="Motivo del desperfecto"
+                                />
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
                     <div className="flex gap-2">
                       <button onClick={ejecutarFinalizacion} className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold">Confirmar Finalización</button>
                       <button onClick={() => setMostrarFinalizar(false)} className="flex-1 px-4 py-2 border border-slate-300 hover:bg-slate-100 rounded-lg text-sm font-semibold">Volver</button>
