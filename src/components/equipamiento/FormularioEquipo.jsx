@@ -2,7 +2,6 @@ export default function FormularioEquipo({
   formData,
   handleChange,
   handleSubmit,
-  cerrarModal,
   errores = {},
 }) {
   const isFijo = formData.esFijo === true || String(formData.esFijo) === "true";
@@ -16,7 +15,6 @@ export default function FormularioEquipo({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 px-3 py-3">
-      
       {/* NOMBRE */}
       <div>
         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
@@ -138,13 +136,6 @@ export default function FormularioEquipo({
 
       {/* BOTONES */}
       <div className="flex justify-end gap-3 pt-2">
-        <button
-          type="button"
-          onClick={cerrarModal}
-          className="px-3 py-2 rounded-lg text-sm border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 hover:border-slate-300 transition"
-        >
-          Cancelar
-        </button>
 
         <button
           type="submit"
