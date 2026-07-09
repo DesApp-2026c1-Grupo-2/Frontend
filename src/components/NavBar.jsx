@@ -15,6 +15,7 @@ function Navbar() {
 
 
   const canViewAdminSections = user?.rol?.toUpperCase() === "ADMIN" || user?.rol?.toUpperCase() === "PERSONAL";
+  const isAdmin = user?.rol?.toUpperCase() === "ADMIN";
 
 
   const handleLogout = () => {
@@ -58,6 +59,12 @@ function Navbar() {
             Dashboard
           </button>
 
+          <button
+            onClick={() => navigate("/calendario")}
+            className={navButtonClass("/calendario")}
+          >
+            Calendario
+          </button>
 
           {canViewAdminSections && (
             <>
@@ -76,6 +83,15 @@ function Navbar() {
                 Equipamiento
               </button>
             </>
+          )}
+
+          {isAdmin && (
+            <button
+              onClick={() => navigate("/aprobacion-usuarios")}
+              className={navButtonClass("/aprobacion-usuarios")}
+            >
+              Usuarios
+            </button>
           )}
 
 
@@ -183,7 +199,6 @@ function Navbar() {
                   Edificios
                 </button>
 
-
                 <button
                   onClick={() => {
                     navigate("/equipamiento");
@@ -196,6 +211,27 @@ function Navbar() {
               </>
             )}
 
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  navigate("/aprobacion-usuarios");
+                  setMenuOpen(false);
+                }}
+                className={navButtonClass("/aprobacion-usuarios")}
+              >
+                Usuarios
+              </button>
+            )}
+
+            <button
+              onClick={() => {
+                  navigate("/calendario");
+                  setMenuOpen(false);
+                }}
+                className={navButtonClass("/calendario")}
+              >
+                Calendario
+            </button>
 
             <button
               onClick={() => {

@@ -91,13 +91,18 @@ function RegistroForm() {
             setErrores({});
 
         } catch (err) {
-            // Capturamos el primer detalle de Joi, o el mensaje del controlador
-            const errorValidacion = err.response?.data?.detalles?.[0];
-            const errorMensaje = err.response?.data?.message;
+            // Capturamos el primer detalle de Joi (que es un objeto { message, path }),
+            // o el mensaje del controlador. Extraemos siempre un string para no
+            // intentar renderizar un objeto como hijo de React.
+            const detalle = err.response?.data?.detalles?.[0];
+            const errorValidacion =
+                typeof detalle === "string" ? detalle : detalle?.message;
+            const errorMensaje =
+                err.response?.data?.message || err.response?.data?.error;
 
             setError(
-                errorValidacion || 
-                errorMensaje || 
+                errorValidacion ||
+                errorMensaje ||
                 "Error al crear usuario"
             );
         }

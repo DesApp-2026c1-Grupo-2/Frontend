@@ -13,6 +13,8 @@ import RegistroForm from "../pages/RegistroForm";
 import Edificios from "../pages/edificios";
 import Laboratorios from "../pages/laboratorios";
 import PedidoDetalle from "../pages/pedidoDetalle";
+import Calendario from "../pages/calendario";
+import AprobacionUsuarios from "../pages/aprobacionUsuarios";
 
 function AppRouter() {
   return (
@@ -30,6 +32,7 @@ function AppRouter() {
           <Route element={<PrivateRoute />}>
             <Route element={<Layout />}>
               <Route path="/dashboard" element={<Dashboard />} /> {/*PRUEBA: dashboard  */}
+              <Route path="/calendario" element={<Calendario />} />
               <Route path="/pedidos" element={<Pedidos />} />
               <Route path="/pedidos/:id" element={<PedidoDetalle />} />
 
@@ -37,8 +40,14 @@ function AppRouter() {
               <Route element={<RoleProtectedRoute allowedRoles={["ADMIN", "PERSONAL"]} />}>
                 <Route path="/" element={<Edificios />} />
                 <Route path="/edificios/:id/laboratorios" element={<Laboratorios />} />
+                <Route path="/calendario" element={<Calendario />} />
                 <Route path="/edificios" element={<Edificios />} />
                 <Route path="/equipamiento" element={<Equipamiento />} />
+              </Route>
+
+              {/* RUTA SOLO ADMIN */}
+              <Route element={<RoleProtectedRoute allowedRoles={["ADMIN"]} />}>
+                <Route path="/aprobacion-usuarios" element={<AprobacionUsuarios />} />
               </Route>
             </Route>
           </Route>

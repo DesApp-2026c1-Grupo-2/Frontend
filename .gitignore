@@ -6,12 +6,15 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+.claude
+CLAUDE.MD
 
 node_modules
 dist
 dist-ssr
 *.local
 coverage
+docs
 
 # Editor directories and files
 .vscode/*
