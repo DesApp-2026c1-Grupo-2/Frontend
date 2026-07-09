@@ -46,8 +46,7 @@ export function Dashboard() {
 
   const pedidosPendientes = misPedidos.filter(
     (p) =>
-      p.estado === "Pendiente" ||
-      p.estado === "En Revisión"
+      p.estado === "Pendiente"
   ).length;
 
 
