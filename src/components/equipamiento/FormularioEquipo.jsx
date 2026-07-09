@@ -92,11 +92,8 @@ export default function FormularioEquipo({
             className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
           >
             <option value="disponible">Disponible</option>
-            <option value="reservado">Reservado</option>
-            <option value="en_uso">En uso</option>
             <option value="mantenimiento">Mantenimiento</option>
-            <option value="fuera_de_servicio">Fuera de servicio</option>
-            <option value="descartado">Descartado</option>
+            <option value="fuera de servicio">Fuera de servicio</option>
           </select>
         </div>
       </div>

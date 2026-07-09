@@ -14,6 +14,7 @@ import FormularioMaterial from "../components/equipamiento/FormularioMaterial";
 import FormularioReactivo from "../components/equipamiento/FormularioReactivo";
 import FormularioSustancia from "../components/equipamiento/FormularioSustancia";
 import FormularioDesperfecto from "../components/equipamiento/FormularioDesperfecto"; // <-- Importamos tu nuevo formulario Desoerfecto
+import FormularioActualizarEstado from "../components/equipamiento/FormularioActualizarEstado"; // <-- Formulario de actualización de estado del equipo
 
 import {
   FiEdit2, // Lapiz
@@ -21,6 +22,7 @@ import {
   FiUsers, // Usuarios
   FiMonitor, // Monitor para equipos
   FiAlertTriangle, // <-- Nuevo icono para reportar desperfectos
+  FiRefreshCw, // <-- Icono para actualizar el estado del equipo
   FiArchive, // Archivo para Descartados
   FiArrowRight, // Flecha del acceso directo al historial
 } from "react-icons/fi";
@@ -37,18 +39,13 @@ const tabs = [
   { label: "Sustancias basicas", icon: PillTabIcon },
 ];
 
+// Estados válidos de un lote (consumibles). El backend solo admite estos dos
+// valores; no existe "reservado" ni "en uso" (ver
+// docs/formulario-estado-lote-item.md).
 const statusConfig = {
   Disponible: {
     statusClassName: "bg-emerald-100 text-emerald-700 border-emerald-200",
     alertClassName: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  },
-  Reservado: {
-    statusClassName: "bg-amber-100 text-amber-700 border-amber-200",
-    alertClassName: "bg-amber-50 text-amber-700 border-amber-200",
-  },
-  "En uso": {
-    statusClassName: "bg-blue-100 text-blue-700 border-blue-200",
-    alertClassName: "bg-blue-50 text-blue-700 border-blue-200",
   },
   Descartado: {
     statusClassName: "bg-rose-100 text-rose-700 border-rose-200",
@@ -56,6 +53,7 @@ const statusConfig = {
   },
 };
 
+// Opciones de estado ofrecidas en los formularios de lote.
 const statusOptions = Object.keys(statusConfig);
 
 /* ─── Iconos generales ─── */
@@ -226,7 +224,7 @@ function AlertCard({ item }) {
 }
 
 // Actualizamos InventoryCard para recibir la acción de Desperfecto
-function InventoryCard({ item, onEdit, onDelete, onReportDesperfecto }) {
+function InventoryCard({ item, onEdit, onDelete, onReportDesperfecto, onUpdateEstado }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
@@ -252,16 +250,26 @@ function InventoryCard({ item, onEdit, onDelete, onReportDesperfecto }) {
       </div>
 
       <div className="mt-4 flex items-center justify-end gap-2 flex-wrap">
-        {/* Botón condicional: Solo para la categoría Equipos */}
+        {/* Botones condicionales: Solo para la categoría Equipos */}
         {item.categoria === "Equipos" && (
-          <button
-            type="button"
-            onClick={onReportDesperfecto}
-            className="inline-flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm font-medium text-amber-600 transition hover:bg-amber-100 cursor-pointer"
-          >
-            <FiAlertTriangle />
-            Desperfecto
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={onUpdateEstado}
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-600 transition hover:bg-emerald-100 cursor-pointer"
+            >
+              <FiRefreshCw />
+              Estado
+            </button>
+            <button
+              type="button"
+              onClick={onReportDesperfecto}
+              className="inline-flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm font-medium text-amber-600 transition hover:bg-amber-100 cursor-pointer"
+            >
+              <FiAlertTriangle />
+              Desperfecto
+            </button>
+          </>
         )}
         <button
           type="button"
@@ -306,6 +314,12 @@ function Equipamiento() {
     fecha: new Date().toISOString().split('T')[0],
     descripcion: ""
   });
+
+  // ─── ESTADOS PARA EL MODAL DE ACTUALIZACIÓN DE ESTADO ───
+  const [isEstadoOpen, setIsEstadoOpen] = useState(false);
+  const [estadoItem, setEstadoItem] = useState(null);
+  const [estadoMsg, setEstadoMsg] = useState("");
+  const [estadoEnviando, setEstadoEnviando] = useState(false);
 
   // ─── MENSAJES INLINE (reemplazan alerts) ───
   const [errorOperacion, setErrorOperacion] = useState("");   // error al eliminar
@@ -462,6 +476,49 @@ function Equipamiento() {
     }
   };
 
+  // ─── ACCIONES DEL FORMULARIO DE ACTUALIZACIÓN DE ESTADO ───
+  const openEstadoModal = (item) => {
+    setEstadoItem(item);
+    setEstadoMsg("");
+    setIsEstadoOpen(true);
+  };
+
+  const closeEstadoModal = () => {
+    setIsEstadoOpen(false);
+    setEstadoItem(null);
+    setEstadoMsg("");
+  };
+
+  const handleEstadoSubmit = async (payload) => {
+    if (!estadoItem) return;
+    const equipoId = estadoItem.itemId || estadoItem.id;
+    setEstadoMsg("");
+    setEstadoEnviando(true);
+    try {
+      if (payload.accion === "iniciarMantenimiento") {
+        const body = { tipo: payload.tipo };
+        if (payload.descripcion) body.descripcion = payload.descripcion;
+        if (payload.fecha) body.fecha = payload.fecha;
+        await equipamientoService.registrarMantenimiento(equipoId, body);
+      } else if (payload.accion === "finalizarMantenimiento") {
+        const body = {};
+        if (payload.fecha) body.fecha = payload.fecha;
+        await equipamientoService.finalizarMantenimiento(equipoId, body);
+      } else {
+        // Cambio directo de estado (PUT): fuera de servicio o volver a disponible.
+        await equipamientoService.updateEquipo(equipoId, { estado: payload.estado });
+      }
+      setEstadoMsg("ok:Estado actualizado con éxito.");
+      await recargarInventario();
+      setTimeout(() => { closeEstadoModal(); }, 1500);
+    } catch (err) {
+      console.error("Error al actualizar estado:", err);
+      setEstadoMsg("error:" + (err.response?.data?.error || "No se pudo actualizar el estado."));
+    } finally {
+      setEstadoEnviando(false);
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -471,8 +528,15 @@ function Equipamiento() {
   };
 
   const estadoToBackend = (estado) => {
-    const estadoMap = { Disponible: "disponible", Reservado: "reservado", "En uso": "en_uso", Descartado: "descartado" };
-    return estadoMap[estado] || estado.toLowerCase().replace(/\s+/g, "_");
+    const estadoMap = {
+      Disponible: "disponible",
+      Reservado: "reservado",
+      "En uso": "en_uso",
+      Descartado: "descartado",
+      Mantenimiento: "mantenimiento",
+      "Fuera de servicio": "fuera de servicio",
+    };
+    return estadoMap[estado] || estado.toLowerCase();
   };
 
   const handleSubmit = async (event) => {
@@ -705,6 +769,7 @@ function Equipamiento() {
                       onEdit={() => openEditForm(item)}
                       onDelete={() => handleDeleteItem(item)}
                       onReportDesperfecto={() => openDesperfectoModal(item)} // <-- Enlazado móvil
+                      onUpdateEstado={() => openEstadoModal(item)} // <-- Actualizar estado (móvil)
                     />
                   ))
                 ) : (
@@ -757,7 +822,17 @@ function Equipamiento() {
                           )}
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
-                              {/* Botón condicional de desperfecto para escritorio */}
+                              {/* Botones condicionales de equipo para escritorio */}
+                              {item.categoria === "Equipos" && (
+                                <button
+                                  type="button"
+                                  onClick={() => openEstadoModal(item)}
+                                  className="rounded-lg p-2 text-emerald-500 bg-emerald-50 hover:bg-emerald-100 transition cursor-pointer"
+                                  title="Actualizar estado"
+                                >
+                                  <FiRefreshCw />
+                                </button>
+                              )}
                               {item.categoria === "Equipos" && (
                                 <button
                                   type="button"
@@ -931,6 +1006,43 @@ function Equipamiento() {
                 handleChange={handleDesperfectoChange}
                 handleSubmit={handleDesperfectoSubmit}
                 cerrarModal={closeDesperfectoModal}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL 3: ACTUALIZAR ESTADO DEL EQUIPO ─── */}
+      {isEstadoOpen && (
+        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/45 backdrop-blur-sm sm:items-center sm:p-4" onClick={closeEstadoModal}>
+          <div className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-md sm:rounded-[24px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]" onClick={(e) => e.stopPropagation()}>
+            <div className="border-b border-slate-100 px-6 py-4 bg-slate-50/80 flex items-center justify-between gap-4">
+              <h2 className="text-lg font-bold text-slate-900">Actualizar estado</h2>
+              <button
+                type="button"
+                onClick={closeEstadoModal}
+                aria-label="Cerrar formulario"
+                title="Cerrar formulario"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
+              >
+                <FiX className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+              {estadoMsg && (
+                <div className={`mb-4 rounded-xl border p-3 text-sm ${
+                  estadoMsg.startsWith("ok:")
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-red-200 bg-red-50 text-red-600"
+                }`}>
+                  {estadoMsg.replace(/^(ok|error):/, "")}
+                </div>
+              )}
+              <FormularioActualizarEstado
+                equipo={estadoItem}
+                onSubmit={handleEstadoSubmit}
+                cerrarModal={closeEstadoModal}
+                enviando={estadoEnviando}
               />
             </div>
           </div>
