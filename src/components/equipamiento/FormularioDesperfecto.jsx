@@ -5,7 +5,6 @@ export default function FormularioDesperfecto({
   desperfectoForm,
   handleChange,
   handleSubmit,
-  cerrarModal,
 }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -105,20 +104,6 @@ export default function FormularioDesperfecto({
       {/* BOTONES */}
       <div className="flex justify-end gap-3 pt-2">
         
-        <button
-          type="button"
-          onClick={cerrarModal}
-          className="
-            px-4 py-2 rounded-xl text-sm
-            border border-slate-200
-            text-slate-600 bg-white
-            hover:bg-slate-50 hover:border-slate-300
-            transition
-          "
-        >
-          Cancelar
-        </button>
-
         <button
           type="submit"
           className="
