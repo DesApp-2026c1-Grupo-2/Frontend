@@ -1,10 +1,20 @@
 import { useMemo, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "../components/equipamiento/Card";
 import { PageHeader } from "../components/SharedUi";
 import * as equipamientoService from "../services/equipamiento";
+import {
+  tipoToCategoria,
+  mapearDatosBackend,
+  mapearEquiposBackend,
+} from "../utils/inventarioMapper";
 import FormularioEquipamiento from "../components/equipamiento/FormularioEquipamiento";
 import FormularioEquipo from "../components/equipamiento/FormularioEquipo";
-import FormularioDesperfecto from "../components/equipamiento/FormularioDesperfecto"; // <-- Importamos tu nuevo formulario
+import FormularioMaterial from "../components/equipamiento/FormularioMaterial";
+import FormularioReactivo from "../components/equipamiento/FormularioReactivo";
+import FormularioSustancia from "../components/equipamiento/FormularioSustancia";
+import FormularioDesperfecto from "../components/equipamiento/FormularioDesperfecto"; // <-- Importamos tu nuevo formulario Desoerfecto
+import FormularioActualizarEstado from "../components/equipamiento/FormularioActualizarEstado"; // <-- Formulario de actualización de estado del equipo
 
 import {
   FiEdit2, // Lapiz
@@ -12,13 +22,15 @@ import {
   FiUsers, // Usuarios
   FiMonitor, // Monitor para equipos
   FiAlertTriangle, // <-- Nuevo icono para reportar desperfectos
+  FiRefreshCw, // <-- Icono para actualizar el estado del equipo
   FiArchive, // Archivo para Descartados
+  FiArrowRight, // Flecha del acceso directo al historial
 } from "react-icons/fi";
 import { VscFileSubmodule } from "react-icons/vsc"; // Caja para materiales
 import { GiMaterialsScience } from "react-icons/gi"; // Materiales reactivos
 import { MdScience } from "react-icons/md";        // Matraz para sustancias
 import { AiOutlinePlus } from "react-icons/ai"; // Icono de suma para nuevo registro
-import { MdOutlineManageSearch } from "react-icons/md"; // Icono para estadísticas de busqueda
+import { FiX } from "react-icons/fi";
 
 const tabs = [
   { label: "Equipos", icon: DeviceTabIcon },
@@ -27,114 +39,13 @@ const tabs = [
   { label: "Sustancias basicas", icon: PillTabIcon },
 ];
 
-const discardCategories = ["Todos", "Equipos", "Materiales", "Reactivos"];
-
-// Mapeo de tipos del backend a categorías del frontend
-const tipoToCategoria = {
-  'material': 'Materiales',
-  'reactivo': 'Reactivos',
-  'sustancia': 'Sustancias basicas',
-  'equipo': 'Equipos'
-};
-
-// Función para mapear datos del backend a la estructura del frontend
-const mapearDatosBackend = (items, lotes) => {
-  const inventario = [];
-  const lotesPorItemId = new Map();
-
-  lotes.forEach(lote => {
-    const itemId = typeof lote.itemId === 'object' ? lote.itemId._id : lote.itemId;
-    const lotesDelItem = lotesPorItemId.get(itemId);
-
-    if (lotesDelItem) {
-      lotesDelItem.push(lote);
-    } else {
-      lotesPorItemId.set(itemId, [lote]);
-    }
-  });
-  
-  items.forEach(item => {
-    const lotesDelItem = lotesPorItemId.get(item._id) || [];
-    
-    lotesDelItem.forEach(lote => {
-      inventario.push({
-        id: lote._id,
-        loteId: lote._id,
-        itemId: item._id,
-        categoria: tipoToCategoria[item.tipo] || 'Equipos',
-        tipo: item.nombre,
-        codigo: item.codigo,
-        ubicacion: lote.ubicacion,
-        estado: mapearEstado(lote.estado),
-        cantidad: lote.cantidadDisponible,
-        movilidad: lote.movilidad || "Fija",
-        unidad: item.unidad,
-        esConsumible: item.esConsumible,
-        fechaDescarte: lote.fechaDescarte || lote.descartadoEn || lote.updatedAt || lote.createdAt,
-        motivoDescarte: lote.motivoDescarte || lote.motivo || "",
-        responsableDescarte: lote.responsableDescarte || lote.responsable || "",
-      });
-    });
-  });
-  
-  return inventario;
-};
-
-// Función para mapear los equipos desde el backend a la estructura del frontend
-const mapearEquiposBackend = (equipos) => {
-  return equipos.map(equipo => {
-    let ubicacion = "Sin asignar";
-    if (equipo.laboratorioId) {
-      ubicacion = typeof equipo.laboratorioId === 'object' ? equipo.laboratorioId.nombre : "Laboratorio asignado";
-    } else if (equipo.edificioId) {
-      ubicacion = typeof equipo.edificioId === 'object' ? equipo.edificioId.nombre : "Edificio asignado";
-    }
-
-    return {
-      id: equipo.id || equipo._id,
-      itemId: equipo.id || equipo._id,
-      categoria: 'Equipos',
-      tipo: equipo.nombre, 
-      codigo: equipo.codigo,
-      ubicacion: ubicacion,
-      estado: mapearEstado(equipo.estado),
-      cantidad: 1, 
-      movilidad: equipo.esFijo ? "Fija" : "Movible",
-      esConsumible: false,
-      fechaDescarte: equipo.fechaDescarte || equipo.descartadoEn || equipo.updatedAt || equipo.createdAt,
-      motivoDescarte: equipo.motivoDescarte || equipo.motivo || "",
-      responsableDescarte: equipo.responsableDescarte || equipo.responsable || "",
-      equipoOriginal: equipo 
-    };
-  });
-};
-
-// Mapear estados del backend al frontend
-const mapearEstado = (estadoBackend) => {
-  const estadoMap = {
-    'disponible': 'Disponible',
-    'reservado': 'Reservado',
-    'en_uso': 'En uso',
-    'descartado': 'Descartado',
-    'mantenimiento': 'Mantenimiento',
-    'fuera_de_servicio': 'Fuera de servicio',
-    'fuera de servicio': 'Fuera de servicio',
-  };
-  return estadoMap[estadoBackend] || 'Disponible';
-};
-
+// Estados válidos de un lote (consumibles). El backend solo admite estos dos
+// valores; no existe "reservado" ni "en uso" (ver
+// docs/formulario-estado-lote-item.md).
 const statusConfig = {
   Disponible: {
     statusClassName: "bg-emerald-100 text-emerald-700 border-emerald-200",
     alertClassName: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  },
-  Reservado: {
-    statusClassName: "bg-amber-100 text-amber-700 border-amber-200",
-    alertClassName: "bg-amber-50 text-amber-700 border-amber-200",
-  },
-  "En uso": {
-    statusClassName: "bg-blue-100 text-blue-700 border-blue-200",
-    alertClassName: "bg-blue-50 text-blue-700 border-blue-200",
   },
   Descartado: {
     statusClassName: "bg-rose-100 text-rose-700 border-rose-200",
@@ -142,6 +53,7 @@ const statusConfig = {
   },
 };
 
+// Opciones de estado ofrecidas en los formularios de lote.
 const statusOptions = Object.keys(statusConfig);
 
 /* ─── Iconos generales ─── */
@@ -289,6 +201,7 @@ function AlertCard({ item }) {
     Reservado: { bg: "bg-amber-50 border-amber-200", iconColor: "text-amber-500" },
     "Fuera de servicio": { bg: "bg-rose-50 border-rose-200", iconColor: "text-rose-500" },
     Mantenimiento: { bg: "bg-yellow-50 border-yellow-200", iconColor: "text-yellow-500" },
+    Descartado: { bg: "bg-rose-50 border-rose-200", iconColor: "text-rose-500" },
   };
 
   const style = styleMap[item.estado] || { bg: "bg-slate-50 border-slate-200", iconColor: "text-slate-400" };
@@ -311,47 +224,8 @@ function AlertCard({ item }) {
   );
 }
 
-function formatDate(value) {
-  if (!value) return "Sin fecha registrada";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Sin fecha registrada";
-
-  return new Intl.DateTimeFormat("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
-}
-
-function DiscardHistoryCard({ item }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-slate-900">{item.tipo}</p>
-          <p className="mt-1 text-xs text-slate-500">Código {item.codigo}</p>
-        </div>
-        <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-          {item.categoria}
-        </span>
-      </div>
-      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-        <div>
-          <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">Cantidad</span>
-          <span className="mt-1 block font-semibold text-slate-900">{item.cantidad}</span>
-        </div>
-        <div>
-          <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">Fecha</span>
-          <span className="mt-1 block font-semibold text-slate-900">{formatDate(item.fechaDescarte)}</span>
-        </div>
-      </div>
-      <p className="mt-3 text-sm text-slate-500">{item.motivoDescarte || "Sin motivo registrado"}</p>
-    </div>
-  );
-}
-
 // Actualizamos InventoryCard para recibir la acción de Desperfecto
-function InventoryCard({ item, onEdit, onDelete, onReportDesperfecto }) {
+function InventoryCard({ item, onEdit, onDelete, onReportDesperfecto, onUpdateEstado }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
@@ -362,7 +236,7 @@ function InventoryCard({ item, onEdit, onDelete, onReportDesperfecto }) {
           </div>
           <p className="mt-1 text-xs text-slate-500">Código {item.codigo}</p>
         </div>
-        <MobilityPill mobility={item.movilidad} />
+        {item.categoria === "Equipos" && <MobilityPill mobility={item.movilidad} />}
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
@@ -377,16 +251,26 @@ function InventoryCard({ item, onEdit, onDelete, onReportDesperfecto }) {
       </div>
 
       <div className="mt-4 flex items-center justify-end gap-2 flex-wrap">
-        {/* Botón condicional: Solo para la categoría Equipos */}
+        {/* Botones condicionales: Solo para la categoría Equipos */}
         {item.categoria === "Equipos" && (
-          <button
-            type="button"
-            onClick={onReportDesperfecto}
-            className="inline-flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm font-medium text-amber-600 transition hover:bg-amber-100 cursor-pointer"
-          >
-            <FiAlertTriangle />
-            Desperfecto
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={onUpdateEstado}
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-600 transition hover:bg-emerald-100 cursor-pointer"
+            >
+              <FiRefreshCw />
+              Estado
+            </button>
+            <button
+              type="button"
+              onClick={onReportDesperfecto}
+              className="inline-flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm font-medium text-amber-600 transition hover:bg-amber-100 cursor-pointer"
+            >
+              <FiAlertTriangle />
+              Desperfecto
+            </button>
+          </>
         )}
         <button
           type="button"
@@ -413,6 +297,7 @@ function InventoryCard({ item, onEdit, onDelete, onReportDesperfecto }) {
 
 /* ─── Componente principal ─── */
 function Equipamiento() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(tabs[0].label);
   const [query, setQuery] = useState("");
   const [inventory, setInventory] = useState([]);
@@ -421,8 +306,6 @@ function Equipamiento() {
   const [formData, setFormData] = useState({ nombre: "", cantidad: "1", estado: "Disponible", ubicacion: "", unidad: "unidad", movilidad: "Fija" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [discardCategory, setDiscardCategory] = useState("Todos");
-  const [discardQuery, setDiscardQuery] = useState("");
 
   // ─── NUEVOS ESTADOS PARA EL MODAL DE DESPERFECTOS ───
   const [isDesperfectoOpen, setIsDesperfectoOpen] = useState(false);
@@ -432,6 +315,12 @@ function Equipamiento() {
     fecha: new Date().toISOString().split('T')[0],
     descripcion: ""
   });
+
+  // ─── ESTADOS PARA EL MODAL DE ACTUALIZACIÓN DE ESTADO ───
+  const [isEstadoOpen, setIsEstadoOpen] = useState(false);
+  const [estadoItem, setEstadoItem] = useState(null);
+  const [estadoMsg, setEstadoMsg] = useState("");
+  const [estadoEnviando, setEstadoEnviando] = useState(false);
 
   // ─── MENSAJES INLINE (reemplazan alerts) ───
   const [errorOperacion, setErrorOperacion] = useState("");   // error al eliminar
@@ -588,6 +477,49 @@ function Equipamiento() {
     }
   };
 
+  // ─── ACCIONES DEL FORMULARIO DE ACTUALIZACIÓN DE ESTADO ───
+  const openEstadoModal = (item) => {
+    setEstadoItem(item);
+    setEstadoMsg("");
+    setIsEstadoOpen(true);
+  };
+
+  const closeEstadoModal = () => {
+    setIsEstadoOpen(false);
+    setEstadoItem(null);
+    setEstadoMsg("");
+  };
+
+  const handleEstadoSubmit = async (payload) => {
+    if (!estadoItem) return;
+    const equipoId = estadoItem.itemId || estadoItem.id;
+    setEstadoMsg("");
+    setEstadoEnviando(true);
+    try {
+      if (payload.accion === "iniciarMantenimiento") {
+        const body = { tipo: payload.tipo };
+        if (payload.descripcion) body.descripcion = payload.descripcion;
+        if (payload.fecha) body.fecha = payload.fecha;
+        await equipamientoService.registrarMantenimiento(equipoId, body);
+      } else if (payload.accion === "finalizarMantenimiento") {
+        const body = {};
+        if (payload.fecha) body.fecha = payload.fecha;
+        await equipamientoService.finalizarMantenimiento(equipoId, body);
+      } else {
+        // Cambio directo de estado (PUT): fuera de servicio o volver a disponible.
+        await equipamientoService.updateEquipo(equipoId, { estado: payload.estado });
+      }
+      setEstadoMsg("ok:Estado actualizado con éxito.");
+      await recargarInventario();
+      setTimeout(() => { closeEstadoModal(); }, 1500);
+    } catch (err) {
+      console.error("Error al actualizar estado:", err);
+      setEstadoMsg("error:" + (err.response?.data?.error || "No se pudo actualizar el estado."));
+    } finally {
+      setEstadoEnviando(false);
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -597,8 +529,15 @@ function Equipamiento() {
   };
 
   const estadoToBackend = (estado) => {
-    const estadoMap = { Disponible: "disponible", Reservado: "reservado", "En uso": "en_uso", Descartado: "descartado" };
-    return estadoMap[estado] || estado.toLowerCase().replace(/\s+/g, "_");
+    const estadoMap = {
+      Disponible: "disponible",
+      Reservado: "reservado",
+      "En uso": "en_uso",
+      Descartado: "descartado",
+      Mantenimiento: "mantenimiento",
+      "Fuera de servicio": "fuera de servicio",
+    };
+    return estadoMap[estado] || estado.toLowerCase();
   };
 
   const handleSubmit = async (event) => {
@@ -696,37 +635,13 @@ function Equipamiento() {
     }
   };
 
-  const alertItems = inventory.filter((i) => i.estado !== "Disponible");
-  const discardItems = useMemo(() => {
-    const normalizedQuery = discardQuery.trim().toLowerCase();
-
-    return inventory
-      .filter((item) => item.estado === "Descartado")
-      .filter((item) => discardCategories.includes(item.categoria))
-      .filter((item) => discardCategory === "Todos" || item.categoria === discardCategory)
-      .filter((item) => {
-        if (!normalizedQuery) return true;
-
-        return (
-          item.tipo.toLowerCase().includes(normalizedQuery) ||
-          item.codigo.toLowerCase().includes(normalizedQuery) ||
-          item.ubicacion.toLowerCase().includes(normalizedQuery) ||
-          item.categoria.toLowerCase().includes(normalizedQuery) ||
-          (item.motivoDescarte || "").toLowerCase().includes(normalizedQuery)
-        );
-      })
-      .sort((a, b) => {
-        const dateA = new Date(a.fechaDescarte || 0).getTime();
-        const dateB = new Date(b.fechaDescarte || 0).getTime();
-        return dateB - dateA;
-      });
-  }, [discardCategory, discardQuery, inventory]);
+  const alertItems = inventory.filter((i) => i.estado === "Descartado");
 
   const stats = [
     { title: "Equipos registrados", value: inventory.filter(i => i.categoria === "Equipos").length, subtitle: "Inventario general", hex: "#06b6d4" },
     { title: "Materiales", value: inventory.filter(i => i.categoria === "Materiales").length, subtitle: "Categoría activa", hex: "#4f46e5" },
     { title: "Reactivos", value: inventory.filter(i => i.categoria === "Reactivos").length, subtitle: "Categoría activa", hex: "#f59e0b" },
-    { title: "Descartes", value: discardItems.length, subtitle: "Historial consultable", hex: "#f43f5e" },
+    { title: "Descartes", value: inventory.filter(i => i.estado === "Descartado").length, subtitle: "Historial consultable", hex: "#f43f5e" },
   ];
 
   const filteredItems = useMemo(() => {
@@ -744,7 +659,7 @@ function Equipamiento() {
 
   return (
     <div className="min-h-screen text-slate-800">
-      <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
+      <div className="px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
         <PageHeader title="Equipamiento" />
 
         {/* Banner error de operación (ej: no se pudo eliminar) */}
@@ -782,7 +697,7 @@ function Equipamiento() {
                     Registro activo
                   </div>
                   <h2 className="mt-3 font-['Playfair_Display',serif] text-2xl font-bold leading-tight text-emerald-950 sm:text-[2rem]">
-                    Últimos movimientos de stock
+                    Stock
                   </h2>
                   <p className="mt-2 max-w-2xl text-sm text-slate-500">Usa tus filtros para ver por categoría los registros cargados.</p>
                 </div>
@@ -855,6 +770,7 @@ function Equipamiento() {
                       onEdit={() => openEditForm(item)}
                       onDelete={() => handleDeleteItem(item)}
                       onReportDesperfecto={() => openDesperfectoModal(item)} // <-- Enlazado móvil
+                      onUpdateEstado={() => openEstadoModal(item)} // <-- Actualizar estado (móvil)
                     />
                   ))
                 ) : (
@@ -888,7 +804,9 @@ function Equipamiento() {
                         <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Codigo</th>
                         <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Ubicacion</th>
                         <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Estado</th>
-                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Movilidad</th>
+                        {activeTab === "Equipos" && (
+                          <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Movilidad</th>
+                        )}
                         <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Acciones</th>
                       </tr>
                     </thead>
@@ -900,10 +818,22 @@ function Equipamiento() {
                           <td className="px-4 py-3 text-slate-500">{item.codigo}</td>
                           <td className="px-4 py-3 text-slate-500">{item.ubicacion}</td>
                           <td className="px-4 py-3"><StatusPill status={item.estado} /></td>
-                          <td className="px-4 py-3"><MobilityPill mobility={item.movilidad} /></td>
+                          {activeTab === "Equipos" && (
+                            <td className="px-4 py-3"><MobilityPill mobility={item.movilidad} /></td>
+                          )}
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
-                              {/* Botón condicional de desperfecto para escritorio */}
+                              {/* Botones condicionales de equipo para escritorio */}
+                              {item.categoria === "Equipos" && (
+                                <button
+                                  type="button"
+                                  onClick={() => openEstadoModal(item)}
+                                  className="rounded-lg p-2 text-emerald-500 bg-emerald-50 hover:bg-emerald-100 transition cursor-pointer"
+                                  title="Actualizar estado"
+                                >
+                                  <FiRefreshCw />
+                                </button>
+                              )}
                               {item.categoria === "Equipos" && (
                                 <button
                                   type="button"
@@ -948,10 +878,10 @@ function Equipamiento() {
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <h2 className="text-lg font-semibold text-emerald-950">Alertas de inventario</h2>
                   <span className="shrink-0 rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-bold text-rose-600">
-                    {alertItems.length} activas
+                    {alertItems.length} descartados
                   </span>
                 </div>
-                <p className="mb-0 text-sm text-slate-500">Estados que requieren revisión o mantenimiento.</p>
+                <p className="mb-0 text-sm text-slate-500">Items descartados del inventario activo.</p>
               </div>
               <div className="max-h-[36rem] overflow-y-auto p-5 pr-3">
                 <div className="flex flex-col gap-3 pr-2">
@@ -961,7 +891,7 @@ function Equipamiento() {
                     ))
                   ) : (
                     <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center text-sm leading-6 text-slate-500">
-                      No hay alertas activas.
+                      No hay descartados en inventario.
                     </p>
                   )}
                 </div>
@@ -971,134 +901,26 @@ function Equipamiento() {
         </div>
 
         <section className="mt-6">
-          <Card padding="none" className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_14px_40px_rgba(15,23,42,0.06)]">
-            <div className="border-b border-slate-100 px-4 py-4 sm:px-6 sm:py-5">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-rose-700">
-                    <FiArchive />
-                    Historial
-                  </div>
-                  <h2 className="mt-3 font-['Playfair_Display',serif] text-[1.7rem] font-bold leading-tight text-emerald-950 sm:text-[2rem]">
-                    Historial de descartes
-                  </h2>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                    Consulta los equipos, materiales y reactivos marcados como descartados.
-                  </p>
-                </div>
-
-                <div className="flex flex-col gap-2 sm:flex-row lg:items-center">
-                  <div className="relative w-full sm:w-72">
-                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                      <MdOutlineManageSearch />
-                    </span>
-                    <input
-                      type="text"
-                      value={discardQuery}
-                      onChange={(e) => setDiscardQuery(e.target.value)}
-                      placeholder="Buscar descarte..."
-                      className="w-full rounded-full border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-700 outline-none transition focus:border-rose-300 focus:ring-4 focus:ring-rose-100"
-                    />
-                  </div>
-                  <select
-                    value={discardCategory}
-                    onChange={(e) => setDiscardCategory(e.target.value)}
-                    className="hidden w-full rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 outline-none transition focus:border-rose-300 focus:ring-4 focus:ring-rose-100 sm:block sm:w-44"
-                  >
-                    {discardCategories.map((category) => (
-                      <option key={category} value={category}>{category}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+          <button
+            type="button"
+            onClick={() => navigate("/historial?tab=descartes")}
+            className="group flex w-full items-center gap-4 overflow-hidden rounded-[28px] border border-slate-200 bg-white px-5 py-5 text-left shadow-[0_14px_40px_rgba(15,23,42,0.06)] transition hover:border-emerald-300 hover:shadow-[0_18px_50px_rgba(16,185,129,0.14)] cursor-pointer sm:px-6"
+          >
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition group-hover:bg-emerald-100">
+              <FiArchive className="h-5 w-5" />
             </div>
-
-            <div className="px-4 py-4 sm:px-6 sm:py-5">
-              <div className="mb-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
-                {discardCategories.map((category) => {
-                  const isActive = discardCategory === category;
-                  const count = category === "Todos"
-                    ? inventory.filter((item) => item.estado === "Descartado" && discardCategories.includes(item.categoria)).length
-                    : inventory.filter((item) => item.estado === "Descartado" && item.categoria === category).length;
-
-                  return (
-                    <button
-                      key={category}
-                      type="button"
-                      onClick={() => setDiscardCategory(category)}
-                      className={`inline-flex min-w-0 items-center justify-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition sm:justify-start ${
-                        isActive
-                          ? "border-rose-200 bg-rose-50 text-rose-700"
-                          : "border-slate-200 bg-white text-slate-500 hover:border-rose-200 hover:text-rose-600"
-                      }`}
-                    >
-                      {category}
-                      <span className={`rounded-full px-2 py-0.5 ${isActive ? "bg-white text-rose-700" : "bg-slate-100 text-slate-500"}`}>
-                        {count}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="space-y-3 md:hidden">
-                {discardItems.length > 0 ? (
-                  discardItems.map((item) => (
-                    <DiscardHistoryCard key={item.id} item={item} />
-                  ))
-                ) : (
-                  <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center text-sm leading-6 text-slate-500">
-                    No hay descartes registrados para la consulta actual.
-                  </p>
-                )}
-              </div>
-
-              <div className="hidden overflow-hidden rounded-[22px] border border-slate-200 md:block">
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[940px] border-collapse bg-white">
-                    <thead>
-                      <tr className="bg-slate-50 text-left">
-                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Fecha</th>
-                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Tipo</th>
-                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Nombre</th>
-                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Codigo</th>
-                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Cantidad</th>
-                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Ubicacion</th>
-                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Motivo</th>
-                        <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Responsable</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {discardItems.length > 0 ? (
-                        discardItems.map((item) => (
-                          <tr key={item.id} className="border-t border-slate-100 text-sm text-slate-700 hover:bg-rose-50/40 transition-colors">
-                            <td className="px-4 py-3 text-slate-500">{formatDate(item.fechaDescarte)}</td>
-                            <td className="px-4 py-3">
-                              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                                {item.categoria}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 font-semibold text-slate-900">{item.tipo}</td>
-                            <td className="px-4 py-3 text-slate-500">{item.codigo}</td>
-                            <td className="px-4 py-3 text-slate-500">{item.cantidad}</td>
-                            <td className="px-4 py-3 text-slate-500">{item.ubicacion}</td>
-                            <td className="px-4 py-3 text-slate-500">{item.motivoDescarte || "Sin motivo registrado"}</td>
-                            <td className="px-4 py-3 text-slate-500">{item.responsableDescarte || "Sin responsable"}</td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan="8" className="px-4 py-8 text-center text-sm text-slate-500">
-                            No hay descartes registrados para la consulta actual.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+            <div className="min-w-0 flex-1">
+              <h2 className="font-['Playfair_Display',serif] text-xl font-bold leading-tight text-emerald-950 sm:text-2xl">
+                Historial
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-slate-500">
+                Consulta el historial de movimientos de stock, descartes y mantenimiento de equipos.
+              </p>
             </div>
-          </Card>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-400 transition group-hover:translate-x-0.5 group-hover:border-emerald-300 group-hover:bg-emerald-50 group-hover:text-emerald-600">
+              <FiArrowRight />
+            </span>
+          </button>
         </section>
       </div>
 
@@ -1120,6 +942,15 @@ function Equipamiento() {
                   </h2>
                   <p className="mt-1 text-sm text-slate-500">{editingItem ? "Actualiza los campos y guarda los cambios." : "Completa el formulario para registrar el ítem."}</p>
                 </div>
+                <button
+                  type="button"
+                  onClick={closeForm}
+                  aria-label="Cerrar formulario"
+                  title="Cerrar formulario"
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
+                >
+                  <FiX className="h-4 w-4" aria-hidden="true" />
+                </button>
               </div>
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
@@ -1132,8 +963,12 @@ function Equipamiento() {
               )}
               {activeTab === "Equipos" ? (
                 <FormularioEquipo formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} errores={erroresFormEquip} />
+              ) : activeTab === "Materiales" ? (
+                <FormularioMaterial formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} statusOptions={statusOptions} errores={erroresFormEquip} />
+              ) : activeTab === "Reactivos" ? (
+                <FormularioReactivo formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} statusOptions={statusOptions} errores={erroresFormEquip} />
               ) : (
-                <FormularioEquipamiento formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} statusOptions={statusOptions} errores={erroresFormEquip} />
+                <FormularioSustancia formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} statusOptions={statusOptions} errores={erroresFormEquip} />
               )}
             </div>
           </div>
@@ -1143,11 +978,26 @@ function Equipamiento() {
       {/* ─── MODAL 2: REGISTRAR DESPERFECTO (NUEVO) ─── */}
       {isDesperfectoOpen && (
         <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/45 backdrop-blur-sm sm:items-center sm:p-4" onClick={closeDesperfectoModal}>
-          <div className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-md sm:rounded-[24px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]" onClick={(e) => e.stopPropagation()}>
-            <div className="border-b border-slate-100 px-6 py-4 bg-slate-50/80">
-              <h2 className="text-lg font-bold text-slate-900">Registrar desperfecto</h2>
+          <div className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-lg sm:rounded-[28px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:static sm:px-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">Registro</div>
+                  <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Registrar desperfecto</h2>
+                  <p className="mt-1 text-sm text-slate-500">Completa el formulario para registrar el desperfecto.</p>
+                </div>
+              <button
+                type="button"
+                onClick={closeDesperfectoModal}
+                aria-label="Cerrar formulario"
+                title="Cerrar formulario"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
+              >
+                <FiX className="h-4 w-4" aria-hidden="true" />
+              </button>
+              </div>
             </div>
-            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
               {desperfectoMsg && (
                 <div className={`mb-4 rounded-xl border p-3 text-sm ${
                   desperfectoMsg.startsWith("ok:")
@@ -1163,6 +1013,43 @@ function Equipamiento() {
                 handleChange={handleDesperfectoChange}
                 handleSubmit={handleDesperfectoSubmit}
                 cerrarModal={closeDesperfectoModal}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL 3: ACTUALIZAR ESTADO DEL EQUIPO ─── */}
+      {isEstadoOpen && (
+        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/45 backdrop-blur-sm sm:items-center sm:p-4" onClick={closeEstadoModal}>
+          <div className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-md sm:rounded-[24px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]" onClick={(e) => e.stopPropagation()}>
+            <div className="border-b border-slate-100 px-6 py-4 bg-slate-50/80 flex items-center justify-between gap-4">
+              <h2 className="text-lg font-bold text-slate-900">Actualizar estado</h2>
+              <button
+                type="button"
+                onClick={closeEstadoModal}
+                aria-label="Cerrar formulario"
+                title="Cerrar formulario"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
+              >
+                <FiX className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+              {estadoMsg && (
+                <div className={`mb-4 rounded-xl border p-3 text-sm ${
+                  estadoMsg.startsWith("ok:")
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-red-200 bg-red-50 text-red-600"
+                }`}>
+                  {estadoMsg.replace(/^(ok|error):/, "")}
+                </div>
+              )}
+              <FormularioActualizarEstado
+                equipo={estadoItem}
+                onSubmit={handleEstadoSubmit}
+                cerrarModal={closeEstadoModal}
+                enviando={estadoEnviando}
               />
             </div>
           </div>
