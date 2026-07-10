@@ -95,66 +95,36 @@ export default function FormularioReactivo({
         )}
       </div>
 
-      {/* ─── Datos adicionales (opcional, pendiente de confirmar en backend) ─── */}
+      {/* Campos reales del modelo Lote/Item para reactivos */}
       <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
         <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-          Información adicional (opcional)
+          Datos del lote
         </p>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-              Concentración
-            </label>
-            <input
-              type="text"
-              name="concentracion"
-              value={formData.concentracion || ""}
-              onChange={handleChange}
-              placeholder="Ej. 37%, 1M"
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-              Vencimiento
-            </label>
-            <input
-              type="date"
-              name="vencimiento"
-              value={formData.vencimiento || ""}
-              onChange={handleChange}
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-              Lote
-            </label>
-            <input
-              type="text"
-              name="lote"
-              value={formData.lote || ""}
-              onChange={handleChange}
-              placeholder="Nº de lote del proveedor"
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-              Peligrosidad
-            </label>
-            <select
-              name="peligrosidad"
-              value={formData.peligrosidad || ""}
-              onChange={handleChange}
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
-            >
-              <option value="">Sin especificar</option>
-              <option value="baja">Baja</option>
-              <option value="media">Media</option>
-              <option value="alta">Alta</option>
-            </select>
-          </div>
+        <div>
+          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+            Fecha de vencimiento (opcional)
+          </label>
+          <input
+            type="date"
+            name="fechaVencimiento"
+            value={formData.fechaVencimiento || ""}
+            onChange={handleChange}
+            className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
+          />
+        </div>
+
+        <div className="mt-3 flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="requiereReceta"
+            name="requiereReceta"
+            checked={!!formData.requiereReceta}
+            onChange={handleChange}
+            className="h-4 w-4 rounded border-slate-300 text-emerald-500 focus:ring-emerald-200"
+          />
+          <label htmlFor="requiereReceta" className="text-sm text-slate-600">
+            Requiere receta para su uso
+          </label>
         </div>
       </div>
 
