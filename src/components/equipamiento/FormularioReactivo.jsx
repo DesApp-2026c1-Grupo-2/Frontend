@@ -1,4 +1,4 @@
-export default function FormularioEquipamiento({
+export default function FormularioReactivo({
   formData,
   handleChange,
   handleSubmit,
@@ -14,24 +14,21 @@ export default function FormularioEquipamiento({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 px-3 py-3">
-
-      {/* NOMBRE */}
       <div>
         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-          Nombre
+          Nombre del reactivo
         </label>
         <input
           type="text"
           name="nombre"
-          value={formData.nombre}
+          value={formData.nombre || ""}
           onChange={handleChange}
-          placeholder="Ej. Micropipeta digital"
+          placeholder="Ej. Ácido clorhídrico (HCl)"
           className={inputClass("nombre")}
         />
         {errores.nombre && <p className="text-red-500 text-xs mt-1">{errores.nombre}</p>}
       </div>
 
-      {/* CANTIDAD + UNIDAD */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
@@ -41,13 +38,12 @@ export default function FormularioEquipamiento({
             type="number"
             name="cantidad"
             min="1"
-            value={formData.cantidad}
+            value={formData.cantidad || ""}
             onChange={handleChange}
             className={inputClass("cantidad")}
           />
           {errores.cantidad && <p className="text-red-500 text-xs mt-1">{errores.cantidad}</p>}
         </div>
-
         <div>
           <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
             Unidad
@@ -55,15 +51,14 @@ export default function FormularioEquipamiento({
           <input
             type="text"
             name="unidad"
-            value={formData.unidad}
+            value={formData.unidad || ""}
             onChange={handleChange}
-            placeholder="unidad, ml, g"
+            placeholder="ml, g, mol/L"
             className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
           />
         </div>
       </div>
 
-      {/* UBICACION */}
       <div>
         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
           Ubicación
@@ -71,7 +66,7 @@ export default function FormularioEquipamiento({
         <input
           type="text"
           name="ubicacion"
-          value={formData.ubicacion}
+          value={formData.ubicacion || ""}
           onChange={handleChange}
           placeholder="Ej. Lab 1 / Edif. A"
           className={inputClass("ubicacion")}
@@ -79,31 +74,13 @@ export default function FormularioEquipamiento({
         {errores.ubicacion && <p className="text-red-500 text-xs mt-1">{errores.ubicacion}</p>}
       </div>
 
-      {/* MOVILIDAD */}
-      <div>
-        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-          Movilidad
-        </label>
-        <select
-          name="movilidad"
-          value={formData.movilidad || "Fija"}
-          onChange={handleChange}
-          disabled
-          className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed"
-        >
-          <option value="Fija">Fija</option>
-          <option value="Movible">Movible</option>
-        </select>
-      </div>
-
-      {/* ESTADO */}
       <div>
         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
           Estado
         </label>
         <select
           name="estado"
-          value={formData.estado}
+          value={formData.estado || "Disponible"}
           onChange={handleChange}
           className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
         >
@@ -111,11 +88,47 @@ export default function FormularioEquipamiento({
             <option key={opt} value={opt}>{opt}</option>
           ))}
         </select>
+        {formData.estado === "Descartado" && (
+          <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            Descartar genera una <strong>baja de stock</strong>: el lote deja de estar disponible.
+          </p>
+        )}
       </div>
 
-      {/* BOTONES */}
-      <div className="flex justify-end gap-3 pt-2">
+      {/* Campos reales del modelo Lote/Item para reactivos */}
+      <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+        <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+          Datos del lote
+        </p>
+        <div>
+          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+            Fecha de vencimiento (opcional)
+          </label>
+          <input
+            type="date"
+            name="fechaVencimiento"
+            value={formData.fechaVencimiento || ""}
+            onChange={handleChange}
+            className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
+          />
+        </div>
 
+        <div className="mt-3 flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="requiereReceta"
+            name="requiereReceta"
+            checked={!!formData.requiereReceta}
+            onChange={handleChange}
+            className="h-4 w-4 rounded border-slate-300 text-emerald-500 focus:ring-emerald-200"
+          />
+          <label htmlFor="requiereReceta" className="text-sm text-slate-600">
+            Requiere receta para su uso
+          </label>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-3 pt-2">
         <button
           type="submit"
           className="px-3 py-2 rounded-lg text-sm font-medium bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm transition"
@@ -123,7 +136,6 @@ export default function FormularioEquipamiento({
           Guardar
         </button>
       </div>
-
     </form>
   );
 }

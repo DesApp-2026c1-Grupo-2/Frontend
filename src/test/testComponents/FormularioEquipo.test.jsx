@@ -104,6 +104,10 @@ describe('FormularioEquipo Component', () => {
     fireEvent.click(screen.getByRole('button', { name: /Cancelar/i }));
     expect(mockCerrarModal).toHaveBeenCalledTimes(1);
 
+    // Cerrar con el ícono X
+    fireEvent.click(screen.getByRole('button', { name: /Cerrar formulario/i }));
+    expect(mockCerrarModal).toHaveBeenCalledTimes(2);
+
     // Guardar
     fireEvent.submit(container.querySelector('form'));
     expect(mockHandleSubmit).toHaveBeenCalledTimes(1);

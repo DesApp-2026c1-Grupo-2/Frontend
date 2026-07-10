@@ -8,6 +8,7 @@ import Landing from "../pages/Landing"; // ← NUEVA pantalla de inicio
 import Dashboard from "../pages/Dashboard"; /*PRUEBA */
 import Pedidos from "../pages/pedidos";
 import Equipamiento from "../pages/equipamiento";
+import Historial from "../pages/historial";
 import LogIn from "../pages/logIn";
 import RegistroForm from "../pages/RegistroForm";
 import Edificios from "../pages/edificios";
@@ -15,6 +16,7 @@ import Laboratorios from "../pages/laboratorios";
 import PedidoDetalle from "../pages/pedidoDetalle";
 import Calendario from "../pages/calendario";
 import AprobacionUsuarios from "../pages/aprobacionUsuarios";
+import Actividades from "../pages/actividades";
 
 function AppRouter() {
   return (
@@ -43,6 +45,8 @@ function AppRouter() {
                 <Route path="/calendario" element={<Calendario />} />
                 <Route path="/edificios" element={<Edificios />} />
                 <Route path="/equipamiento" element={<Equipamiento />} />
+                <Route path="/historial" element={<Historial />} />
+                <Route path="/actividades" element={<Actividades />} />
               </Route>
 
               {/* RUTA SOLO ADMIN */}
