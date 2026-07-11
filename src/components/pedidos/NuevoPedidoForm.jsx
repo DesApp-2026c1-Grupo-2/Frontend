@@ -15,6 +15,7 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
   const [actividades, setActividades] = useState([]);
   const [actividadPlantilla, setActividadPlantilla] = useState("");
   const [cargandoSugerencias, setCargandoSugerencias] = useState(false);
+  const [tipoActividadSeleccionada, setTipoActividadSeleccionada] = useState(null);
   const [errorSubmit, setErrorSubmit] = useState("");
   const [estadoEnvio, setEstadoEnvio] = useState(null);
   const [errores, setErrores] = useState({});
@@ -220,6 +221,21 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
     }));
   };
 
+  // Tipos de laboratorio compatibles con cada tipo de actividad.
+  // "teorica" puede darse en cualquier laboratorio (sin restricción de tipo).
+  const labsCompatibles = (tipoActividad) => {
+    if (!tipoActividad || tipoActividad === "teorica") return laboratorios;
+    return laboratorios.filter(
+      (l) => l.tipo === tipoActividad || l.tipo === "mixto"
+    );
+  };
+
+  // Labs que se muestran en el selector: si hay una actividad elegida, filtrados;
+  // si no, todos los disponibles.
+  const laboratoriosFiltrados = tipoActividadSeleccionada
+    ? labsCompatibles(tipoActividadSeleccionada)
+    : laboratorios;
+
   // Aplica una actividad como plantilla: trae los recursos sugeridos para su
   // tipo y los pre-selecciona (con su cantidad sugerida) en el formulario,
   // sin perder la posibilidad de seguir editando manualmente después.
@@ -233,9 +249,21 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
     setForm((prev) => ({
       ...prev,
       recursos: prev.recursos.filter((r) => !r.deLaPlantilla),
+      // Si cambia el tipo de actividad, resetear el laboratorio seleccionado
+      // para evitar inconsistencias (el lab previo puede no ser compatible)
+      laboratorio: "",
     }));
 
-    if (!actividadId) return;
+    if (!actividadId) {
+      setTipoActividadSeleccionada(null);
+      return;
+    }
+
+    // Guardar el tipo de la actividad elegida para filtrar los labs
+    const actividadElegida = actividades.find(
+      (a) => (a._id || a.id) === actividadId
+    );
+    setTipoActividadSeleccionada(actividadElegida?.tipo || null);
 
     setCargandoSugerencias(true);
     try {
@@ -556,37 +584,6 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
                 )}
               </div>
               
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-zinc-600 mb-1">Laboratorio</label>
-                <select
-                  value={form.laboratorio}
-                  onChange={set("laboratorio")}
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm"
-                >
-                  <option value="">Seleccionar laboratorio...</option>
-
-                  {laboratorios.map((l) => {
-                    const noDisponible = alumnos > l.capacidad;
-
-                    return (
-                      <option
-                        key={l._id || l.id}
-                        value={l._id || l.id}
-                        disabled={noDisponible}
-                      >
-                        {l.nombre} (Cap: {l.capacidad})
-                        {noDisponible ? " - NO DISPONIBLE" : ""}
-                      </option>
-                    );
-                  })}
-                </select>
-                <p className="text-xs text-zinc-400 mt-1">
-                  Si no seleccionás un laboratorio, el equipo de gestión asignará uno disponible antes de aprobar el pedido.
-                </p>
-                {errores.laboratorio && (
-                  <p className="text-red-500 text-xs mt-1">{errores.laboratorio}</p>
-                )}
-              </div>
             </div>
           )}
 
@@ -597,27 +594,109 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
               </p>
 
               {actividades.length > 0 && (
-                <div className="bg-emerald-50/60 border border-emerald-100 rounded-xl px-4 py-3">
-                  <label className="block text-sm font-medium text-zinc-600 mb-1">
-                    Usar actividad como plantilla (opcional)
-                  </label>
+                <div className="bg-emerald-50/60 border border-emerald-100 rounded-xl px-4 py-3 space-y-3">
+
+                  {/* PLANTILLA */}
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-600 mb-1">
+                      Usar actividad como plantilla (opcional)
+                    </label>
+                    <select
+                      value={actividadPlantilla}
+                      onChange={(e) => aplicarPlantilla(e.target.value)}
+                      className="w-full bg-white border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all"
+                    >
+                      <option value="">Sin plantilla...</option>
+                      {actividades.map((a) => (
+                        <option key={a._id || a.id} value={a._id || a.id}>
+                          {a.nombre} ({a.tipo})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-zinc-400 mt-1">
+                      Precarga los recursos sugeridos para el tipo de actividad elegido. Podés seguir agregando, quitando o ajustando cantidades después.
+                    </p>
+                    {cargandoSugerencias && (
+                      <p className="text-xs text-emerald-600 mt-1">Cargando recursos sugeridos...</p>
+                    )}
+                  </div>
+
+                  {/* LABORATORIO — filtrado según tipo de actividad */}
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-600 mb-1">
+                      Laboratorio
+                      {tipoActividadSeleccionada && tipoActividadSeleccionada !== "teorica" && (
+                        <span className="ml-2 text-xs text-emerald-600 font-normal">
+                          (mostrando compatibles con actividad de tipo "{tipoActividadSeleccionada}")
+                        </span>
+                      )}
+                      {tipoActividadSeleccionada === "teorica" && (
+                        <span className="ml-2 text-xs text-emerald-600 font-normal">
+                          (clase teórica — todos los laboratorios disponibles)
+                        </span>
+                      )}
+                    </label>
+                    <select
+                      value={form.laboratorio}
+                      onChange={set("laboratorio")}
+                      className={`w-full bg-white border rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all ${
+                        errores.laboratorio ? "border-red-400" : "border-zinc-200"
+                      }`}
+                    >
+                      <option value="">Sin laboratorio asignado...</option>
+                      {laboratoriosFiltrados.map((l) => {
+                        const noDisponible = alumnos > l.capacidad;
+                        return (
+                          <option
+                            key={l._id || l.id}
+                            value={l._id || l.id}
+                            disabled={noDisponible}
+                          >
+                            {l.nombre} — Cap: {l.capacidad}
+                            {l.tipo ? ` · ${l.tipo}` : ""}
+                            {noDisponible ? " — SIN CAPACIDAD" : ""}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <p className="text-xs text-zinc-400 mt-1">
+                      {tipoActividadSeleccionada && tipoActividadSeleccionada !== "teorica"
+                        ? `Solo se muestran laboratorios de tipo "${tipoActividadSeleccionada}" o "mixto". Si no elegís uno, el equipo de gestión asignará uno antes de aprobar.`
+                        : "Si no elegís un laboratorio, el equipo de gestión asignará uno antes de aprobar el pedido."}
+                    </p>
+                    {errores.laboratorio && (
+                      <p className="text-red-500 text-xs mt-1">{errores.laboratorio}</p>
+                    )}
+                  </div>
+
+                </div>
+              )}
+
+              {actividades.length === 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-zinc-600 mb-1">Laboratorio</label>
                   <select
-                    value={actividadPlantilla}
-                    onChange={(e) => aplicarPlantilla(e.target.value)}
-                    className="w-full bg-white border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all"
+                    value={form.laboratorio}
+                    onChange={set("laboratorio")}
+                    className={`w-full bg-zinc-50 border rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all ${
+                      errores.laboratorio ? "border-red-400" : "border-zinc-200"
+                    }`}
                   >
-                    <option value="">Sin plantilla...</option>
-                    {actividades.map((a) => (
-                      <option key={a._id || a.id} value={a._id || a.id}>
-                        {a.nombre} ({a.tipo})
-                      </option>
-                    ))}
+                    <option value="">Sin laboratorio asignado...</option>
+                    {laboratorios.map((l) => {
+                      const noDisponible = alumnos > l.capacidad;
+                      return (
+                        <option key={l._id || l.id} value={l._id || l.id} disabled={noDisponible}>
+                          {l.nombre} — Cap: {l.capacidad}{noDisponible ? " — SIN CAPACIDAD" : ""}
+                        </option>
+                      );
+                    })}
                   </select>
                   <p className="text-xs text-zinc-400 mt-1">
-                    Precarga los recursos sugeridos para el tipo de actividad elegido. Podés seguir agregando, quitando o ajustando cantidades después.
+                    Si no elegís un laboratorio, el equipo de gestión asignará uno antes de aprobar el pedido.
                   </p>
-                  {cargandoSugerencias && (
-                    <p className="text-xs text-emerald-600 mt-1">Cargando recursos sugeridos...</p>
+                  {errores.laboratorio && (
+                    <p className="text-red-500 text-xs mt-1">{errores.laboratorio}</p>
                   )}
                 </div>
               )}
