@@ -239,7 +239,8 @@ export const registrarMantenimiento = async (equipoId, data) => {
 };
 
 // Finalizar mantenimiento: devuelve el equipo a "disponible" y cierra el
-// mantenimiento abierto. Body opcional: { fecha } (fecha de fin, no futura).
+// mantenimiento abierto. El backend fija la fecha de fin con su propia hora,
+// así que el body va vacío ({}).
 export const finalizarMantenimiento = async (equipoId, data = {}) => {
   try {
     const response = await api.patch(`/equipo/${equipoId}/mantenimientos/finalizar`, data);

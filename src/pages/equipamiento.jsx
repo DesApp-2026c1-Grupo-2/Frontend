@@ -846,9 +846,8 @@ function Equipamiento() {
         if (payload.fecha) body.fecha = payload.fecha;
         await equipamientoService.registrarMantenimiento(equipoId, body);
       } else if (payload.accion === "finalizarMantenimiento") {
-        const body = {};
-        if (payload.fecha) body.fecha = payload.fecha;
-        await equipamientoService.finalizarMantenimiento(equipoId, body);
+        // El backend fija la fecha de fin con su propia hora: body vacío.
+        await equipamientoService.finalizarMantenimiento(equipoId, {});
       } else {
         // Cambio directo de estado (PUT): fuera de servicio o volver a disponible.
         await equipamientoService.updateEquipo(equipoId, { estado: payload.estado });
