@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getDescartes } from "../../services/descartes";
 import { discardCategories, tipoToCategoria, formatDate } from "../../utils/inventarioMapper";
-import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import Paginador from "../common/Paginador";
 
 const LIMIT = 20;
 
@@ -273,27 +273,12 @@ function PanelDescartes() {
             </div>
 
             {/* Paginador */}
-            {totalPaginas > 1 && (
-              <div className="mt-6 flex items-center justify-center gap-3">
-                <button
-                  onClick={() => irAPagina(page - 1)}
-                  disabled={page <= 1 || loading}
-                  className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:border-rose-200 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:text-slate-600"
-                >
-                  <FiChevronLeft /> Anterior
-                </button>
-                <span className="text-sm text-slate-500">
-                  Página {page} de {totalPaginas}
-                </span>
-                <button
-                  onClick={() => irAPagina(page + 1)}
-                  disabled={page >= totalPaginas || loading}
-                  className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:border-rose-200 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:text-slate-600"
-                >
-                  Siguiente <FiChevronRight />
-                </button>
-              </div>
-            )}
+            <Paginador
+              page={page}
+              totalPaginas={totalPaginas}
+              onPageChange={irAPagina}
+              loading={loading}
+            />
           </>
         )}
       </div>

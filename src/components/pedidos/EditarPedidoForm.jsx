@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "../../api/axios";
+import { getAllItems, getAllEquipos } from "../../services/equipamiento";
 import { FiX } from "react-icons/fi";
 
 /**
@@ -65,8 +66,8 @@ export default function EditarPedidoForm({ pedido, onClose, onGuardar }) {
         const [labsRes, usersRes, equiposRes, itemsRes] = await Promise.allSettled([
           api.get("/laboratorio"),
           api.get("/usuarios"),
-          api.get("/equipo"),
-          api.get("/items"),
+          getAllEquipos(),
+          getAllItems(),
         ]);
 
         if (labsRes.status === "fulfilled") setLaboratorios(labsRes.value.data);
@@ -88,15 +89,15 @@ export default function EditarPedidoForm({ pedido, onClose, onGuardar }) {
 
         let recopilados = [];
         if (equiposRes.status === "fulfilled") {
-          const equipos = equiposRes.value.data
+          const equipos = equiposRes.value
             .filter((e) => e.estado === "disponible" || pedido.recursos?.some(
-              (r) => (r.recursoId?._id || r.recursoId) === e._id
+              (r) => (r.recursoId?._id || r.recursoId) === (e.id || e._id)
             ))
             .map((e) => ({ ...e, tipoRecurso: "Equipo", tipoDetalle: "Equipo" }));
           recopilados = [...recopilados, ...equipos];
         }
         if (itemsRes.status === "fulfilled") {
-          const items = itemsRes.value.data.map((i) => ({
+          const items = itemsRes.value.map((i) => ({
             ...i,
             tipoRecurso: "Item",
             tipoDetalle: i.tipo

@@ -41,6 +41,9 @@ export default function FormularioActualizarEstado({
   const [destino, setDestino] = useState(destinos[0] || "");
   const [tipo, setTipo] = useState("preventivo");
   const [descripcion, setDescripcion] = useState("");
+  // Solo se usa al iniciar un mantenimiento (fecha de inicio opcional). Al
+  // finalizar, el backend fija el fin con su propia hora, así que el front no
+  // envía ninguna fecha.
   const [fecha, setFecha] = useState("");
 
   const maxFecha = useMemo(() => ahoraLocal(), []);
@@ -65,11 +68,11 @@ export default function FormularioActualizarEstado({
       payload.tipo = tipo;
       payload.descripcion = descripcion.trim();
       payload.fecha = fecha ? new Date(fecha).toISOString() : undefined;
-    } else if (accion === "finalizarMantenimiento") {
-      payload.fecha = fecha ? new Date(fecha).toISOString() : undefined;
-    } else {
+    } else if (accion === "cambioDirecto") {
       payload.estado = destino;
     }
+    // finalizarMantenimiento: el backend fija el fin con su propia hora, no se
+    // envía ninguna fecha (payload queda solo con { accion, destino }).
     onSubmit(payload);
   };
 
@@ -169,21 +172,14 @@ export default function FormularioActualizarEstado({
         </div>
       )}
 
-      {/* CAMPO PARA FINALIZAR MANTENIMIENTO */}
+      {/* FINALIZAR MANTENIMIENTO: el backend fija la fecha de fin con su propia
+          hora, por eso no se pide ninguna fecha en el formulario. */}
       {accion === "finalizarMantenimiento" && (
-        <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-            Fecha de fin <span className="text-slate-400 normal-case">(opcional, no futura)</span>
-          </label>
-          <input
-            type="datetime-local"
-            name="fecha"
-            value={fecha}
-            max={maxFecha}
-            onChange={(e) => setFecha(e.target.value)}
-            className={inputClass}
-          />
-        </div>
+        <p className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-sm text-slate-600">
+          Se cerrará el mantenimiento y el equipo volverá a{" "}
+          <span className="font-medium text-slate-700">Disponible</span>. La fecha
+          de fin se registra automáticamente con la hora actual.
+        </p>
       )}
 
       {/* BOTONES */}

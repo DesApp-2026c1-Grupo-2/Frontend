@@ -4,12 +4,25 @@
 
 export const discardCategories = ["Todos", "Equipos", "Materiales", "Reactivos"];
 
-// Mapeo de tipos del backend a categorías del frontend
+// Mapeo de tipos del backend a categorías del frontend.
+// La entrada 'equipo' se conserva a propósito: aunque "equipo" ya NO es un tipo
+// válido de Item (la pantalla de Stock nunca lo deriva), el historial de
+// descartes (PanelDescartes.jsx, contrato de /descartes) sí trae descartes cuyo
+// tipo puede ser 'equipo'. Quitarla rompería ese mapeo.
 export const tipoToCategoria = {
   'material': 'Materiales',
   'reactivo': 'Reactivos',
   'sustancia': 'Sustancias basicas',
   'equipo': 'Equipos'
+};
+
+// Mapeo inverso SOLO para la pantalla de Stock: categoría del front -> tipo de
+// Item válido para el backend. No incluye 'Equipos' porque los equipos son una
+// entidad aparte (nunca se crean como Item con tipo=equipo, que daría 400).
+export const categoriaATipoItem = {
+  'Materiales': 'material',
+  'Reactivos': 'reactivo',
+  'Sustancias basicas': 'sustancia',
 };
 
 // Mapear estados del backend al frontend
@@ -26,47 +39,50 @@ export const mapearEstado = (estadoBackend) => {
   return estadoMap[estadoBackend] || 'Disponible';
 };
 
-// Función para mapear datos del backend a la estructura del frontend
-export const mapearDatosBackend = (items, lotes) => {
-  const inventario = [];
-  const lotesPorItemId = new Map();
-
-  lotes.forEach(lote => {
-    const itemId = typeof lote.itemId === 'object' ? lote.itemId._id : lote.itemId;
-    const lotesDelItem = lotesPorItemId.get(itemId);
-
-    if (lotesDelItem) {
-      lotesDelItem.push(lote);
-    } else {
-      lotesPorItemId.set(itemId, [lote]);
-    }
+// Mapea los items paginados del backend (GET /items) al modelo de "grupo" del
+// frontend. El stock total viene calculado por el backend (stockDisponible); el
+// front ya NO suma lotes en memoria. Los lotes de cada item se piden aparte al
+// expandirlo (GET /lotes?itemId=...).
+export const mapearItemsBackend = (items) => {
+  return items.map(item => {
+    const id = item.id || item._id;
+    return {
+      id,
+      itemId: id,
+      categoria: tipoToCategoria[item.tipo] || 'Materiales',
+      tipo: item.nombre,
+      codigo: item.codigo,
+      unidad: item.unidad,
+      esConsumible: item.esConsumible,
+      requiereReceta: item.requiereReceta,
+      stockDisponible: item.stockDisponible ?? 0,
+    };
   });
+};
 
-  items.forEach(item => {
-    const lotesDelItem = lotesPorItemId.get(item._id) || [];
+// Mapea un lote del backend (GET /lotes) a una fila del frontend. Se usa tanto
+// en el desplegable de un item (lotes disponibles) como en el panel de
+// descartados. `itemId` puede venir poblado (objeto) o como ObjectId (string).
+export const mapearLoteBackend = (lote) => {
+  const itemPoblado = typeof lote.itemId === 'object' && lote.itemId !== null ? lote.itemId : null;
+  const itemId = itemPoblado ? (itemPoblado.id || itemPoblado._id) : lote.itemId;
+  const loteId = lote.id || lote._id;
 
-    lotesDelItem.forEach(lote => {
-      inventario.push({
-        id: lote._id,
-        loteId: lote._id,
-        itemId: item._id,
-        categoria: tipoToCategoria[item.tipo] || 'Equipos',
-        tipo: item.nombre,
-        codigo: item.codigo,
-        ubicacion: lote.ubicacion,
-        estado: mapearEstado(lote.estado),
-        cantidad: lote.cantidadDisponible,
-        movilidad: lote.movilidad || "Fija",
-        unidad: item.unidad,
-        esConsumible: item.esConsumible,
-        fechaDescarte: lote.fechaDescarte || lote.descartadoEn || lote.updatedAt || lote.createdAt,
-        motivoDescarte: lote.motivoDescarte || lote.motivo || "",
-        responsableDescarte: lote.responsableDescarte || lote.responsable || "",
-      });
-    });
-  });
-
-  return inventario;
+  return {
+    id: loteId,
+    loteId,
+    itemId,
+    tipo: itemPoblado?.nombre,
+    codigo: itemPoblado?.codigo,
+    ubicacion: lote.ubicacion,
+    estado: mapearEstado(lote.estado),
+    cantidad: lote.cantidadDisponible,
+    movilidad: lote.movilidad || "Fija",
+    fechaVencimiento: lote.fechaVencimiento || null,
+    fechaDescarte: lote.fechaDescarte || lote.descartadoEn || lote.updatedAt || lote.createdAt,
+    motivoDescarte: lote.motivoDescarte || lote.motivo || "",
+    responsableDescarte: lote.responsableDescarte || lote.responsable || "",
+  };
 };
 
 // Función para mapear los equipos desde el backend a la estructura del frontend
