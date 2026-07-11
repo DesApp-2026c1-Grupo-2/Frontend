@@ -87,8 +87,8 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
         
         if (equiposRes.status === "fulfilled") {
           const equipos = equiposRes.value.data
-            .filter(e => e.estado === "disponible") // Traemos solo equipos disponibles
-            .map(e => ({ ...e, tipoRecurso: "Equipo", tipoDetalle: "Equipo" }));
+            .filter(e => e.estado === "disponible")
+            .map(e => ({ ...e, tipoRecurso: "Equipo", tipoDetalle: "Equipo", cantidadDisponible: 1 }));
           recursosRecopilados = [...recursosRecopilados, ...equipos];
         }
         
@@ -96,7 +96,6 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
           const items = itemsRes.value.data.map(i => ({
             ...i,
             tipoRecurso: "Item",
-            // Joi Schema requiere mayúscula inicial en el campo "tipo" -> "Material", "Reactivo", "Sustancia"
             tipoDetalle: i.tipo ? (i.tipo.charAt(0).toUpperCase() + i.tipo.slice(1)) : "Material"
           }));
           recursosRecopilados = [...recursosRecopilados, ...items];
@@ -728,93 +727,107 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
               )}
 
               <div className="max-h-[40vh] overflow-y-auto grid grid-cols-1 gap-2 pr-2">
-                {recursosDB.map((r, i) => {
-                  const recursoId = r._id || r.id;
-                  const seleccionado = form.recursos.find(rec => (rec._id || rec.id) === recursoId);
-
-                  const labDelEquipo = r?.esFijo ? (r.laboratorioId?.nombre || null) : null;
-                  const labIdDelEquipo = r?.esFijo
-                    ? (r.laboratorioId?._id || r.laboratorioId?.id || r.laboratorioId)?.toString()
-                    : null;
-
-                  // Bloqueado solo si hay lab seleccionado y este equipo fijo es de otro lab
-                  const bloqueadoPorLabDistinto =
-                    r?.esFijo &&
-                    form.laboratorio &&
-                    labIdDelEquipo &&
-                    labIdDelEquipo !== form.laboratorio.toString();
-
-                  // Lab no disponible en la fecha seleccionada
-                  const labNoDisponibleEnFecha =
-                    r?.esFijo &&
-                    labIdDelEquipo &&
-                    labsNoDisponibles.has(labIdDelEquipo);
-
-                  const errorEsteRecurso = errores[`recurso_${recursoId}`];
+                {[
+                  { key: "Equipo",    label: "Equipos",           icono: "🔬" },
+                  { key: "Material",  label: "Materiales",         icono: "🧪" },
+                  { key: "Reactivo",  label: "Reactivos",          icono: "⚗️"  },
+                  { key: "Sustancia", label: "Sustancias básicas", icono: "🧫" },
+                ].map(({ key, label, icono }) => {
+                  const grupo = recursosDB.filter((r) =>
+                    key === "Equipo" ? r.tipoRecurso === "Equipo" : r.tipoDetalle === key
+                  );
+                  if (grupo.length === 0) return null;
 
                   return (
-                    <div key={i} className={`flex flex-col rounded-xl px-4 py-3 border transition-colors group ${
-                      bloqueadoPorLabDistinto
-                        ? "bg-zinc-50 border-zinc-200 opacity-50"
-                        : "bg-white hover:bg-emerald-50 border-zinc-200 hover:border-emerald-200"
-                    }`}>
-                      <div className="flex items-center justify-between">
-                        <label className="flex items-center gap-3 cursor-pointer flex-1">
-                          <input
-                            type="checkbox"
-                            className="accent-emerald-500 w-4 h-4"
-                            checked={!!seleccionado}
-                            disabled={bloqueadoPorLabDistinto}
-                            onChange={() => toggleRecurso(r)}
-                          />
-                          <div className="flex flex-col">
-                            <span className={`text-sm font-medium ${bloqueadoPorLabDistinto ? "text-zinc-400" : "text-zinc-700 group-hover:text-emerald-800"}`}>
-                              {r.nombre}
-                              {r?.esFijo ? " • Fijo" : ""}
-                            </span>
-                            <span className="text-zinc-400 text-xs">{r.tipoDetalle}</span>
+                    <div key={key} className="mb-3">
+                      <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5 mb-1.5 px-1">
+                        <span>{icono}</span> {label}
+                      </p>
 
-                            {/* Lab asociado al equipo fijo — siempre visible en letra chica */}
-                            {r?.esFijo && labDelEquipo && (
-                              <span className={`text-xs mt-0.5 font-normal ${
-                                bloqueadoPorLabDistinto
-                                  ? "text-zinc-400"
-                                  : labNoDisponibleEnFecha
-                                  ? "text-red-400"
-                                  : "text-zinc-400"
-                              }`}>
-                                {bloqueadoPorLabDistinto
-                                  ? `Pertenece a: ${labDelEquipo} (incompatible con lab seleccionado)`
-                                  : `Laboratorio: ${labDelEquipo}${!form.laboratorio && !labNoDisponibleEnFecha ? " · se asignará automáticamente" : ""}`
-                                }
-                              </span>
+                      {grupo.map((r, i) => {
+                        const recursoId = r._id || r.id;
+                        const seleccionado = form.recursos.find(rec => (rec._id || rec.id) === recursoId);
+                        const labDelEquipo = r?.esFijo ? (r.laboratorioId?.nombre || null) : null;
+                        const labIdDelEquipo = r?.esFijo
+                          ? (r.laboratorioId?._id || r.laboratorioId?.id || r.laboratorioId)?.toString()
+                          : null;
+                        const bloqueadoPorLabDistinto =
+                          r?.esFijo && form.laboratorio && labIdDelEquipo &&
+                          labIdDelEquipo !== form.laboratorio.toString();
+                        const labNoDisponibleEnFecha =
+                          r?.esFijo && labIdDelEquipo && labsNoDisponibles.has(labIdDelEquipo);
+                        const sinStock = r.tipoRecurso === "Item" && (r.cantidadDisponible ?? 0) === 0;
+                        const bloqueado = bloqueadoPorLabDistinto || sinStock;
+                        const errorEsteRecurso = errores[`recurso_${recursoId}`];
+
+                        return (
+                          <div key={i} className={`flex flex-col rounded-xl px-4 py-3 border transition-colors group mb-1 ${
+                            bloqueado
+                              ? "bg-zinc-50 border-zinc-200 opacity-50"
+                              : "bg-white hover:bg-emerald-50 border-zinc-200 hover:border-emerald-200"
+                          }`}>
+                            <div className="flex items-center justify-between">
+                              <label className={`flex items-center gap-3 flex-1 ${bloqueado ? "cursor-not-allowed" : "cursor-pointer"}`}>
+                                <input
+                                  type="checkbox"
+                                  className="accent-emerald-500 w-4 h-4"
+                                  checked={!!seleccionado}
+                                  disabled={bloqueado}
+                                  onChange={() => toggleRecurso(r)}
+                                />
+                                <div className="flex flex-col">
+                                  <span className={`text-sm font-medium ${bloqueado ? "text-zinc-400" : "text-zinc-700 group-hover:text-emerald-800"}`}>
+                                    {r.nombre}
+                                    {r?.esFijo ? " • Fijo" : ""}
+                                  </span>
+                                  <span className="text-zinc-400 text-xs">
+                                    {r.tipoDetalle}
+                                    {r.unidad ? ` · ${r.unidad}` : ""}
+                                    {r.tipoRecurso === "Item" && (
+                                      <span className={sinStock ? "text-red-400" : ""}>
+                                        {` · Stock: ${r.cantidadDisponible ?? 0}`}
+                                      </span>
+                                    )}
+                                  </span>
+                                  {r?.esFijo && labDelEquipo && (
+                                    <span className="text-xs mt-0.5 text-zinc-400">
+                                      {bloqueadoPorLabDistinto
+                                        ? `Pertenece a: ${labDelEquipo} (incompatible con lab seleccionado)`
+                                        : `Laboratorio: ${labDelEquipo}${!form.laboratorio && !labNoDisponibleEnFecha ? " · se asignará automáticamente" : ""}`
+                                      }
+                                    </span>
+                                  )}
+                                  {sinStock && (
+                                    <span className="text-red-400 text-xs mt-0.5">Sin stock disponible</span>
+                                  )}
+                                </div>
+                              </label>
+
+                              {seleccionado && (
+                                <div className="flex items-center gap-2 ml-4">
+                                  <span className="text-xs text-zinc-500 font-medium">Cant:</span>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={seleccionado.cantidad}
+                                    onChange={(e) => actualizarCantidad(recursoId, e.target.value)}
+                                    className="w-16 bg-zinc-50 border border-zinc-300 rounded-lg px-2 py-1 text-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all text-center shadow-sm"
+                                  />
+                                </div>
+                              )}
+                            </div>
+
+                            {errorEsteRecurso && (
+                              <p className="text-red-500 text-xs mt-1.5 ml-7">{errorEsteRecurso}</p>
+                            )}
+                            {labNoDisponibleEnFecha && !errorEsteRecurso && form.fecha && (
+                              <p className="text-amber-500 text-xs mt-1.5 ml-7">
+                                El laboratorio de este equipo no está disponible en la fecha y hora seleccionadas.
+                              </p>
                             )}
                           </div>
-                        </label>
-
-                        {seleccionado && (
-                          <div className="flex items-center gap-2 ml-4">
-                            <span className="text-xs text-zinc-500 font-medium">Cant:</span>
-                            <input
-                              type="number"
-                              min="1"
-                              value={seleccionado.cantidad}
-                              onChange={(e) => actualizarCantidad(recursoId, e.target.value)}
-                              className="w-16 bg-zinc-50 border border-zinc-300 rounded-lg px-2 py-1 text-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all text-center shadow-sm"
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Error inline de disponibilidad por fecha */}
-                      {errorEsteRecurso && (
-                        <p className="text-red-500 text-xs mt-1.5 ml-7">{errorEsteRecurso}</p>
-                      )}
-                      {labNoDisponibleEnFecha && !errorEsteRecurso && form.fecha && (
-                        <p className="text-amber-500 text-xs mt-1.5 ml-7">
-                          El laboratorio de este equipo no está disponible en la fecha y hora seleccionadas.
-                        </p>
-                      )}
+                        );
+                      })}
                     </div>
                   );
                 })}
