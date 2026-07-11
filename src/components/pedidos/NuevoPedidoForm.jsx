@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "../../api/axios";
+import { getAllItems, getAllEquipos } from "../../services/equipamiento";
 import { useAuth } from "../../context/AuthContext";
 import { FiX, FiLoader, FiCheckCircle } from "react-icons/fi";
 
@@ -51,8 +52,8 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
         const [labsRes, usersRes, equiposRes, itemsRes, actividadesRes] = await Promise.allSettled([
           api.get("/laboratorio"),
           api.get("/usuarios"),
-          api.get("/equipo"),
-          api.get("/items"),
+          getAllEquipos(),
+          getAllItems(),
           api.get("/actividades")
         ]);
 
@@ -83,14 +84,14 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
         let recursosRecopilados = [];
         
         if (equiposRes.status === "fulfilled") {
-          const equipos = equiposRes.value.data
+          const equipos = equiposRes.value
             .filter(e => e.estado === "disponible") // Traemos solo equipos disponibles
             .map(e => ({ ...e, tipoRecurso: "Equipo", tipoDetalle: "Equipo" }));
           recursosRecopilados = [...recursosRecopilados, ...equipos];
         }
-        
+
         if (itemsRes.status === "fulfilled") {
-          const items = itemsRes.value.data.map(i => ({
+          const items = itemsRes.value.map(i => ({
             ...i,
             tipoRecurso: "Item",
             // Joi Schema requiere mayúscula inicial en el campo "tipo" -> "Material", "Reactivo", "Sustancia"
