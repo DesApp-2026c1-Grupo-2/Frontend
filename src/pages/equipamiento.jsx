@@ -626,7 +626,7 @@ useEffect(() => {
   const openItemEdit = async (group) => {
     const lotes = await ensureLotes(group.itemId);
     const rep = lotes[0] || {};
-    setEditingItem({ ...group, loteId: rep.loteId, ubicacion: rep.ubicacion, movilidad: rep.movilidad });
+    setEditingItem({ ...group, loteId: rep.loteId, ubicacion: rep.ubicacion, estado: rep.estado, movilidad: rep.movilidad });
     setFormMode("item");
     setActiveTab(group.categoria);
     setFormData({
