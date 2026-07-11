@@ -1014,7 +1014,7 @@ function Equipamiento() {
 
   return (
     <div className="min-h-screen text-slate-800">
-      <div className="px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
+      <div className="px-3 py-5 sm:px-6 lg:px-8 lg:py-6">
         <PageHeader title="Equipamiento" />
 
         {/* Banner error de operación (ej: no se pudo eliminar) */}
@@ -1103,7 +1103,7 @@ function Equipamiento() {
               </div>
             </div>
 
-            <div className="px-4 py-5 sm:px-6">
+            <div className="px-3 py-4 sm:px-6 sm:py-5">
               {/* Vista móvil */}
               <div className="space-y-3 md:hidden">
                 {loading ? (
@@ -1140,55 +1140,51 @@ function Equipamiento() {
                     const loteState = lotesPorItem[g.itemId];
                     return (
                       <div key={g.itemId} className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-                        <div className="flex w-full items-center gap-2 px-4 py-3">
+                        <div className="px-3 py-3">
                           <button
                             type="button"
                             onClick={() => toggleGroup(g.itemId)}
-                            className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                            className="flex w-full items-center gap-2 text-left"
                             aria-expanded={isOpen}
                           >
                             <FiChevronRight className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${isOpen ? "rotate-90" : ""}`} />
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className="truncate text-sm font-semibold text-slate-900">{g.tipo}</span>
-                                {loteState?.lotes && (
-                                  <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
-                                    {loteState.lotes.length} {loteState.lotes.length === 1 ? "lote" : "lotes"}
-                                  </span>
-                                )}
-                              </div>
-                              <span className="text-xs text-slate-500">Código {g.codigo}</span>
-                            </div>
-                            <div className="shrink-0 text-right">
-                              <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">Total</span>
-                              <span className="text-sm font-bold text-slate-900">{g.stockDisponible} {g.unidad}</span>
-                            </div>
+                            <span className="min-w-0 flex-1 text-sm font-semibold text-slate-900 line-clamp-2">{g.tipo}</span>
+                            {loteState?.lotes && (
+                              <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
+                                {loteState.lotes.length} {loteState.lotes.length === 1 ? "lote" : "lotes"}
+                              </span>
+                            )}
                           </button>
-                          <div className="flex shrink-0 items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => openAddLote(g)}
-                              className="rounded-lg p-2 text-emerald-500 bg-emerald-50 hover:bg-emerald-100 transition"
-                              aria-label={`Registrar entrada de ${g.tipo}`}
-                            >
-                              <FiPlus />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => openItemEdit(g)}
-                              className="rounded-lg p-2 text-cyan-500 bg-cyan-50 hover:bg-cyan-100 transition"
-                              aria-label={`Editar ${g.tipo}`}
-                            >
-                              <FiEdit2 />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteGroup(g)}
-                              className="rounded-lg p-2 text-rose-500 bg-rose-50 hover:bg-rose-100 transition"
-                              aria-label={`Eliminar ${g.tipo}`}
-                            >
-                              <FiTrash2 />
-                            </button>
+                          <div className="mt-1.5 flex items-center justify-between gap-2 pl-6">
+                            <span className="min-w-0 truncate text-xs text-slate-500">
+                              Código {g.codigo} · {g.stockDisponible} {g.unidad}
+                            </span>
+                            <div className="flex shrink-0 items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => openAddLote(g)}
+                                className="rounded-lg p-1.5 text-emerald-500 bg-emerald-50 hover:bg-emerald-100 transition"
+                                aria-label={`Registrar entrada de ${g.tipo}`}
+                              >
+                                <FiPlus />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => openItemEdit(g)}
+                                className="rounded-lg p-1.5 text-cyan-500 bg-cyan-50 hover:bg-cyan-100 transition"
+                                aria-label={`Editar ${g.tipo}`}
+                              >
+                                <FiEdit2 />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteGroup(g)}
+                                className="rounded-lg p-1.5 text-rose-500 bg-rose-50 hover:bg-rose-100 transition"
+                                aria-label={`Eliminar ${g.tipo}`}
+                              >
+                                <FiTrash2 />
+                              </button>
+                            </div>
                           </div>
                         </div>
                         {isOpen && (
