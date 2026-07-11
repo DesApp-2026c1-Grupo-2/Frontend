@@ -62,12 +62,46 @@ export default function PedidosLaboratorio() {
   const [pedidos, setPedidos] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [tab, setTab] = useState("todos");
+  const [busqueda, setBusqueda] = useState("");
   const [showNuevo, setShowNuevo] = useState(false);
   const [pedidoEditando, setPedidoEditando] = useState(null);
   const [errorOperacion, setErrorOperacion] = useState("");
 
-  const pendientes = pedidos.filter((p) => PENDING_STATES.includes(p.estado));
-  const lista = tab === "pendientes" ? pendientes : pedidos;
+  // Ordenar por más reciente primero
+  const pedidosOrdenados = [...pedidos].sort(
+    (a, b) => new Date(b.fechaHora || b.createdAt) - new Date(a.fechaHora || a.createdAt)
+  );
+
+  const pendientes  = pedidos.filter((p) => PENDING_STATES.includes(p.estado));
+  const aprobados   = pedidos.filter((p) => normalizarEstado(p.estado) === "Aprobado");
+  const rechazados  = pedidos.filter((p) => p.estado === "Rechazado");
+  const expirados   = pedidos.filter((p) => p.estado === "Expirado");
+  const finalizados = pedidos.filter((p) => p.estado === "Finalizado");
+
+  const TABS = [
+    { key: "todos",       label: "Todos",       count: pedidos.length },
+    { key: "pendientes",  label: "Pendientes",  count: pendientes.length },
+    { key: "aprobados",   label: "Aprobados",   count: aprobados.length },
+    { key: "rechazados",  label: "Rechazados",  count: rechazados.length },
+    { key: "expirados",   label: "Expirados",   count: expirados.length },
+    { key: "finalizados", label: "Finalizados", count: finalizados.length },
+  ];
+
+  const porTab = {
+    todos:       pedidosOrdenados,
+    pendientes:  pedidosOrdenados.filter((p) => PENDING_STATES.includes(p.estado)),
+    aprobados:   pedidosOrdenados.filter((p) => normalizarEstado(p.estado) === "Aprobado"),
+    rechazados:  pedidosOrdenados.filter((p) => p.estado === "Rechazado"),
+    expirados:   pedidosOrdenados.filter((p) => p.estado === "Expirado"),
+    finalizados: pedidosOrdenados.filter((p) => p.estado === "Finalizado"),
+  };
+
+  // Filtro de búsqueda por ID
+  const lista = busqueda.trim()
+    ? porTab[tab].filter((p) =>
+        (p._id || p.id)?.toString().toLowerCase().includes(busqueda.trim().toLowerCase())
+      )
+    : porTab[tab];
 
   useEffect(() => {
     const fetchPedidos = async () => {
@@ -172,21 +206,32 @@ export default function PedidosLaboratorio() {
         </div>
       </div>
 
-      {/* TABS */}
-      <div className="flex gap-2 mb-10">
-        {["todos", "pendientes"].map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-              tab === t
-                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                : "text-slate-500 bg-white border border-slate-200 hover:text-emerald-600 hover:border-emerald-200"
-            }`}
-          >
-            {t === "todos" ? "Todos" : `Pendientes (${pendientes.length})`}
-          </button>
-        ))}
+      {/* TABS + BÚSQUEDA */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-10">
+        <div className="flex gap-2 flex-wrap flex-1">
+          {TABS.map(({ key, label, count }) => (
+            <button
+              key={key}
+              onClick={() => { setTab(key); setBusqueda(""); }}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                tab === key
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  : "text-slate-500 bg-white border border-slate-200 hover:text-emerald-600 hover:border-emerald-200"
+              }`}
+            >
+              {label}{count > 0 ? ` (${count})` : ""}
+            </button>
+          ))}
+        </div>
+
+        {/* Búsqueda por ID */}
+        <input
+          type="text"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          placeholder="Buscar por ID..."
+          className="w-full sm:w-56 px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm text-slate-700 focus:outline-none focus:border-emerald-400 transition"
+        />
       </div>
 
       {/* CONTENEDOR */}
@@ -200,7 +245,11 @@ export default function PedidosLaboratorio() {
             {lista.length === 0 ? (
               <div className="col-span-full flex flex-col items-center justify-center py-12 text-slate-500">
                 <p className="text-xl font-bold text-emerald-700">Sin pedidos</p>
-                <p className="text-sm mt-2">No hay pedidos para mostrar en esta vista.</p>
+                <p className="text-sm mt-2">
+                  {busqueda.trim()
+                    ? `No se encontró ningún pedido con ID "${busqueda.trim()}".`
+                    : "No hay pedidos para mostrar en esta vista."}
+                </p>
               </div>
             ) : (
               lista.map((p) => {
