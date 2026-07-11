@@ -16,6 +16,8 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
   const [actividadPlantilla, setActividadPlantilla] = useState("");
   const [cargandoSugerencias, setCargandoSugerencias] = useState(false);
   const [tipoActividadSeleccionada, setTipoActividadSeleccionada] = useState(null);
+  // Set de IDs de laboratorios NO disponibles en el horario seleccionado
+  const [labsNoDisponibles, setLabsNoDisponibles] = useState(new Set());
   const [errorSubmit, setErrorSubmit] = useState("");
   const [estadoEnvio, setEstadoEnvio] = useState(null);
   const [errores, setErrores] = useState({});
@@ -127,17 +129,22 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
         const fechaFin = `${form.fecha}T${form.horaFin}`;
 
         const { data } = await api.get("/laboratorio/disponibles-horario", {
-          params: {
-            fechaHora,
-            fechaFin,
-            alumnos: form.alumnos,
-          },
+          params: { fechaHora, fechaFin, alumnos: form.alumnos },
         });
 
         setLaboratorios(data);
 
-        // Si el laboratorio seleccionado dejó de estar disponible para el nuevo
-        // horario/cantidad de alumnos, lo deseleccionamos para evitar un ID inconsistente.
+        // Calcular qué labs NO están disponibles comparando contra todos los labs
+        // (los que no aparecen en "disponibles" están ocupados en ese horario)
+        const todosLabs = await api.get("/laboratorio");
+        const idsDisponibles = new Set(data.map((l) => (l._id || l.id).toString()));
+        const idsNoDisponibles = new Set(
+          todosLabs.data
+            .map((l) => (l._id || l.id).toString())
+            .filter((id) => !idsDisponibles.has(id))
+        );
+        setLabsNoDisponibles(idsNoDisponibles);
+
         if (form.laboratorio) {
           const sigueDisponible = data.some(
             (l) => (l._id || l.id) === form.laboratorio
@@ -169,45 +176,56 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
   };
 
   const toggleRecurso = (recurso) => {
-    if (recurso?.esFijo && !form.laboratorio) {
-      setErrores((prev) => ({
+    if (errores.recursos) {
+      setErrores((prev) => ({ ...prev, recursos: undefined }));
+    }
+
+    const recursoId = recurso._id || recurso.id;
+    const yaSeleccionado = form.recursos.some((r) => (r._id || r.id) === recursoId);
+
+    // Si lo está destildando, simplemente sacarlo
+    if (yaSeleccionado) {
+      setForm((prev) => ({
         ...prev,
-        laboratorio: "Seleccioná un laboratorio antes de agregar un equipo fijo.",
+        recursos: prev.recursos.filter((r) => (r._id || r.id) !== recursoId),
       }));
       return;
     }
 
-    if (errores.recursos) {
-      setErrores((prev) => ({
-        ...prev,
-        recursos: undefined,
-      }));
+    // Equipos fijos: verificar disponibilidad del lab en la fecha elegida
+    if (recurso?.esFijo) {
+      const labId = (recurso.laboratorioId?._id || recurso.laboratorioId?.id || recurso.laboratorioId)?.toString();
+
+      // Si ya hay un lab seleccionado y este equipo fijo pertenece a otro → bloquear
+      if (form.laboratorio && labId && labId !== form.laboratorio.toString()) {
+        return; // el render ya lo muestra deshabilitado, no hacer nada
+      }
+
+      // Si el lab del equipo no está disponible en la fecha seleccionada → mostrar error inline
+      if (labId && labsNoDisponibles.has(labId)) {
+        setErrores((prev) => ({
+          ...prev,
+          [`recurso_${recursoId}`]: `El laboratorio de este equipo no está disponible en la fecha y hora seleccionadas.`,
+        }));
+        return;
+      }
+
+      // Auto-asignar el laboratorio del equipo fijo si no hay ninguno seleccionado
+      if (!form.laboratorio && labId) {
+        setForm((prev) => ({
+          ...prev,
+          laboratorio: labId,
+          recursos: [...prev.recursos, { ...recurso, cantidad: 1, deLaPlantilla: false }],
+        }));
+        return;
+      }
     }
 
-    setForm((prev) => {
-      const recursoId = recurso._id || recurso.id;
-
-      const existe = prev.recursos.some(
-        (r) => (r._id || r.id) === recursoId
-      );
-
-      if (existe) {
-        return {
-          ...prev,
-          recursos: prev.recursos.filter(
-            (r) => (r._id || r.id) !== recursoId
-          ),
-        };
-      } else {
-        return {
-          ...prev,
-          recursos: [
-            ...prev.recursos,
-            { ...recurso, cantidad: 1, deLaPlantilla: false },
-          ],
-        };
-      }
-    });
+    // Caso general: agregar el recurso
+    setForm((prev) => ({
+      ...prev,
+      recursos: [...prev.recursos, { ...recurso, cantidad: 1, deLaPlantilla: false }],
+    }));
   };
 
   const actualizarCantidad = (idRecurso, nuevaCantidad) => {
@@ -711,43 +729,91 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
 
               <div className="max-h-[40vh] overflow-y-auto grid grid-cols-1 gap-2 pr-2">
                 {recursosDB.map((r, i) => {
-                  const seleccionado = form.recursos.find(rec => (rec._id || rec.id) === (r._id || r.id));
-                  const bloqueado = r?.esFijo && !form.laboratorio;
-                  
-                  return (
-                    <div key={i} className="flex items-center justify-between bg-white hover:bg-emerald-50 rounded-xl px-4 py-3 border border-zinc-200 hover:border-emerald-200 transition-colors group">
-                      
-                      {/* Lado Izquierdo: Checkbox y Texto (clickable) */}
-                      <label className="flex items-center gap-3 cursor-pointer flex-1">
-                        <input 
-                          type="checkbox" 
-                          className="accent-emerald-500 w-4 h-4"
-                          checked={!!seleccionado}
-                          disabled={bloqueado}
-                          onChange={() => toggleRecurso(r)}
-                        />
-                        <div className="flex flex-col">
-                          <span className={`text-sm font-medium ${bloqueado ? "text-zinc-400" : "text-zinc-700 group-hover:text-emerald-800"}`}>
-                            {r.nombre} {r.tipoRecurso === 'Equipo' ? '(Disponible)' : ''}
-                            {r?.esFijo ? " • Fijo" : ""}
-                          </span>
-                          <span className="text-zinc-400 text-xs">{r.tipoDetalle}</span>
-                          {bloqueado && <span className="text-xs text-amber-600">Seleccioná un laboratorio primero</span>}
-                        </div>
-                      </label>
+                  const recursoId = r._id || r.id;
+                  const seleccionado = form.recursos.find(rec => (rec._id || rec.id) === recursoId);
 
-                      {/* Lado Derecho: Input de cantidad (solo aparece si está tildado) */}
-                      {seleccionado && (
-                        <div className="flex items-center gap-2 ml-4">
-                          <span className="text-xs text-zinc-500 font-medium">Cant:</span>
-                          <input 
-                            type="number" 
-                            min="1" 
-                            value={seleccionado.cantidad} 
-                            onChange={(e) => actualizarCantidad(r._id || r.id, e.target.value)}
-                            className="w-16 bg-zinc-50 border border-zinc-300 rounded-lg px-2 py-1 text-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all text-center shadow-sm"
+                  const labDelEquipo = r?.esFijo ? (r.laboratorioId?.nombre || null) : null;
+                  const labIdDelEquipo = r?.esFijo
+                    ? (r.laboratorioId?._id || r.laboratorioId?.id || r.laboratorioId)?.toString()
+                    : null;
+
+                  // Bloqueado solo si hay lab seleccionado y este equipo fijo es de otro lab
+                  const bloqueadoPorLabDistinto =
+                    r?.esFijo &&
+                    form.laboratorio &&
+                    labIdDelEquipo &&
+                    labIdDelEquipo !== form.laboratorio.toString();
+
+                  // Lab no disponible en la fecha seleccionada
+                  const labNoDisponibleEnFecha =
+                    r?.esFijo &&
+                    labIdDelEquipo &&
+                    labsNoDisponibles.has(labIdDelEquipo);
+
+                  const errorEsteRecurso = errores[`recurso_${recursoId}`];
+
+                  return (
+                    <div key={i} className={`flex flex-col rounded-xl px-4 py-3 border transition-colors group ${
+                      bloqueadoPorLabDistinto
+                        ? "bg-zinc-50 border-zinc-200 opacity-50"
+                        : "bg-white hover:bg-emerald-50 border-zinc-200 hover:border-emerald-200"
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <label className="flex items-center gap-3 cursor-pointer flex-1">
+                          <input
+                            type="checkbox"
+                            className="accent-emerald-500 w-4 h-4"
+                            checked={!!seleccionado}
+                            disabled={bloqueadoPorLabDistinto}
+                            onChange={() => toggleRecurso(r)}
                           />
-                        </div>
+                          <div className="flex flex-col">
+                            <span className={`text-sm font-medium ${bloqueadoPorLabDistinto ? "text-zinc-400" : "text-zinc-700 group-hover:text-emerald-800"}`}>
+                              {r.nombre}
+                              {r?.esFijo ? " • Fijo" : ""}
+                            </span>
+                            <span className="text-zinc-400 text-xs">{r.tipoDetalle}</span>
+
+                            {/* Lab asociado al equipo fijo — siempre visible en letra chica */}
+                            {r?.esFijo && labDelEquipo && (
+                              <span className={`text-xs mt-0.5 font-normal ${
+                                bloqueadoPorLabDistinto
+                                  ? "text-zinc-400"
+                                  : labNoDisponibleEnFecha
+                                  ? "text-red-400"
+                                  : "text-zinc-400"
+                              }`}>
+                                {bloqueadoPorLabDistinto
+                                  ? `Pertenece a: ${labDelEquipo} (incompatible con lab seleccionado)`
+                                  : `Laboratorio: ${labDelEquipo}${!form.laboratorio && !labNoDisponibleEnFecha ? " · se asignará automáticamente" : ""}`
+                                }
+                              </span>
+                            )}
+                          </div>
+                        </label>
+
+                        {seleccionado && (
+                          <div className="flex items-center gap-2 ml-4">
+                            <span className="text-xs text-zinc-500 font-medium">Cant:</span>
+                            <input
+                              type="number"
+                              min="1"
+                              value={seleccionado.cantidad}
+                              onChange={(e) => actualizarCantidad(recursoId, e.target.value)}
+                              className="w-16 bg-zinc-50 border border-zinc-300 rounded-lg px-2 py-1 text-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all text-center shadow-sm"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Error inline de disponibilidad por fecha */}
+                      {errorEsteRecurso && (
+                        <p className="text-red-500 text-xs mt-1.5 ml-7">{errorEsteRecurso}</p>
+                      )}
+                      {labNoDisponibleEnFecha && !errorEsteRecurso && form.fecha && (
+                        <p className="text-amber-500 text-xs mt-1.5 ml-7">
+                          El laboratorio de este equipo no está disponible en la fecha y hora seleccionadas.
+                        </p>
                       )}
                     </div>
                   );
