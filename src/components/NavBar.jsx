@@ -75,12 +75,18 @@ function Navbar() {
                 Edificios
               </button>
 
-
               <button
                 onClick={() => navigate("/equipamiento")}
                 className={navButtonClass("/equipamiento")}
               >
                 Equipamiento
+              </button>
+
+              <button
+                onClick={() => navigate("/actividades")}
+                className={navButtonClass("/actividades")}
+              >
+                Actividades
               </button>
             </>
           )}

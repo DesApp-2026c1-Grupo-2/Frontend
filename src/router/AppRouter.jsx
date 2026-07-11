@@ -16,6 +16,7 @@ import Laboratorios from "../pages/laboratorios";
 import PedidoDetalle from "../pages/pedidoDetalle";
 import Calendario from "../pages/calendario";
 import AprobacionUsuarios from "../pages/aprobacionUsuarios";
+import Actividades from "../pages/actividades";
 
 function AppRouter() {
   return (
@@ -45,6 +46,7 @@ function AppRouter() {
                 <Route path="/edificios" element={<Edificios />} />
                 <Route path="/equipamiento" element={<Equipamiento />} />
                 <Route path="/historial" element={<Historial />} />
+                <Route path="/actividades" element={<Actividades />} />
               </Route>
 
               {/* RUTA SOLO ADMIN */}

@@ -1,4 +1,53 @@
-const formatSimpleValue = (valor) => {
+const obtenerIdString = (valor) => {
+  if (!valor) return null;
+  if (typeof valor === "string") return valor;
+  if (typeof valor === "object") {
+    if (valor._id && typeof valor._id.toString === "function") return valor._id.toString();
+    if (valor.id && typeof valor.id.toString === "function") return valor.id.toString();
+  }
+  return null;
+};
+
+const obtenerNombreLegible = (valor, nombresPorId = {}) => {
+  if (!valor && valor !== 0) return null;
+
+  if (typeof valor === "string") {
+    const nombreMapeado = nombresPorId[valor];
+    if (nombreMapeado) return nombreMapeado;
+    return null;
+  }
+
+  if (typeof valor === "object" && !Array.isArray(valor)) {
+    if (valor.nombre) return valor.nombre;
+    if (valor.email) return valor.email;
+    if (valor.descripcion) return valor.descripcion;
+
+    const id = obtenerIdString(valor);
+    if (id && nombresPorId[id]) return nombresPorId[id];
+  }
+
+  return null;
+};
+
+const formatearRecursoHistorial = (valor, nombresPorId = {}) => {
+  if (!valor || typeof valor !== "object") return null;
+
+  const nombre = obtenerNombreLegible(valor, nombresPorId);
+  const tipo = valor.tipo || valor.tipoRecurso || valor.modeloRef || (valor.itemId ? "Item" : valor.equipoId ? "Equipo" : "Recurso");
+  const id = obtenerIdString(valor.itemId || valor.equipoId || valor.recursoId || valor);
+
+  if (nombre) {
+    return tipo ? `${tipo} — ${nombre}` : nombre;
+  }
+
+  if (tipo && id) {
+    return `${tipo} — ${id}`;
+  }
+
+  return null;
+};
+
+const formatSimpleValue = (valor, nombresPorId = {}) => {
   if (valor === null || valor === undefined) return "—";
   if (typeof valor === "string" && /^\d{4}-\d{2}-\d{2}T/.test(valor)) {
     const d = new Date(valor);
@@ -9,7 +58,14 @@ const formatSimpleValue = (valor) => {
       })}`;
     }
   }
+
+  const nombreMapeado = obtenerNombreLegible(valor, nombresPorId);
+  if (nombreMapeado) return nombreMapeado;
+
   if (typeof valor === "object" && !Array.isArray(valor)) {
+    const recursoFormateado = formatearRecursoHistorial(valor, nombresPorId);
+    if (recursoFormateado) return recursoFormateado;
+
     if (valor.nombre || valor.email || (valor._id && typeof valor._id.toString === "function")) {
       return valor.nombre || valor.email || valor._id.toString();
     }
@@ -41,7 +97,7 @@ const parsearProfundo = (v) => {
   return actual;
 };
 
-export const ResumenValorHistorial = ({ valor }) => {
+export const ResumenValorHistorial = ({ valor, nombresPorId = {} }) => {
     
   if (valor === null || valor === undefined) {
     return <span className="text-slate-400">—</span>;
@@ -59,7 +115,7 @@ export const ResumenValorHistorial = ({ valor }) => {
       <ul className="list-disc ml-4 space-y-1">
         {valor.map((item, index) => (
           <li key={index} className="text-slate-700 text-sm">
-            {typeof item === "object" ? <ResumenValorHistorial valor={item} /> : formatSimpleValue(item)}
+            {typeof item === "object" ? <ResumenValorHistorial valor={item} nombresPorId={nombresPorId} /> : formatSimpleValue(item, nombresPorId)}
           </li>
         ))}
       </ul>
@@ -76,7 +132,7 @@ export const ResumenValorHistorial = ({ valor }) => {
 
       // Si es el reporte final enmascarado
       if (valorDespues && typeof valorDespues === "object" && ("descartes" in valorDespues || "desperfectos" in valorDespues)) {
-        return <ResumenValorHistorial valor={valorDespues} />;
+        return <ResumenValorHistorial valor={valorDespues} nombresPorId={nombresPorId} />;
       }
 
       const esComplejo = (v) => typeof v === "object" && v !== null;
@@ -86,11 +142,11 @@ export const ResumenValorHistorial = ({ valor }) => {
           <div className="flex flex-col gap-1.5 text-sm mt-1 w-full max-w-md">
             <div className="bg-red-50 text-red-800 p-2 rounded-md border border-red-100 flex gap-2">
               <span className="font-bold shrink-0">-</span>
-              <div className="w-full"><ResumenValorHistorial valor={valorAntes} /></div>
+              <div className="w-full"><ResumenValorHistorial valor={valorAntes} nombresPorId={nombresPorId} /></div>
             </div>
             <div className="bg-emerald-50 text-emerald-800 p-2 rounded-md border border-emerald-100 flex gap-2">
               <span className="font-bold shrink-0">+</span>
-              <div className="w-full"><ResumenValorHistorial valor={valorDespues} /></div>
+              <div className="w-full"><ResumenValorHistorial valor={valorDespues} nombresPorId={nombresPorId} /></div>
             </div>
           </div>
         );
@@ -100,11 +156,11 @@ export const ResumenValorHistorial = ({ valor }) => {
       return (
         <span className="inline-flex flex-wrap items-center gap-2 text-sm mt-0.5">
           <span className="text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded line-through decoration-slate-400">
-            {formatSimpleValue(valorAntes)}
+            {formatSimpleValue(valorAntes, nombresPorId)}
           </span>
           <span className="text-slate-400 font-bold">→</span>
           <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-medium border border-emerald-100">
-            {formatSimpleValue(valorDespues)}
+            {formatSimpleValue(valorDespues, nombresPorId)}
           </span>
         </span>
       );
@@ -121,13 +177,16 @@ export const ResumenValorHistorial = ({ valor }) => {
             <div className="border border-orange-200 bg-orange-50 p-2.5 rounded-lg">
               <p className="font-semibold text-orange-800 text-xs mb-1.5 uppercase tracking-wide">🗑️ Descartes</p>
               <ul className="list-disc ml-4 space-y-1 text-sm text-orange-700">
-                {descartes.map((item, index) => (
-                  <li key={`descarte-${index}`}>
-                    <span className="font-medium">{item.itemId || item.tipo || "Material"}</span>
-                    <span className="ml-1.5 bg-orange-200 text-orange-900 px-1.5 py-0.5 rounded text-xs font-bold shadow-sm">×{item.cantidad || 1}</span>
-                    {item.motivo && <span className="text-orange-600 italic block text-xs mt-0.5">Motivo: {item.motivo}</span>}
-                  </li>
-                ))}
+                {descartes.map((item, index) => {
+                  const etiqueta = formatearRecursoHistorial(item, nombresPorId) || item.tipo || "Material";
+                  return (
+                    <li key={`descarte-${index}`}>
+                      <span className="font-medium">{etiqueta}</span>
+                      <span className="ml-1.5 bg-orange-200 text-orange-900 px-1.5 py-0.5 rounded text-xs font-bold shadow-sm">×{item.cantidad || 1}</span>
+                      {item.motivo && <span className="text-orange-600 italic block text-xs mt-0.5">Motivo: {item.motivo}</span>}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}
@@ -136,12 +195,15 @@ export const ResumenValorHistorial = ({ valor }) => {
             <div className="border border-red-200 bg-red-50 p-2.5 rounded-lg">
               <p className="font-semibold text-red-800 text-xs mb-1.5 uppercase tracking-wide">⚠️ Desperfectos</p>
               <ul className="list-disc ml-4 space-y-1 text-sm text-red-700">
-                {desperfectos.map((item, index) => (
-                  <li key={`desperfecto-${index}`}>
-                    <span className="font-medium break-all">{item.equipoId || item.equipo || "Equipo"}</span>
-                    {item.motivo && <span className="text-red-600 italic block text-xs mt-0.5">Motivo: {item.motivo}</span>}
-                  </li>
-                ))}
+                {desperfectos.map((item, index) => {
+                  const etiqueta = formatearRecursoHistorial(item, nombresPorId) || item.equipoId || item.equipo || "Equipo";
+                  return (
+                    <li key={`desperfecto-${index}`}>
+                      <span className="font-medium break-all">{etiqueta}</span>
+                      {item.motivo && <span className="text-red-600 italic block text-xs mt-0.5">Motivo: {item.motivo}</span>}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}
@@ -167,7 +229,7 @@ export const ResumenValorHistorial = ({ valor }) => {
               {clave.replace(/([A-Z])/g, ' $1').trim()}:
             </span>
             <div className="pl-3 border-l-2 border-slate-200">
-              <ResumenValorHistorial valor={subValor} />
+              <ResumenValorHistorial valor={subValor} nombresPorId={nombresPorId} />
             </div>
           </div>
         ))}
