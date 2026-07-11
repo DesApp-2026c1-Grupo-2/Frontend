@@ -17,4 +17,18 @@ describe("ResumenValorHistorial", () => {
     expect(screen.getByText(/material/i)).toBeInTheDocument();
     expect(screen.getByText(/se calleron/i)).toBeInTheDocument();
   });
+
+  it("resuelve los ids de recursos a nombres cuando el componente recibe un mapa", () => {
+    render(
+      <ResumenValorHistorial
+        valor={{
+          descartes: [{ itemId: "abc123", cantidad: 1, motivo: "hoal" }],
+          desperfectos: [],
+        }}
+        nombresPorId={{ abc123: "Tubo de ensayo" }}
+      />
+    );
+
+    expect(screen.getByText(/Tubo de ensayo/i)).toBeInTheDocument();
+  });
 });

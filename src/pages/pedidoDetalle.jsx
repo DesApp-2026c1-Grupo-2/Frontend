@@ -47,7 +47,7 @@ const ETIQUETAS_CAMPO = {
   reporteFinal: "Reporte final",
 };
 
-const formatValorSimple = (valor) => {
+const formatValorSimple = (valor, nombresPorId = {}) => {
   if (valor === null || valor === undefined) return "—";
   if (typeof valor === "string" && /^\d{4}-\d{2}-\d{2}T/.test(valor)) {
     const d = new Date(valor);
@@ -58,21 +58,26 @@ const formatValorSimple = (valor) => {
       })}`;
     }
   }
+
+  if (typeof valor === "string" && nombresPorId[valor]) {
+    return nombresPorId[valor];
+  }
+
   if (typeof valor === "object" && valor !== null) {
     return valor.nombre || valor.email || valor._id?.toString() || JSON.stringify(valor);
   }
   return String(valor);
 };
 
-const CambioCampoSimple = ({ campo, antes, despues }) => {
+const CambioCampoSimple = ({ campo, antes, despues, nombresPorId = {} }) => {
   const renderValor = (valor) => {
     if (valor === null || valor === undefined) {
       return <span className="text-slate-400">—</span>;
     }
     if (typeof valor === "object") {
-      return <ResumenValorHistorial valor={valor} />;
+      return <ResumenValorHistorial valor={valor} nombresPorId={nombresPorId} />;
     }
-    return <span>{formatValorSimple(valor)}</span>;
+    return <span>{formatValorSimple(valor, nombresPorId)}</span>;
   };
 
   return (
@@ -82,11 +87,11 @@ const CambioCampoSimple = ({ campo, antes, despues }) => {
           {ETIQUETAS_CAMPO[campo] || campo}:
         </span>
         {typeof antes !== "object" && (
-          <span className="text-slate-500 line-through">{formatValorSimple(antes)}</span>
+          <span className="text-slate-500 line-through">{formatValorSimple(antes, nombresPorId)}</span>
         )}
         <span className="text-slate-400 mx-1">→</span>
         {typeof despues !== "object" && (
-          <span className="text-slate-800">{formatValorSimple(despues)}</span>
+          <span className="text-slate-800">{formatValorSimple(despues, nombresPorId)}</span>
         )}
       </div>
       {typeof antes === "object" && (
@@ -127,7 +132,7 @@ const CambioHorario = ({ antes, despues }) => {
   );
 };
 
-const CambioRecursos = ({ antes, despues }) => {
+const CambioRecursos = ({ antes, despues, nombresPorId = {} }) => {
   const renderLista = (lista, color) => {
     if (!Array.isArray(lista) || lista.length === 0)
       return <span className="text-slate-400 italic">sin recursos</span>;
@@ -136,13 +141,22 @@ const CambioRecursos = ({ antes, despues }) => {
         {lista.map((r, i) => {
           const id =
             typeof r.recursoId === "object"
-              ? r.recursoId?.nombre || r.recursoId?._id
+              ? r.recursoId?._id?.toString?.() || r.recursoId?.id?.toString?.() || r.recursoId?.nombre
               : r.recursoId;
+          const nombre =
+            r.recursoId?.nombre ||
+            r.nombre ||
+            nombresPorId[id] ||
+            (typeof r.recursoId === "object" ? r.recursoId?.descripcion : null);
+
           return (
             <li key={id || i} className="text-xs flex items-start gap-1 break-words">
               <span className="font-bold shrink-0">•</span>
               <span className="flex-1">
-                <span className="font-medium">{r.tipoRecurso}</span> — <span className="break-all">{id || "recurso"}</span> ×{r.cantidad}
+                <span className="font-medium">{r.tipoRecurso || r.tipo || "Recurso"}</span>
+                {nombre ? <span> — <span className="break-all">{nombre}</span></span> : null}
+                {!nombre && id ? <span> — <span className="break-all">{id}</span></span> : null}
+                {!nombre && !id ? <span> — recurso</span> : null} ×{r.cantidad}
               </span>
             </li>
           );
@@ -168,7 +182,7 @@ const CambioRecursos = ({ antes, despues }) => {
   );
 };
 
-const RenderCambios = ({ cambios }) => {
+const RenderCambios = ({ cambios, nombresPorId = {} }) => {
   if (!cambios || Object.keys(cambios).length === 0) return null;
 
   return (
@@ -190,6 +204,7 @@ const RenderCambios = ({ cambios }) => {
               key={campo}
               antes={valor?.antes}
               despues={valor?.despues}
+              nombresPorId={nombresPorId}
             />
           );
         }
@@ -201,6 +216,7 @@ const RenderCambios = ({ cambios }) => {
               campo={campo}
               antes={valor.antes}
               despues={valor.despues}
+              nombresPorId={nombresPorId}
             />
           );
         }
@@ -211,7 +227,7 @@ const RenderCambios = ({ cambios }) => {
               {ETIQUETAS_CAMPO[campo] || campo}:
             </span>{" "}
             <div className="mt-1 text-slate-700">
-              <ResumenValorHistorial valor={valor} />
+              <ResumenValorHistorial valor={valor} nombresPorId={nombresPorId} />
             </div>
           </div>
         );
@@ -255,44 +271,114 @@ export default function PedidoDetalle() {
 
   const tieneConflictos = conflictos.length > 0;
 
+  const nombresPorId = (() => {
+    const map = {};
+
+    if (pedido?.laboratorio) {
+      const idLaboratorio =
+        typeof pedido.laboratorio === "object"
+          ? pedido.laboratorio?._id?.toString?.() || pedido.laboratorio?.id?.toString?.()
+          : pedido.laboratorio;
+      if (idLaboratorio && typeof pedido.laboratorio === "object" && pedido.laboratorio.nombre) {
+        map[idLaboratorio] = pedido.laboratorio.nombre;
+      }
+    }
+
+    (pedido?.recursos || []).forEach((recurso) => {
+      const recursoId =
+        typeof recurso.recursoId === "object"
+          ? recurso.recursoId?._id?.toString?.() || recurso.recursoId?.id?.toString?.()
+          : recurso.recursoId;
+      const nombreRecurso = recurso.recursoId?.nombre || recurso.nombre || nombresRecursos[recursoId];
+      if (recursoId && nombreRecurso) {
+        map[recursoId] = nombreRecurso;
+      }
+    });
+
+    return map;
+  })();
+
   useEffect(() => {
     const fetchPedido = async () => {
       try {
         const res = await api.get(`/pedido/${id}`);
-        setPedido(res.data);
-        setConflictos(res.data.conflictos || []);
+        const dataPedido = res.data;
+        setPedido(dataPedido);
+        setConflictos(dataPedido.conflictos || []);
 
-        if (res.data.recursos && res.data.recursos.length > 0) {
+        // 1. Set para coleccionar IDs únicos (actuales e históricos)
+        const idsPendientes = new Set();
+        const tiposPorId = {}; // Para saber a qué endpoint pegarle
+
+        // Agregar recursos actuales
+        (dataPedido.recursos || []).forEach((r) => {
+          const recId = typeof r.recursoId === "object" ? r.recursoId?._id : r.recursoId;
+          if (recId) {
+            idsPendientes.add(recId);
+            tiposPorId[recId] = r.tipoRecurso?.toLowerCase() || r.tipo?.toLowerCase();
+          }
+        });
+
+        // 2. Función recursiva para buscar IDs huérfanos en el historial
+        const extraerIdsHistorial = (obj) => {
+          if (!obj || typeof obj !== "object") return;
+          
+          // Buscar llaves comunes de IDs en tu estructura
+          const posiblesLlaves = ["recursoId", "itemId", "equipoId"];
+          posiblesLlaves.forEach(llave => {
+            if (obj[llave]) {
+              const strId = typeof obj[llave] === "object" ? obj[llave]._id : obj[llave];
+              if (typeof strId === "string" && /^[a-f\d]{24}$/i.test(strId)) {
+                idsPendientes.add(strId);
+                // Si encontramos tipo en el objeto, lo guardamos para la consulta
+                if (obj.tipo || obj.tipoRecurso) {
+                  tiposPorId[strId] = (obj.tipo || obj.tipoRecurso).toLowerCase();
+                }
+              }
+            }
+          });
+
+          // Seguir escaneando hijos
+          Object.values(obj).forEach((val) => {
+            if (typeof val === "object") extraerIdsHistorial(val);
+          });
+        };
+
+        extraerIdsHistorial(dataPedido.historial);
+
+        // 3. Obtener nombres faltantes
+        if (idsPendientes.size > 0) {
           const nombresMap = {};
+          
           await Promise.all(
-            res.data.recursos.map(async (r) => {
-              const recId =
-                typeof r.recursoId === "object"
-                  ? r.recursoId?._id
-                  : r.recursoId;
-
-              if (r.recursoId && typeof r.recursoId === "object" && r.recursoId.nombre) {
-                nombresMap[recId] = r.recursoId.nombre;
+            Array.from(idsPendientes).map(async (recId) => {
+              // Si el pedido ya lo trajo populado desde el backend, lo usamos
+              const recursoPopulado = dataPedido.recursos?.find(
+                r => (r.recursoId?._id || r.recursoId) === recId
+              );
+              
+              if (recursoPopulado?.recursoId?.nombre) {
+                nombresMap[recId] = recursoPopulado.recursoId.nombre;
                 return;
               }
 
-              const tipo = r.tipoRecurso?.toLowerCase() || r.tipo?.toLowerCase();
-              if (recId && tipo) {
-                try {
-                  const endpoint =
-                    tipo === "equipo" ? `/equipo/${recId}` : `/items/${recId}`;
-                  const resRecurso = await api.get(endpoint);
+              // Si no, lo buscamos en la API (Fallback para el historial)
+              // Asumimos "item" por defecto si no encontramos el tipo en el escaneo
+              const tipo = tiposPorId[recId] === "equipo" ? "equipo" : "items"; 
+              try {
+                const resRecurso = await api.get(`/${tipo}/${recId}`);
+                if (resRecurso.data?.nombre) {
                   nombresMap[recId] = resRecurso.data.nombre;
-                } catch (error) {
-                  console.error(`Error al obtener recurso ${recId}:`, error);
                 }
+              } catch (error) {
+                console.warn(`No se pudo obtener el nombre histórico para ID ${recId}:`, error.message);
               }
             })
           );
-          setNombresRecursos(nombresMap);
+          setNombresRecursos(prev => ({ ...prev, ...nombresMap }));
         }
       } catch (err) {
-        console.error(err);
+        console.error("Error al obtener el pedido:", err);
       } finally {
         setLoading(false);
       }
@@ -680,7 +766,7 @@ export default function PedidoDetalle() {
 
                               {evento.cambios && Object.keys(evento.cambios).length > 0 && (
                                 <div className="mt-3 pt-3 border-t border-slate-200">
-                                  <RenderCambios cambios={evento.cambios} />
+                                  <RenderCambios cambios={evento.cambios} nombresPorId={nombresPorId} />
                                 </div>
                               )}
                             </div>
