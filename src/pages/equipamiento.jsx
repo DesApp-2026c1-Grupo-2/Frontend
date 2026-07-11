@@ -51,6 +51,7 @@ const tabs = [
 // Tamaño de página del listado principal y del panel de descartados.
 const LIMIT = 20;
 const DESCARTES_LIMIT = 10;
+const UMBRAL_STOCK_BAJO = 5;
 
 // Estados válidos de un lote (consumibles). El backend solo admite estos dos
 // valores; no existe "reservado" ni "en uso" (ver
@@ -209,27 +210,20 @@ function MobilityPill({ mobility }) {
   );
 }
 
-function AlertCard({ item }) {
-  const styleMap = {
-    Reservado: { bg: "bg-amber-50 border-amber-200", iconColor: "text-amber-500" },
-    "Fuera de servicio": { bg: "bg-rose-50 border-rose-200", iconColor: "text-rose-500" },
-    Mantenimiento: { bg: "bg-yellow-50 border-yellow-200", iconColor: "text-yellow-500" },
-    Descartado: { bg: "bg-rose-50 border-rose-200", iconColor: "text-rose-500" },
-  };
-
-  const style = styleMap[item.estado] || { bg: "bg-slate-50 border-slate-200", iconColor: "text-slate-400" };
-
+function BajoStockCard({ material }) {
   return (
-    <div className={`rounded-xl border p-3 ${style.bg}`}>
+    <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
       <div className="flex items-center gap-3">
-        <InfoIcon colorClass={style.iconColor} />
+        <InfoIcon colorClass="text-amber-500" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-slate-900 text-sm">{item.tipo}</span>
-            <StatusPill status={item.estado} />
+            <span className="font-semibold text-slate-900 text-sm">{material.nombre}</span>
+            <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+              Bajo stock
+            </span>
           </div>
           <div className="mt-0.5 text-xs text-slate-500">
-            Código {item.codigo} · {item.ubicacion} · {item.cantidad} {item.cantidad === 1 ? "unidad" : "unidades"}
+            Código {material.codigo} · {material.stockDisponible} {material.unidad}
           </div>
         </div>
       </div>
@@ -346,9 +340,10 @@ function Equipamiento() {
   const [estadisticas, setEstadisticas] = useState(null);
 
   // Panel "Alertas de inventario" (lotes descartados, paginado aparte).
-  const [descartados, setDescartados] = useState([]);
-  const [descartadosTotal, setDescartadosTotal] = useState(0);
-  const [descartadosPage, setDescartadosPage] = useState(1);
+ const [materialesBajoStock, setMaterialesBajoStock] = useState([]);
+ const [bajoStockLoading, setBajoStockLoading] = useState(false);
+ const [bajoStockError, setBajoStockError] = useState("");
+ const [bajoStockPage, setBajoStockPage] = useState(1);
 
   const [expandedGroups, setExpandedGroups] = useState(() => new Set());
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -481,30 +476,33 @@ function Equipamiento() {
 
   // ─── Efecto C: panel de descartados. Se pide SIEMPRE con page/limit para
   // recibir la forma paginada { total, page, limit, lotes }.
-  useEffect(() => {
-    let cancelado = false;
-    const cargar = async () => {
-      try {
-        const resp = await equipamientoService.getLotes({
-          estado: "descartado",
-          page: descartadosPage,
-          limit: DESCARTES_LIMIT,
-        });
-        if (cancelado) return;
-        setDescartados((resp.lotes || []).map(mapearLoteBackend));
-        setDescartadosTotal(resp.total || 0);
-      } catch (err) {
-        if (cancelado) return;
-        console.error("Error al cargar descartados:", err);
-        setDescartados([]);
-        setDescartadosTotal(0);
-      }
-    };
-    cargar();
-    return () => {
-      cancelado = true;
-    };
-  }, [descartadosPage, refreshKey]);
+useEffect(() => {
+  let cancelado = false;
+  const cargarBajoStock = async () => {
+    try {
+      setBajoStockLoading(true);
+      setBajoStockError("");
+      const materiales = await equipamientoService.getAllItems({ tipo: "material" });
+      if (cancelado) return;
+      const bajoStock = (materiales || [])
+        .filter((m) => (m.stockDisponible ?? 0) <= UMBRAL_STOCK_BAJO)
+        .sort((a, b) => (a.stockDisponible ?? 0) - (b.stockDisponible ?? 0));
+      setMaterialesBajoStock(bajoStock);
+      setBajoStockPage(1);
+    } catch (err) {
+      if (cancelado) return;
+      console.error("Error al cargar materiales con bajo stock:", err);
+      setMaterialesBajoStock([]);
+      setBajoStockError("No se pudo cargar el stock bajo de materiales.");
+    } finally {
+      if (!cancelado) setBajoStockLoading(false);
+    }
+  };
+  cargarBajoStock();
+  return () => {
+    cancelado = true;
+  };
+}, [refreshKey]);
 
   // Recarga tras una mutación: respeta tab/búsqueda/página y refresca tarjetas.
   const recargarTodo = () => {
@@ -1025,8 +1023,11 @@ function Equipamiento() {
     { title: "Descartes", value: estadisticas?.descartes ?? 0, subtitle: "Historial consultable", hex: "#f43f5e" },
   ];
 
-  const descartadosPaginas = Math.max(1, Math.ceil(descartadosTotal / DESCARTES_LIMIT));
-
+ const bajoStockPaginas = Math.max(1, Math.ceil(materialesBajoStock.length / DESCARTES_LIMIT));
+ const materialesBajoStockPagina = materialesBajoStock.slice(
+  (bajoStockPage - 1) * DESCARTES_LIMIT,
+  bajoStockPage * DESCARTES_LIMIT
+);
   // Al expandir un grupo, se piden sus lotes on-demand (una sola vez, cacheados).
   const toggleGroup = (itemId) => {
     const estaAbierto = expandedGroups.has(itemId);
@@ -1453,28 +1454,36 @@ function Equipamiento() {
               <div className="border-b border-slate-100 px-5 py-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <h2 className="text-lg font-semibold text-emerald-950">Alertas de inventario</h2>
-                  <span className="shrink-0 rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-bold text-rose-600">
-                    {descartadosTotal} descartados
+                  <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-700">
+                    {materialesBajoStock.length} bajo stock
                   </span>
                 </div>
-                <p className="mb-0 text-sm text-slate-500">Lotes descartados del inventario activo.</p>
+                <p className="mb-0 text-sm text-slate-500">
+                  Materiales con stock disponible igual o menor a {UMBRAL_STOCK_BAJO} unidades.
+                </p>
               </div>
               <div className="max-h-[36rem] overflow-y-auto p-5 pr-3">
                 <div className="flex flex-col gap-3 pr-2">
-                  {descartados.length > 0 ? (
-                    descartados.map((item) => (
-                      <AlertCard key={item.id} item={item} />
+                  {bajoStockLoading ? (
+                    <p className="text-center text-sm text-slate-400">Cargando...</p>
+                  ) : bajoStockError ? (
+                    <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-center text-sm text-rose-600">
+                      {bajoStockError}
+                    </p>
+                  ) : materialesBajoStockPagina.length > 0 ? (
+                    materialesBajoStockPagina.map((m) => (
+                      <BajoStockCard key={m._id || m.id} material={m} />
                     ))
                   ) : (
                     <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center text-sm leading-6 text-slate-500">
-                      No hay descartados en inventario.
+                      No hay materiales con bajo stock.
                     </p>
                   )}
                 </div>
                 <Paginador
-                  page={descartadosPage}
-                  totalPaginas={descartadosPaginas}
-                  onPageChange={setDescartadosPage}
+                  page={bajoStockPage}
+                  totalPaginas={bajoStockPaginas}
+                  onPageChange={setBajoStockPage}
                 />
               </div>
             </Card>
