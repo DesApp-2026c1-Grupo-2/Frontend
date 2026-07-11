@@ -332,6 +332,7 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
 
 
   const handleSiguiente = () => {
+    setErrorSubmit("");
     if (step === 0) {
       const nuevosErrores = {};
 
@@ -886,7 +887,7 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
         </div>
         
         <div className="flex justify-between px-8 py-5 border-t border-zinc-100 bg-zinc-50/50 rounded-b-2xl">
-          <button onClick={step === 0 ? onClose : () => setStep(s => s - 1)}
+          <button onClick={step === 0 ? onClose : () => { setStep(s => s - 1); setErrorSubmit(""); }}
             className="px-5 py-2 rounded-xl text-sm font-medium text-zinc-600 border border-zinc-200 bg-white hover:bg-zinc-50 hover:text-zinc-800 transition-all shadow-sm">
             {step === 0 ? "Cancelar" : "Anterior"}
           </button>
