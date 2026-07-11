@@ -230,7 +230,7 @@ export const deleteEquipo = async (equipoId) => {
 // El responsableId lo toma el backend del JWT.
 export const registrarMantenimiento = async (equipoId, data) => {
   try {
-    const response = await api.post(`/equipos/${equipoId}/mantenimientos`, data);
+    const response = await api.post(`/equipo/${equipoId}/mantenimientos`, data);
     return response.data;
   } catch (error) {
     console.error(`Error al registrar mantenimiento del equipo ${equipoId}:`, error);
@@ -242,7 +242,7 @@ export const registrarMantenimiento = async (equipoId, data) => {
 // mantenimiento abierto. Body opcional: { fecha } (fecha de fin, no futura).
 export const finalizarMantenimiento = async (equipoId, data = {}) => {
   try {
-    const response = await api.patch(`/equipos/${equipoId}/mantenimientos/finalizar`, data);
+    const response = await api.patch(`/equipo/${equipoId}/mantenimientos/finalizar`, data);
     return response.data;
   } catch (error) {
     console.error(`Error al finalizar mantenimiento del equipo ${equipoId}:`, error);

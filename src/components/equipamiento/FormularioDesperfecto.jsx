@@ -4,7 +4,9 @@ export default function FormularioDesperfecto({
   handleChange,
   handleSubmit,
   errores = {},
+  enviando = false,
 }) {
+  const descripcion = desperfectoForm.descripcion || "";
   const inputClass = (campo) =>
     `w-full px-3 py-2 rounded-lg border bg-white text-slate-800 focus:outline-none focus:ring-2 transition ${
       errores[campo]
@@ -28,60 +30,35 @@ export default function FormularioDesperfecto({
 
       <div>
         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-          Reserva asociada
-        </label>
-        <select
-          name="reservaId"
-          value={desperfectoForm.reservaId || ""}
-          onChange={handleChange}
-          className={inputClass("reservaId")}
-        >
-          <option value="">Seleccionar reserva</option>
-          <option value="res-1">Reserva #4012 - Laboratorio A</option>
-          <option value="res-2">Reserva #4592 - Clase practica de Fisica</option>
-        </select>
-        {errores.reservaId && <p className="text-red-500 text-xs mt-1">{errores.reservaId}</p>}
-      </div>
-
-      <div>
-        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-          Fecha
-        </label>
-        <input
-          type="date"
-          name="fecha"
-          value={desperfectoForm.fecha || ""}
-          onChange={handleChange}
-          required
-          className={inputClass("fecha")}
-        />
-        {errores.fecha && <p className="text-red-500 text-xs mt-1">{errores.fecha}</p>}
-      </div>
-
-      <div>
-        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
           Descripcion
         </label>
         <textarea
           name="descripcion"
-          value={desperfectoForm.descripcion || ""}
+          value={descripcion}
           onChange={handleChange}
           placeholder="Escribir detalle del desperfecto..."
           rows="4"
           required
+          maxLength={500}
           className={`${inputClass("descripcion")} resize-none`}
         />
-        {errores.descripcion && (
-          <p className="text-red-500 text-xs mt-1">{errores.descripcion}</p>
-        )}
+        <div className="mt-1 flex items-center justify-between">
+          {errores.descripcion ? (
+            <p className="text-red-500 text-xs">{errores.descripcion}</p>
+          ) : (
+            <span />
+          )}
+          <span className="text-xs text-slate-400">{descripcion.length}/500</span>
+        </div>
       </div>
 
       <div className="flex justify-end gap-3 pt-2">
         <button
           type="submit"
-          className="px-3 py-2 rounded-lg text-sm font-medium bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm transition"
+          disabled={enviando}
+          className="px-3 py-2 rounded-lg text-sm font-medium bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm transition disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          Guardar
+          {enviando ? "Guardando..." : "Guardar"}
         </button>
       </div>
     </form>

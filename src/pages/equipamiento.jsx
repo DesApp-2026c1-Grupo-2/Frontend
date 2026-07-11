@@ -4,6 +4,7 @@ import { Card } from "../components/equipamiento/Card";
 import { PageHeader } from "../components/SharedUi";
 import Paginador from "../components/common/Paginador";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
+import { useAuth } from "../context/AuthContext";
 import * as equipamientoService from "../services/equipamiento";
 import {
   categoriaATipoItem,
@@ -237,7 +238,8 @@ function AlertCard({ item }) {
 }
 
 // Actualizamos InventoryCard para recibir la acción de Desperfecto
-function InventoryCard({ item, onEdit, onDelete, onReportDesperfecto, onUpdateEstado, hideIdentity = false, hideDelete = false }) {
+function InventoryCard({ item, onEdit, onDelete, onReportDesperfecto, onUpdateEstado, puedeGestionar = false, hideIdentity = false, hideDelete = false }) {
+  const puedeReportarDesperfecto = puedeGestionar && item.estado === "Disponible";
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
@@ -281,15 +283,17 @@ function InventoryCard({ item, onEdit, onDelete, onReportDesperfecto, onUpdateEs
               <FiRefreshCw />
               <span className="hidden sm:inline">Estado</span>
             </button>
-            <button
-              type="button"
-              onClick={onReportDesperfecto}
-              className="inline-flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm font-medium text-amber-600 transition hover:bg-amber-100 cursor-pointer"
-              aria-label="Registrar desperfecto"
-            >
-              <FiAlertTriangle />
-              <span className="hidden sm:inline">Desperfecto</span>
-            </button>
+            {puedeReportarDesperfecto && (
+              <button
+                type="button"
+                onClick={onReportDesperfecto}
+                className="inline-flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm font-medium text-amber-600 transition hover:bg-amber-100 cursor-pointer"
+                aria-label="Registrar desperfecto"
+              >
+                <FiAlertTriangle />
+                <span className="hidden sm:inline">Desperfecto</span>
+              </button>
+            )}
           </>
         )}
         <button
@@ -320,6 +324,9 @@ function InventoryCard({ item, onEdit, onDelete, onReportDesperfecto, onUpdateEs
 /* ─── Componente principal ─── */
 function Equipamiento() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  // Reportar desperfecto / gestionar estado del equipo: solo PERSONAL/ADMIN.
+  const puedeGestionar = user?.rol === "ADMIN" || user?.rol === "PERSONAL";
   const [activeTab, setActiveTab] = useState(tabs[0].label);
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query, 400);
@@ -370,11 +377,9 @@ function Equipamiento() {
   // ─── NUEVOS ESTADOS PARA EL MODAL DE DESPERFECTOS ───
   const [isDesperfectoOpen, setIsDesperfectoOpen] = useState(false);
   const [desperfectoItem, setDesperfectoItem] = useState(null);
-  const [desperfectoForm, setDesperfectoForm] = useState({
-    reservaId: "",
-    fecha: new Date().toISOString().split('T')[0],
-    descripcion: ""
-  });
+  const [desperfectoForm, setDesperfectoForm] = useState({ descripcion: "" });
+  const [desperfectoEnviando, setDesperfectoEnviando] = useState(false);
+  const [erroresDesperfecto, setErroresDesperfecto] = useState({});
 
   // ─── ESTADOS PARA EL MODAL DE ACTUALIZACIÓN DE ESTADO ───
   const [isEstadoOpen, setIsEstadoOpen] = useState(false);
@@ -760,11 +765,9 @@ function Equipamiento() {
   // ─── ACCIONES DEL FORMULARIO DE DESPERFECTOS ───
   const openDesperfectoModal = (item) => {
     setDesperfectoItem(item);
-    setDesperfectoForm({
-      reservaId: "",
-      fecha: new Date().toISOString().split('T')[0],
-      descripcion: ""
-    });
+    setDesperfectoForm({ descripcion: "" });
+    setErroresDesperfecto({});
+    setDesperfectoMsg("");
     setIsDesperfectoOpen(true);
   };
 
@@ -772,24 +775,49 @@ function Equipamiento() {
     setIsDesperfectoOpen(false);
     setDesperfectoItem(null);
     setDesperfectoMsg("");
+    setErroresDesperfecto({});
   };
 
   const handleDesperfectoChange = (e) => {
     const { name, value } = e.target;
     setDesperfectoForm((prev) => ({ ...prev, [name]: value }));
+    if (erroresDesperfecto[name]) {
+      setErroresDesperfecto((prev) => ({ ...prev, [name]: undefined }));
+    }
   };
 
   const handleDesperfectoSubmit = async (e) => {
     e.preventDefault();
+    if (!desperfectoItem) return;
     setDesperfectoMsg("");
+
+    // Validación inline: descripción obligatoria, máx 500 caracteres.
+    const descripcion = (desperfectoForm.descripcion || "").trim();
+    if (!descripcion) {
+      setErroresDesperfecto({ descripcion: "La descripción es obligatoria." });
+      return;
+    }
+    if (descripcion.length > 500) {
+      setErroresDesperfecto({ descripcion: "La descripción no puede superar los 500 caracteres." });
+      return;
+    }
+    setErroresDesperfecto({});
+
+    const equipoId = desperfectoItem.itemId || desperfectoItem.id;
+    setDesperfectoEnviando(true);
     try {
-      // await equipamientoService.createDesperfecto(desperfectoItem.id, desperfectoForm);
+      await equipamientoService.registrarMantenimiento(equipoId, {
+        tipo: "correctivo",
+        descripcion,
+      });
       setDesperfectoMsg(`ok:Desperfecto registrado con éxito para el equipo: ${desperfectoItem.tipo}`);
       recargarTodo();
-      setTimeout(() => { closeDesperfectoModal(); setDesperfectoMsg(""); }, 2000);
+      setTimeout(() => { closeDesperfectoModal(); }, 2000);
     } catch (err) {
       console.error("Error al guardar desperfecto:", err);
-      setDesperfectoMsg("error:Error al registrar el desperfecto.");
+      setDesperfectoMsg("error:" + (err.response?.data?.error || "No se pudo registrar el desperfecto."));
+    } finally {
+      setDesperfectoEnviando(false);
     }
   };
 
@@ -1127,6 +1155,7 @@ function Equipamiento() {
                         onDelete={() => handleDeleteItem(item)}
                         onReportDesperfecto={() => openDesperfectoModal(item)} // <-- Enlazado móvil
                         onUpdateEstado={() => openEstadoModal(item)} // <-- Actualizar estado (móvil)
+                        puedeGestionar={puedeGestionar}
                       />
                     ))
                   ) : (
@@ -1203,6 +1232,7 @@ function Equipamiento() {
                                   onEdit={() => openLoteEdit(item)}
                                   onReportDesperfecto={() => openDesperfectoModal(item)}
                                   onUpdateEstado={() => openEstadoModal(item)}
+                                  puedeGestionar={puedeGestionar}
                                 />
                               ))
                             ) : (
@@ -1272,14 +1302,16 @@ function Equipamiento() {
                               >
                                 <FiRefreshCw />
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => openDesperfectoModal(item)}
-                                className="rounded-lg p-2 text-amber-500 bg-amber-50 hover:bg-amber-100 transition cursor-pointer"
-                                title="Registrar Desperfecto"
-                              >
-                                <FiAlertTriangle />
-                              </button>
+                              {puedeGestionar && item.estado === "Disponible" && (
+                                <button
+                                  type="button"
+                                  onClick={() => openDesperfectoModal(item)}
+                                  className="rounded-lg p-2 text-amber-500 bg-amber-50 hover:bg-amber-100 transition cursor-pointer"
+                                  title="Registrar Desperfecto"
+                                >
+                                  <FiAlertTriangle />
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 onClick={() => openEditForm(item)}
@@ -1564,6 +1596,8 @@ function Equipamiento() {
                 desperfectoForm={desperfectoForm}
                 handleChange={handleDesperfectoChange}
                 handleSubmit={handleDesperfectoSubmit}
+                errores={erroresDesperfecto}
+                enviando={desperfectoEnviando}
                 cerrarModal={closeDesperfectoModal}
               />
             </div>
