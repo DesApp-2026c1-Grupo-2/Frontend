@@ -63,6 +63,7 @@ export default function PedidosLaboratorio() {
   const [isLoading, setIsLoading] = useState(true);
   const [tab, setTab] = useState("todos");
   const [busqueda, setBusqueda] = useState("");
+  const [pagina, setPagina] = useState(1);
   const [showNuevo, setShowNuevo] = useState(false);
   const [pedidoEditando, setPedidoEditando] = useState(null);
   const [errorOperacion, setErrorOperacion] = useState("");
@@ -102,6 +103,11 @@ export default function PedidosLaboratorio() {
         (p._id || p.id)?.toString().toLowerCase().includes(busqueda.trim().toLowerCase())
       )
     : porTab[tab];
+
+  const POR_PAGINA = 9;
+  const totalPaginas = Math.max(1, Math.ceil(lista.length / POR_PAGINA));
+  const paginaActual = Math.min(pagina, totalPaginas);
+  const listaPaginada = lista.slice((paginaActual - 1) * POR_PAGINA, paginaActual * POR_PAGINA);
 
   useEffect(() => {
     const fetchPedidos = async () => {
@@ -190,15 +196,15 @@ export default function PedidosLaboratorio() {
 
       {/* MÉTRICAS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div className="bg-white rounded-2xl border border-emerald-200 shadow-sm p-5">
           <p className="text-sm text-emerald-700 font-medium">Pedidos</p>
           <p className="text-2xl font-bold">{pedidos.length}</p>
         </div>
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div className="bg-white rounded-2xl border border-emerald-200 shadow-sm p-5">
           <p className="text-sm text-emerald-700 font-medium">Pendientes</p>
           <p className="text-2xl font-bold">{pendientes.length}</p>
         </div>
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div className="bg-white rounded-2xl border border-emerald-200 shadow-sm p-5">
           <p className="text-sm text-emerald-700 font-medium">Aprobados</p>
           <p className="text-2xl font-bold">
             {pedidos.filter((p) => normalizarEstado(p.estado) === "Aprobado").length}
@@ -212,7 +218,7 @@ export default function PedidosLaboratorio() {
           {TABS.map(({ key, label, count }) => (
             <button
               key={key}
-              onClick={() => { setTab(key); setBusqueda(""); }}
+              onClick={() => { setTab(key); setBusqueda(""); setPagina(1); }}
               className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
                 tab === key
                   ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
@@ -228,7 +234,7 @@ export default function PedidosLaboratorio() {
         <input
           type="text"
           value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
+          onChange={(e) => { setBusqueda(e.target.value); setPagina(1); }}
           placeholder="Buscar por ID..."
           className="w-full sm:w-56 px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm text-slate-700 focus:outline-none focus:border-emerald-400 transition"
         />
@@ -252,7 +258,7 @@ export default function PedidosLaboratorio() {
                 </p>
               </div>
             ) : (
-              lista.map((p) => {
+              listaPaginada.map((p) => {
                 const id = p._id || p.id;
                 const estado = normalizarEstado(p.estado);
                 const esPropio =
@@ -361,6 +367,45 @@ export default function PedidosLaboratorio() {
             {/* FIN DE LA VALIDACIÓN */}
 
           </div>
+
+          {/* PAGINADOR */}
+          {totalPaginas > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-8 flex-wrap">
+              <button
+                onClick={() => setPagina((p) => Math.max(1, p - 1))}
+                disabled={paginaActual === 1}
+                className="px-3 py-1.5 rounded-xl text-sm border border-slate-200 bg-white text-slate-600 hover:border-emerald-300 hover:text-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              >
+                ← Anterior
+              </button>
+
+              {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setPagina(n)}
+                  className={`w-9 h-9 rounded-xl text-sm font-medium border transition ${
+                    n === paginaActual
+                      ? "bg-emerald-500 text-white border-emerald-500"
+                      : "bg-white text-slate-600 border-slate-200 hover:border-emerald-300 hover:text-emerald-700"
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
+
+              <button
+                onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+                disabled={paginaActual === totalPaginas}
+                className="px-3 py-1.5 rounded-xl text-sm border border-slate-200 bg-white text-slate-600 hover:border-emerald-300 hover:text-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              >
+                Siguiente →
+              </button>
+
+              <span className="text-xs text-slate-400 ml-2">
+                Página {paginaActual} de {totalPaginas} · {lista.length} pedidos
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

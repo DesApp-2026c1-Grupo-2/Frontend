@@ -363,6 +363,20 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
         erroresExtra.horaFin = "La hora de finalización debe ser posterior a la hora de inicio.";
       }
 
+      if (form.hora) {
+        const [h, m] = form.hora.split(':').map(Number);
+        if (h < 8 || h > 21 || (h === 21 && m > 0)) {
+          erroresExtra.hora = "La hora de inicio debe ser entre las 08:00 y las 21:00.";
+        }
+      }
+
+      if (form.horaFin) {
+        const [h, m] = form.horaFin.split(':').map(Number);
+        if (h > 22 || (h === 22 && m > 0)) {
+          erroresExtra.horaFin = "La hora de finalización máxima es a las 22:00.";
+        }
+      }
+
       const hoy = new Date();
       hoy.setHours(0, 0, 0, 0);
       const [year, month, day] = form.fecha.split("-").map(Number);
