@@ -16,6 +16,40 @@ export const tipoToCategoria = {
   'equipo': 'Equipos'
 };
 
+// Etiqueta legible por tipo de movimiento de stock (contrato /movimientos).
+// Se usa en el Historial de Movimientos (PanelMovimientos.jsx) para mostrar el
+// enum del backend de forma amigable.
+export const tipoMovimientoLabel = {
+  APROBACION_RESERVA: 'Aprobación de reserva',
+  DESCARTE: 'Descarte',
+  COMPRA: 'Compra',
+  AJUSTE_MANUAL: 'Ajuste manual',
+  BAJA: 'Baja',
+  DEVOLUCION: 'Devolución',
+  TRANSFERENCIA: 'Transferencia',
+  MANTENIMIENTO: 'Mantenimiento',
+};
+
+// Opciones del filtro por tipo de movimiento: "Todos" (→ sin filtro) seguido de
+// los tipos del enum en el orden declarado arriba. Se excluye MANTENIMIENTO del
+// filtro (el mantenimiento tiene su propia pestaña); la etiqueta se conserva en
+// `tipoMovimientoLabel` para mostrarlo legible si el backend lo devuelve.
+export const tiposMovimiento = [
+  'Todos',
+  ...Object.keys(tipoMovimientoLabel).filter((t) => t !== 'MANTENIMIENTO'),
+];
+
+// Tipos de mantenimiento de equipos (contrato /equipo/:id/mantenimientos).
+// Se usan en el Historial de Mantenimiento (PanelMantenimiento.jsx).
+export const tipoMantenimientoLabel = {
+  preventivo: 'Preventivo',
+  correctivo: 'Correctivo',
+};
+
+// Opciones del filtro por tipo de mantenimiento: "Todos" (→ sin filtro) seguido
+// de los tipos válidos del backend.
+export const tiposMantenimiento = ['Todos', 'preventivo', 'correctivo'];
+
 // Mapeo inverso SOLO para la pantalla de Stock: categoría del front -> tipo de
 // Item válido para el backend. No incluye 'Equipos' porque los equipos son una
 // entidad aparte (nunca se crean como Item con tipo=equipo, que daría 400).

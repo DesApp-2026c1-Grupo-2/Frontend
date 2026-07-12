@@ -2,7 +2,8 @@ import { useSearchParams } from "react-router-dom";
 import { PageHeader } from "../components/SharedUi";
 import { Card } from "../components/equipamiento/Card";
 import PanelDescartes from "../components/historial/PanelDescartes";
-import PanelProximamente from "../components/historial/PanelProximamente";
+import PanelMovimientos from "../components/historial/PanelMovimientos";
+import PanelMantenimiento from "../components/historial/PanelMantenimiento";
 import { FiRepeat, FiArchive, FiTool } from "react-icons/fi";
 
 const tabs = [
@@ -51,18 +52,8 @@ function Historial() {
 
       <Card padding="none" className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_14px_40px_rgba(15,23,42,0.06)]">
         {activeTab === "descartes" && <PanelDescartes />}
-        {activeTab === "movimientos" && (
-          <PanelProximamente
-            titulo="Historial de movimientos de stock"
-            descripcion="Registrará consumos, altas, ajustes, bajas y transferencias del inventario."
-          />
-        )}
-        {activeTab === "mantenimiento" && (
-          <PanelProximamente
-            titulo="Historial de mantenimiento de equipos"
-            descripcion="Registrará las intervenciones de mantenimiento sobre los equipos."
-          />
-        )}
+        {activeTab === "movimientos" && <PanelMovimientos />}
+        {activeTab === "mantenimiento" && <PanelMantenimiento />}
       </Card>
     </div>
   );

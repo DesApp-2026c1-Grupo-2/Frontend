@@ -251,6 +251,22 @@ export const finalizarMantenimiento = async (equipoId, data = {}) => {
   }
 };
 
+// Historial de mantenimiento de un equipo (paginado). Ojo: shape distinto al
+// resto de listados → { paginacion: { page, limit, total, totalPaginas },
+// registros: [...] }. `responsableId` viene populado (o null); los registros
+// van ordenados por `fecha` descendente.
+export const getMantenimientos = async (equipoId, { tipo, page = 1, limit = 20 } = {}) => {
+  try {
+    const params = { page, limit };
+    if (tipo) params.tipo = tipo;
+    const { data } = await api.get(`/equipo/${equipoId}/mantenimientos`, { params });
+    return data; // { paginacion, registros }
+  } catch (error) {
+    console.error(`Error al obtener mantenimientos del equipo ${equipoId}:`, error);
+    throw error;
+  }
+};
+
 // --- Helpers para consumidores que necesitan TODO el listado (no paginado) ---
 
 // Itera las páginas de un endpoint paginado (limit=100, máximo del back) y
