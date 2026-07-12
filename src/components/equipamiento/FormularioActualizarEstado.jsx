@@ -32,7 +32,6 @@ function ahoraLocal() {
 export default function FormularioActualizarEstado({
   equipo,
   onSubmit,
-  cerrarModal,
   enviando = false,
 }) {
   const estadoActual = estadoDisplayToBackend[equipo?.estado] || "disponible";
@@ -77,7 +76,7 @@ export default function FormularioActualizarEstado({
   };
 
   return (
-    <form onSubmit={submit} className="space-y-4">
+    <form onSubmit={submit} className="space-y-4 px-3 py-3">
       {/* EQUIPO (solo lectura) */}
       <div>
         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
@@ -185,17 +184,9 @@ export default function FormularioActualizarEstado({
       {/* BOTONES */}
       <div className="flex justify-end gap-3 pt-2">
         <button
-          type="button"
-          onClick={cerrarModal}
-          disabled={enviando}
-          className="px-4 py-2 rounded-lg text-sm border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 hover:border-slate-300 transition disabled:opacity-50"
-        >
-          Cancelar
-        </button>
-        <button
           type="submit"
           disabled={enviando || !destino}
-          className="px-5 py-2 rounded-lg text-sm font-medium bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm transition disabled:opacity-50"
+          className="px-3 py-2 rounded-lg text-sm font-medium bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm transition disabled:opacity-50"
         >
           {enviando ? "Guardando..." : "Actualizar estado"}
         </button>

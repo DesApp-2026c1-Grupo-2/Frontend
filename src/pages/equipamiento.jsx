@@ -1617,17 +1617,23 @@ useEffect(() => {
       {isEstadoOpen && (
         <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/45 backdrop-blur-sm sm:items-center sm:p-4" onClick={closeEstadoModal}>
           <div className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-md sm:rounded-[24px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]" onClick={(e) => e.stopPropagation()}>
-            <div className="border-b border-slate-100 px-6 py-4 bg-slate-50/80 flex items-center justify-between gap-4">
-              <h2 className="text-lg font-bold text-slate-900">Actualizar estado</h2>
-              <button
-                type="button"
-                onClick={closeEstadoModal}
-                aria-label="Cerrar formulario"
-                title="Cerrar formulario"
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
-              >
-                <FiX className="h-4 w-4" aria-hidden="true" />
-              </button>
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:static sm:px-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">Estado</div>
+                  <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Actualizar estado</h2>
+                  <p className="mt-1 text-sm text-slate-500">Cambia el estado del equipo seleccionado.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeEstadoModal}
+                  aria-label="Cerrar formulario"
+                  title="Cerrar formulario"
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
+                >
+                  <FiX className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
               {estadoMsg && (
@@ -1642,7 +1648,6 @@ useEffect(() => {
               <FormularioActualizarEstado
                 equipo={estadoItem}
                 onSubmit={handleEstadoSubmit}
-                cerrarModal={closeEstadoModal}
                 enviando={estadoEnviando}
               />
             </div>
