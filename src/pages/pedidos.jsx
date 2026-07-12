@@ -190,15 +190,15 @@ export default function PedidosLaboratorio() {
 
       {/* MÉTRICAS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div className="bg-white rounded-2xl border border-emerald-200 shadow-sm p-5">
           <p className="text-sm text-emerald-700 font-medium">Pedidos</p>
           <p className="text-2xl font-bold">{pedidos.length}</p>
         </div>
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div className="bg-white rounded-2xl border border-emerald-200 shadow-sm p-5">
           <p className="text-sm text-emerald-700 font-medium">Pendientes</p>
           <p className="text-2xl font-bold">{pendientes.length}</p>
         </div>
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div className="bg-white rounded-2xl border border-emerald-200 shadow-sm p-5">
           <p className="text-sm text-emerald-700 font-medium">Aprobados</p>
           <p className="text-2xl font-bold">
             {pedidos.filter((p) => normalizarEstado(p.estado) === "Aprobado").length}
