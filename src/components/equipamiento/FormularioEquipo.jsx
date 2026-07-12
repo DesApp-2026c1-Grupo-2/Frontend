@@ -1,6 +1,18 @@
 import { useState, useEffect } from "react";
 import { obtenerEdificios } from "../../services/edificioService";
 import { obtenerLaboratoriosPorEdificio } from "../../services/laboratorioService";
+import CustomSelect from "../common/CustomSelect";
+
+const MOVILIDAD_OPTIONS = [
+  { value: "false", label: "Movible" },
+  { value: "true", label: "Fija (Asignado a un espacio)" },
+];
+
+const ESTADO_OPTIONS = [
+  { value: "disponible", label: "Disponible" },
+  { value: "mantenimiento", label: "Mantenimiento" },
+  { value: "fuera de servicio", label: "Fuera de servicio" },
+];
 
 export default function FormularioEquipo({
   formData = {},
@@ -127,31 +139,24 @@ export default function FormularioEquipo({
           <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
             Movilidad
           </label>
-          <select
+          <CustomSelect
             name="esFijo"
             value={String(formData.esFijo)}
             onChange={handleChange}
-            className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
-          >
-            <option value="false">Movible</option>
-            <option value="true">Fija (Asignado a un espacio)</option>
-          </select>
+            options={MOVILIDAD_OPTIONS}
+          />
         </div>
 
         <div>
           <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
             Estado
           </label>
-          <select
+          <CustomSelect
             name="estado"
             value={formData.estado || "disponible"}
             onChange={handleChange}
-            className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
-          >
-            <option value="disponible">Disponible</option>
-            <option value="mantenimiento">Mantenimiento</option>
-            <option value="fuera de servicio">Fuera de servicio</option>
-          </select>
+            options={ESTADO_OPTIONS}
+          />
         </div>
       </div>
 
@@ -166,48 +171,40 @@ export default function FormularioEquipo({
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
               Edificio
             </label>
-            <select
+            <CustomSelect
               name="edificioId"
               value={formData.edificioId || ""}
               onChange={handleEdificioChange}
               disabled={loadingEdificios}
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition disabled:bg-slate-100 disabled:text-slate-400"
-            >
-              <option value="">
-                {loadingEdificios ? "Cargando edificios..." : "Seleccionar edificio"}
-              </option>
-              {edificios.map((edificio) => (
-                <option key={edificio.id} value={edificio.id}>
-                  {edificio.nombre}
-                </option>
-              ))}
-            </select>
+              placeholder={loadingEdificios ? "Cargando edificios..." : "Seleccionar edificio"}
+              options={edificios.map((edificio) => ({
+                value: edificio.id,
+                label: edificio.nombre,
+              }))}
+            />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
               Laboratorio
             </label>
-            <select
+            <CustomSelect
               name="laboratorioId"
               value={formData.laboratorioId || ""}
               onChange={handleChange}
               disabled={!formData.edificioId || loadingLaboratorios}
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition disabled:bg-slate-100 disabled:text-slate-400"
-            >
-              <option value="">
-                {!formData.edificioId
+              placeholder={
+                !formData.edificioId
                   ? "Elegí un edificio primero"
                   : loadingLaboratorios
                   ? "Cargando laboratorios..."
-                  : "Seleccionar laboratorio"}
-              </option>
-              {laboratorios.map((lab) => (
-                <option key={lab.id} value={lab.id}>
-                  {lab.nombre} · {lab.tipo} (cap. {lab.capacidad})
-                </option>
-              ))}
-            </select>
+                  : "Seleccionar laboratorio"
+              }
+              options={laboratorios.map((lab) => ({
+                value: lab.id,
+                label: `${lab.nombre} · ${lab.tipo} (cap. ${lab.capacidad})`,
+              }))}
+            />
           </div>
         </div>
       )}

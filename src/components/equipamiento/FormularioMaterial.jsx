@@ -1,3 +1,5 @@
+import CustomSelect from "../common/CustomSelect";
+
 export default function FormularioMaterial({
   formData,
   handleChange,
@@ -78,16 +80,12 @@ export default function FormularioMaterial({
         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
           Estado
         </label>
-        <select
+        <CustomSelect
           name="estado"
           value={formData.estado || "Disponible"}
           onChange={handleChange}
-          className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
-        >
-          {statusOptions.map((opt) => (
-            <option key={opt} value={opt}>{opt}</option>
-          ))}
-        </select>
+          options={statusOptions.map((opt) => ({ value: opt, label: opt }))}
+        />
         {formData.estado === "Descartado" && (
           <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
             Descartar genera una <strong>baja de stock</strong>: el lote deja de estar disponible.
