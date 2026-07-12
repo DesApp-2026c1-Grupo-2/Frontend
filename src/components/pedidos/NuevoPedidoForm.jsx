@@ -447,16 +447,16 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/40 backdrop-blur-sm p-4">
-      <div className="bg-white border border-zinc-200 rounded-2xl w-full max-w-2xl shadow-xl relative">
+      <div className="bg-white border border-zinc-200 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-xl relative">
         {/* CRUZ */}
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 text-zinc-400 hover:text-zinc-700 text-xl"
+          className="sticky top-3 ml-auto mr-3 z-10 text-zinc-400 hover:text-zinc-700"
         >
           <FiX size={20} />
         </button>
 
-        <div className="px-8 pt-6 pb-4">
+        <div className="flex-1 overflow-y-auto px-8 pt-6 pb-4">
            
           {/* Stepper */}
           <div className="flex items-center mb-6">
@@ -838,7 +838,7 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
           )}
 
           {step === 2 && (
-            <div className="space-y-1 bg-zinc-50 p-6 rounded-2xl border border-zinc-100">
+            <div className="space-y-1 bg-zinc-50 p-6 rounded-2xl border border-zinc-100 max-h-[50vh] overflow-y-auto">
               <p className="text-zinc-400 text-xs uppercase tracking-wider font-bold mb-4">Resumen del pedido</p>
               {[
                 ["Materia", form.materia || "—"],

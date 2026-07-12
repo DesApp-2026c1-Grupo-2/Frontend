@@ -521,7 +521,7 @@ export default function PedidoDetalle() {
         return {
           id: recursoId,
           recursoId,
-          nombre: r.recursoId?.nombre || r.nombre || "Recurso",
+          nombre: r.recursoId?.nombre || r.nombre || nombresRecursos[recursoId] || "Recurso",
           tipo: tipoBase === "Equipo" ? "Equipo" : "Item",
           tipoDetalle: r.recursoId?.tipo || r.tipoDetalle || (tipoBase === "Equipo" ? "Equipo" : "Material"),
           cantidadSolicitada: Number(r.cantidad || 1),
@@ -544,7 +544,7 @@ export default function PedidoDetalle() {
         };
       }),
     }));
-  }, [pedido]);
+  }, [pedido, nombresRecursos]);
 
   useEffect(() => {
     const marcarVisto = async () => {
@@ -926,8 +926,13 @@ export default function PedidoDetalle() {
                                     type="number"
                                     min="1"
                                     max={recurso.cantidadSolicitada}
-                                    value={recursoForm.cantidadDescartada || 0}
-                                    onChange={(e) => actualizarRecursoFinalizacion(recurso.recursoId, { cantidadDescartada: Number(e.target.value) })}
+                                    value={recursoForm.cantidadDescartada === undefined ? "" : recursoForm.cantidadDescartada}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      actualizarRecursoFinalizacion(recurso.recursoId, { 
+                                        cantidadDescartada: val === "" ? "" : Number(val) 
+                                      });
+                                    }}
                                     className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                                     placeholder="Cantidad descartada"
                                   />
