@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import CustomSelect from "../common/CustomSelect";
 
 // Estado que muestra el frontend (mapearEstado) -> string exacto del backend.
 // El backend solo acepta estos tres valores para un equipo.
@@ -108,18 +109,12 @@ export default function FormularioActualizarEstado({
         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
           Nuevo estado
         </label>
-        <select
+        <CustomSelect
           name="destino"
           value={destino}
           onChange={(e) => setDestino(e.target.value)}
-          className={inputClass}
-        >
-          {destinos.map((d) => (
-            <option key={d} value={d}>
-              {estadoLabel[d] || d}
-            </option>
-          ))}
-        </select>
+          options={destinos.map((d) => ({ value: d, label: estadoLabel[d] || d }))}
+        />
       </div>
 
       {/* CAMPOS PARA ENTRAR EN MANTENIMIENTO */}
@@ -129,15 +124,15 @@ export default function FormularioActualizarEstado({
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
               Tipo de mantenimiento
             </label>
-            <select
+            <CustomSelect
               name="tipo"
               value={tipo}
               onChange={(e) => setTipo(e.target.value)}
-              className={inputClass}
-            >
-              <option value="preventivo">Preventivo</option>
-              <option value="correctivo">Correctivo</option>
-            </select>
+              options={[
+                { value: "preventivo", label: "Preventivo" },
+                { value: "correctivo", label: "Correctivo" },
+              ]}
+            />
           </div>
 
           <div>

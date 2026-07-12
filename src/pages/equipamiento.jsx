@@ -1574,9 +1574,9 @@ useEffect(() => {
 
       {/* ─── MODAL 2: REGISTRAR DESPERFECTO (NUEVO) ─── */}
       {isDesperfectoOpen && (
-        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/45 backdrop-blur-sm sm:items-center sm:p-4" onClick={closeDesperfectoModal}>
-          <div className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-lg sm:rounded-[28px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:static sm:px-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 backdrop-blur-sm p-4" onClick={closeDesperfectoModal}>
+          <div className="flex w-full max-w-lg max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:px-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">Registro</div>
@@ -1620,9 +1620,9 @@ useEffect(() => {
 
       {/* ─── MODAL 3: ACTUALIZAR ESTADO DEL EQUIPO ─── */}
       {isEstadoOpen && (
-        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/45 backdrop-blur-sm sm:items-center sm:p-4" onClick={closeEstadoModal}>
-          <div className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-md sm:rounded-[24px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:static sm:px-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 backdrop-blur-sm p-4" onClick={closeEstadoModal}>
+          <div className="flex w-full max-w-md max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:px-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">Estado</div>
@@ -1662,9 +1662,9 @@ useEffect(() => {
 
       {/* ─── MODAL 4: EDITAR LOTE (UBICACIÓN / ESTADO) ─── */}
       {isLoteEditOpen && (
-        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/45 backdrop-blur-sm sm:items-center sm:p-4" onClick={closeLoteEdit}>
-          <div className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-md sm:rounded-[24px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:static sm:px-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 backdrop-blur-sm p-4" onClick={closeLoteEdit}>
+          <div className="flex w-full max-w-md max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:px-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">Lote</div>
@@ -1703,9 +1703,9 @@ useEffect(() => {
 
       {/* ─── MODAL 5: REGISTRAR ENTRADA (NUEVO LOTE) ─── */}
       {isAddLoteOpen && (
-        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/45 backdrop-blur-sm sm:items-center sm:p-4" onClick={closeAddLote}>
-          <div className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-md sm:rounded-[24px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:static sm:px-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 backdrop-blur-sm p-4" onClick={closeAddLote}>
+          <div className="flex w-full max-w-md max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:px-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">Entrada</div>
