@@ -9,8 +9,8 @@ vi.mock('../../context/AuthContext', () => ({
 
 vi.mock('../../services/useDashboardData', () => ({
   usePedidos: vi.fn(),
-  useEquipamiento: vi.fn(),
-  useMateriales: vi.fn()
+  useMateriales: vi.fn(),
+  useUsoEquipos: vi.fn()
 }));
 
 vi.mock('../../services/useCalendarReservas', () => ({
@@ -28,7 +28,7 @@ vi.mock('../../components/LabCalendar', () => ({
 }));
 
 import { useAuth } from '../../context/AuthContext';
-import { usePedidos, useEquipamiento, useMateriales } from '../../services/useDashboardData';
+import { usePedidos, useMateriales, useUsoEquipos } from '../../services/useDashboardData';
 import { useCalendarReservas } from '../../services/useCalendarReservas';
 
 const mockNavigate = vi.fn();
@@ -46,8 +46,8 @@ describe('Dashboard Component', () => {
 
     useAuth.mockReturnValue({ user: { nombre: 'Test', email: 'test@test.com', rol: 'ADMIN' } });
     usePedidos.mockReturnValue({ pedidos: [], loading: false });
-    useEquipamiento.mockReturnValue({ equipamiento: [], loading: false });
     useMateriales.mockReturnValue({ materiales: [], loading: false });
+    useUsoEquipos.mockReturnValue({ estadisticas: { equipos: [], desde: null, hasta: null, paginacion: {} }, loading: false });
     useCalendarReservas.mockReturnValue({ eventosLabCalendar: [], loading: false, handleDateRangeChange: vi.fn(), dateRange: { start: '', end: '' } });
   });
 
@@ -74,8 +74,8 @@ describe('Dashboard Component', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/¡Bienvenido, Test!/i)).toBeInTheDocument();
-    expect(screen.getByText('Desde el menú podés acceder a todas tus opciones operativas.')).toBeInTheDocument();
+    expect(screen.getByText(/Hola, Test/i)).toBeInTheDocument();
+    expect(screen.getByText('Bienvenido al sistema de gestión de laboratorios.')).toBeInTheDocument();
     expect(screen.queryByText('TOTAL DE PEDIDOS')).not.toBeInTheDocument();
   });
 });

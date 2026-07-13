@@ -6,6 +6,8 @@ import Paginador from "../components/common/Paginador";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { useAuth } from "../context/AuthContext";
 import * as equipamientoService from "../services/equipamiento";
+import { obtenerEdificios } from "../services/edificioService";
+import { obtenerLaboratoriosPorEdificio } from "../services/laboratorioService";
 import {
   categoriaATipoItem,
   mapearItemsBackend,
@@ -18,10 +20,11 @@ import FormularioMaterial from "../components/equipamiento/FormularioMaterial";
 import FormularioReactivo from "../components/equipamiento/FormularioReactivo";
 import FormularioSustancia from "../components/equipamiento/FormularioSustancia";
 import FormularioItem from "../components/equipamiento/FormularioItem"; // Edición a nivel de ítem (nombre, código, cantidad, unidad)
-import FormularioLote from "../components/equipamiento/FormularioLote"; // Edición a nivel de lote (ubicación, estado)
+import FormularioLote from "../components/equipamiento/FormularioLote"; // Edición a nivel de lote (cantidad, estado)
 import FormularioAgregarLote from "../components/equipamiento/FormularioAgregarLote"; // Registrar entrada (nuevo lote sobre un ítem existente)
 import FormularioDesperfecto from "../components/equipamiento/FormularioDesperfecto"; // <-- Importamos tu nuevo formulario Desoerfecto
 import FormularioActualizarEstado from "../components/equipamiento/FormularioActualizarEstado"; // <-- Formulario de actualización de estado del equipo
+import FormularioTransferirLote from "../components/equipamiento/FormularioTransferirLote"; // Mover lote entre depósito y laboratorios
 
 import {
   FiEdit2, // Lapiz
@@ -34,6 +37,7 @@ import {
   FiArrowRight, // Flecha del acceso directo al historial
   FiChevronRight, // Chevron para el desplegable de grupos de ítems
   FiPlus, // Registrar entrada (agregar lote)
+  FiMove, // Mover / transferir lote entre depósito y laboratorios
 } from "react-icons/fi";
 import { VscFileSubmodule } from "react-icons/vsc"; // Caja para materiales
 import { GiMaterialsScience } from "react-icons/gi"; // Materiales reactivos
@@ -232,7 +236,7 @@ function BajoStockCard({ material }) {
 }
 
 // Actualizamos InventoryCard para recibir la acción de Desperfecto
-function InventoryCard({ item, onEdit, onDelete, onReportDesperfecto, onUpdateEstado, puedeGestionar = false, hideIdentity = false, hideDelete = false }) {
+function InventoryCard({ item, onEdit, onDelete, onReportDesperfecto, onUpdateEstado, onTransfer, puedeGestionar = false, hideIdentity = false, hideDelete = false }) {
   const puedeReportarDesperfecto = puedeGestionar && item.estado === "Disponible";
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
@@ -254,7 +258,7 @@ function InventoryCard({ item, onEdit, onDelete, onReportDesperfecto, onUpdateEs
         </div>
         <div className="rounded-xl bg-slate-50 p-3">
           <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">Ubicación</span>
-          <span className="mt-1 block font-semibold text-slate-900">{item.ubicacion}</span>
+          <span className="mt-1 block font-semibold text-slate-900">{item.ubicacionLote || item.ubicacion}</span>
         </div>
         {item.fechaVencimiento && (
           <div className="col-span-2 rounded-xl bg-slate-50 p-3">
@@ -289,6 +293,17 @@ function InventoryCard({ item, onEdit, onDelete, onReportDesperfecto, onUpdateEs
               </button>
             )}
           </>
+        )}
+        {onTransfer && puedeGestionar && (
+          <button
+            type="button"
+            onClick={onTransfer}
+            className="inline-flex items-center gap-2 rounded-xl bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-600 transition hover:bg-indigo-100"
+            aria-label="Mover lote"
+          >
+            <FiMove />
+            <span className="hidden sm:inline">Mover</span>
+          </button>
         )}
         <button
           type="button"
@@ -352,20 +367,20 @@ function Equipamiento() {
   // "item" = edición a nivel de ítem consumible (FormularioItem).
   const [formMode, setFormMode] = useState("full");
 
-  // ─── MODAL DE EDICIÓN DE LOTE (ubicación / estado) ───
+  // ─── MODAL DE EDICIÓN DE LOTE (cantidad / estado) ───
   const [isLoteEditOpen, setIsLoteEditOpen] = useState(false);
   const [loteEditItem, setLoteEditItem] = useState(null);
-  const [loteEditData, setLoteEditData] = useState({ ubicacion: "", estado: "Disponible" });
+  const [loteEditData, setLoteEditData] = useState({ estado: "Disponible" });
   const [erroresLoteEdit, setErroresLoteEdit] = useState({});
   const [errorLoteEdit, setErrorLoteEdit] = useState("");
 
   // ─── MODAL DE REGISTRAR ENTRADA (nuevo lote sobre un ítem existente) ───
   const [isAddLoteOpen, setIsAddLoteOpen] = useState(false);
   const [addLoteGroup, setAddLoteGroup] = useState(null);
-  const [addLoteData, setAddLoteData] = useState({ cantidad: "1", ubicacion: "", fechaVencimiento: "" });
+  const [addLoteData, setAddLoteData] = useState({ cantidad: "1", fechaVencimiento: "" });
   const [erroresAddLote, setErroresAddLote] = useState({});
   const [errorAddLote, setErrorAddLote] = useState("");
-  const [formData, setFormData] = useState({ nombre: "", cantidad: "1", estado: "Disponible", ubicacion: "", unidad: "unidad", movilidad: "Fija" });
+  const [formData, setFormData] = useState({ nombre: "", cantidad: "1", estado: "Disponible", unidad: "unidad", movilidad: "Fija" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -381,6 +396,16 @@ function Equipamiento() {
   const [estadoItem, setEstadoItem] = useState(null);
   const [estadoMsg, setEstadoMsg] = useState("");
   const [estadoEnviando, setEstadoEnviando] = useState(false);
+
+  // ─── MODAL DE TRANSFERENCIA DE LOTE (mover entre depósito y laboratorios) ───
+  const [isTransferOpen, setIsTransferOpen] = useState(false);
+  const [transferLote, setTransferLote] = useState(null);
+  const [transferEnviando, setTransferEnviando] = useState(false);
+  const [errorTransfer, setErrorTransfer] = useState("");
+
+  // Mapa laboratorioId -> nombre para etiquetar la ubicación de los lotes.
+  // GET /lotes no popula laboratorioId, así que resolvemos el nombre acá.
+  const [labMap, setLabMap] = useState({});
 
   // ─── MENSAJES INLINE (reemplazan alerts) ───
   const [errorOperacion, setErrorOperacion] = useState("");   // error al eliminar
@@ -474,6 +499,36 @@ function Equipamiento() {
     };
   }, []);
 
+  // ─── Mapa de laboratorios (id -> nombre) para etiquetar la ubicación de lotes.
+  // No hay endpoint "traer todos": se itera edificios y sus laboratorios (misma
+  // cascada que PanelMovimientos / FormularioTransferirLote).
+  useEffect(() => {
+    let cancelado = false;
+    const cargarLabs = async () => {
+      try {
+        const edificios = await obtenerEdificios();
+        const listas = await Promise.all(
+          (edificios || []).map((ed) =>
+            obtenerLaboratoriosPorEdificio(ed.id || ed._id).catch(() => [])
+          )
+        );
+        if (cancelado) return;
+        const mapa = {};
+        listas.flat().forEach((lab) => {
+          const id = lab?.id || lab?._id;
+          if (id) mapa[String(id)] = lab.nombre;
+        });
+        setLabMap(mapa);
+      } catch (err) {
+        console.error("Error al cargar laboratorios para el mapa de ubicaciones:", err);
+      }
+    };
+    cargarLabs();
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
   // ─── Efecto C: panel de descartados. Se pide SIEMPRE con page/limit para
   // recibir la forma paginada { total, page, limit, lotes }.
 useEffect(() => {
@@ -520,7 +575,7 @@ useEffect(() => {
     try {
       // Sin page/limit -> array FEFO (lo que vence primero, arriba). No reordenar.
       const data = await equipamientoService.getLotes({ itemId, estado: "disponible" });
-      const lotes = (data || []).map(mapearLoteBackend);
+      const lotes = (data || []).map((l) => mapearLoteBackend(l, labMap));
       setLotesPorItem((prev) => ({ ...prev, [itemId]: { lotes, loading: false, error: null } }));
       return lotes;
     } catch (err) {
@@ -534,7 +589,15 @@ useEffect(() => {
   };
 
   // Invalida el cache de lotes de un ítem (tras editar/agregar/borrar lotes).
+  // Si el grupo está expandido, en vez de sólo borrar el cache re-pedimos sus
+  // lotes (force) para que el desplegable abierto se repueble solo, sin que el
+  // usuario tenga que cerrarlo y reabrirlo (evita que "desaparezcan" los lotes
+  // restantes tras descartar uno).
   const invalidarLotes = (itemId) => {
+    if (expandedGroups.has(itemId)) {
+      ensureLotes(itemId, { force: true });
+      return;
+    }
     setLotesPorItem((prev) => {
       const next = { ...prev };
       delete next[itemId];
@@ -562,7 +625,26 @@ useEffect(() => {
     }
   };
 
-  const resetForm = () => setFormData({ nombre: "", cantidad: "1", estado: "Disponible", ubicacion: "", unidad: "unidad", movilidad: "Fija" });
+  // Elimina un lote puntual de un ítem (no el ítem entero). Refresca el grupo
+  // abierto vía invalidarLotes + recargarTodo.
+  const handleDeleteLote = async (lote, group) => {
+    const nombre = group?.tipo || lote.tipo || "este ítem";
+    const confirmDelete = window.confirm(`¿Seguro que querés eliminar este lote de ${nombre}?`);
+    if (!confirmDelete) return;
+
+    try {
+      await equipamientoService.deleteLote(lote.loteId);
+      invalidarLotes(lote.itemId);
+      recargarTodo();
+    } catch (err) {
+      console.error("Error al eliminar el lote:", err);
+      const msg = "No se pudo eliminar el lote: " + (err.response?.data?.error || err.message);
+      setErrorOperacion(msg);
+      setTimeout(() => setErrorOperacion(""), 5000);
+    }
+  };
+
+  const resetForm = () => setFormData({ nombre: "", cantidad: "1", estado: "Disponible", unidad: "unidad", movilidad: "Fija" });
   
   const openForm = () => {
     setEditingItem(null);
@@ -570,7 +652,7 @@ useEffect(() => {
     if (activeTab === "Equipos") {
       setFormData({
         nombre: "", codigo: "", tipo: "", esFijo: "", estado: "disponible",
-        edificioId: "", laboratorioId: "", cantidad: "1", ubicacion: "", unidad: "unidad", movilidad: "Fija",
+        edificioId: "", laboratorioId: "", cantidad: "1", unidad: "unidad", movilidad: "Fija",
       });
     } else {
       resetForm();
@@ -594,7 +676,6 @@ useEffect(() => {
         edificioId: original.edificioId?._id || original.edificioId?.id || original.edificioId || "",
         laboratorioId: original.laboratorioId?._id || original.laboratorioId?.id || original.laboratorioId || "",
         cantidad: String(item.cantidad),
-        ubicacion: item.ubicacion,
         unidad: item.unidad || "unidad",
         movilidad: item.movilidad || "Fija",
       });
@@ -603,7 +684,6 @@ useEffect(() => {
         nombre: item.tipo,
         cantidad: String(item.cantidad),
         estado: item.estado,
-        ubicacion: item.ubicacion,
         unidad: item.unidad || "unidad",
         movilidad: item.movilidad || "Fija",
       });
@@ -626,7 +706,7 @@ useEffect(() => {
   const openItemEdit = async (group) => {
     const lotes = await ensureLotes(group.itemId);
     const rep = lotes[0] || {};
-    setEditingItem({ ...group, loteId: rep.loteId, ubicacion: rep.ubicacion, estado: rep.estado, movilidad: rep.movilidad });
+    setEditingItem({ ...group, loteId: rep.loteId, estado: rep.estado, movilidad: rep.movilidad });
     setFormMode("item");
     setActiveTab(group.categoria);
     setFormData({
@@ -663,10 +743,10 @@ useEffect(() => {
     }
   };
 
-  // ─── EDICIÓN A NIVEL DE LOTE (ubicación / estado) ───
+  // ─── EDICIÓN A NIVEL DE LOTE (cantidad / estado) ───
   const openLoteEdit = (lote) => {
     setLoteEditItem(lote);
-    setLoteEditData({ ubicacion: lote.ubicacion, estado: lote.estado });
+    setLoteEditData({ cantidad: String(lote.cantidad ?? ""), estado: lote.estado });
     setErroresLoteEdit({});
     setErrorLoteEdit("");
     setIsLoteEditOpen(true);
@@ -688,15 +768,16 @@ useEffect(() => {
     e.preventDefault();
     setErroresLoteEdit({});
     setErrorLoteEdit("");
-    const ubicacion = loteEditData.ubicacion.trim();
-    if (!ubicacion) {
-      setErroresLoteEdit({ ubicacion: "La ubicación es obligatoria." });
+    const cantidad = Number.parseInt(loteEditData.cantidad, 10);
+    const errs = {};
+    if (Number.isNaN(cantidad) || cantidad < 1) errs.cantidad = "Ingresá una cantidad válida (mínimo 1).";
+    if (Object.keys(errs).length > 0) {
+      setErroresLoteEdit(errs);
       return;
     }
     try {
       await equipamientoService.updateLote(loteEditItem.loteId, {
-        cantidadDisponible: loteEditItem.cantidad,
-        ubicacion,
+        cantidadDisponible: cantidad,
         estado: estadoToBackend(loteEditData.estado),
         movilidad: loteEditItem.movilidad,
       });
@@ -712,7 +793,7 @@ useEffect(() => {
   // ─── REGISTRAR ENTRADA: crea un lote nuevo sobre el ítem del grupo ───
   const openAddLote = (group) => {
     setAddLoteGroup(group);
-    setAddLoteData({ cantidad: "1", ubicacion: "", fechaVencimiento: "" });
+    setAddLoteData({ cantidad: "1", fechaVencimiento: "" });
     setErroresAddLote({});
     setErrorAddLote("");
     setIsAddLoteOpen(true);
@@ -736,17 +817,14 @@ useEffect(() => {
     setErrorAddLote("");
 
     const cantidad = Number.parseInt(addLoteData.cantidad, 10);
-    const ubicacion = addLoteData.ubicacion.trim();
     const errs = {};
     if (Number.isNaN(cantidad) || cantidad < 1) errs.cantidad = "Ingresá una cantidad válida (mínimo 1).";
-    if (!ubicacion) errs.ubicacion = "La ubicación es obligatoria.";
     if (Object.keys(errs).length > 0) { setErroresAddLote(errs); return; }
 
     try {
       await equipamientoService.createLote({
         itemId: addLoteGroup.itemId,
         cantidadDisponible: cantidad,
-        ubicacion,
         estado: "disponible",
         movilidad: "Fija",
         ...(addLoteData.fechaVencimiento ? { fechaVencimiento: addLoteData.fechaVencimiento } : {}),
@@ -757,6 +835,37 @@ useEffect(() => {
     } catch (err) {
       console.error("Error al registrar la entrada:", err);
       setErrorAddLote("Error al registrar la entrada: " + (err.response?.data?.error || err.message));
+    }
+  };
+
+  // ─── TRANSFERENCIA DE LOTE (mover entre depósito y laboratorios) ───
+  const openTransferModal = (lote) => {
+    setTransferLote(lote);
+    setErrorTransfer("");
+    setIsTransferOpen(true);
+  };
+
+  const closeTransferModal = () => {
+    setIsTransferOpen(false);
+    setTransferLote(null);
+    setErrorTransfer("");
+  };
+
+  const handleTransferSubmit = async (payload) => {
+    setErrorTransfer("");
+    setTransferEnviando(true);
+    try {
+      await equipamientoService.transferirLote(transferLote.loteId, payload);
+      // Tras un traslado (sobre todo parcial) el listado del ítem cambió: el
+      // origen quedó con menos cantidad y pudo crearse un lote destino nuevo.
+      invalidarLotes(transferLote.itemId);
+      recargarTodo();
+      closeTransferModal();
+    } catch (err) {
+      console.error("Error al transferir lote:", err);
+      setErrorTransfer("Error al mover el lote: " + (err.response?.data?.error || err.message));
+    } finally {
+      setTransferEnviando(false);
     }
   };
 
@@ -907,7 +1016,6 @@ useEffect(() => {
         if (editingItem.loteId) {
           await equipamientoService.updateLote(editingItem.loteId, {
             cantidadDisponible: cantidad,
-            ubicacion: editingItem.ubicacion,
             estado: estadoToBackend(editingItem.estado),
             movilidad: editingItem.movilidad,
           });
@@ -959,12 +1067,10 @@ useEffect(() => {
 
     const nombre = formData.nombre.trim();
     const cantidad = Number.parseInt(formData.cantidad, 10);
-    const ubicacion = formData.ubicacion.trim();
-    
+
     const errs = {};
     if (!nombre) errs.nombre = "El nombre es obligatorio.";
     if (Number.isNaN(cantidad) || cantidad < 1) errs.cantidad = "Ingresá una cantidad válida (mínimo 1).";
-    if (!ubicacion) errs.ubicacion = "La ubicación es obligatoria.";
     if (Object.keys(errs).length > 0) { setErroresFormEquip(errs); return; }
 
     try {
@@ -974,7 +1080,7 @@ useEffect(() => {
           tipo: tipoItem, nombre, codigo: editingItem.codigo, unidad: formData.unidad, esConsumible: editingItem.esConsumible ?? true,
         });
         await equipamientoService.updateLote(editingItem.loteId, {
-          cantidadDisponible: cantidad, ubicacion, estado: estadoToBackend(formData.estado), movilidad: formData.movilidad,
+          cantidadDisponible: cantidad, estado: estadoToBackend(formData.estado), movilidad: formData.movilidad,
         });
         invalidarLotes(editingItem.itemId);
       } else {
@@ -995,7 +1101,7 @@ useEffect(() => {
 
         try {
           await equipamientoService.createLote({
-            itemId: nuevoItemId, cantidadDisponible: cantidad, ubicacion, estado: estadoToBackend(formData.estado), movilidad: formData.movilidad,
+            itemId: nuevoItemId, cantidadDisponible: cantidad, estado: estadoToBackend(formData.estado), movilidad: formData.movilidad,
             ...(formData.fechaVencimiento ? { fechaVencimiento: formData.fechaVencimiento } : {}),
           });
         } catch (loteError) {
@@ -1178,11 +1284,6 @@ useEffect(() => {
                           >
                             <FiChevronRight className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${isOpen ? "rotate-90" : ""}`} />
                             <span className="min-w-0 flex-1 text-sm font-semibold text-slate-900 line-clamp-2">{g.tipo}</span>
-                            {loteState?.lotes && (
-                              <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
-                                {loteState.lotes.length} {loteState.lotes.length === 1 ? "lote" : "lotes"}
-                              </span>
-                            )}
                           </button>
                           <div className="mt-1.5 flex items-center justify-between gap-2 pl-6">
                             <span className="min-w-0 truncate text-xs text-slate-500">
@@ -1228,10 +1329,11 @@ useEffect(() => {
                                   key={item.id}
                                   item={{ ...item, unidad: g.unidad }}
                                   hideIdentity
-                                  hideDelete
                                   onEdit={() => openLoteEdit(item)}
+                                  onDelete={() => handleDeleteLote(item, g)}
                                   onReportDesperfecto={() => openDesperfectoModal(item)}
                                   onUpdateEstado={() => openEstadoModal(item)}
+                                  onTransfer={() => openTransferModal(item)}
                                   puedeGestionar={puedeGestionar}
                                 />
                               ))
@@ -1347,11 +1449,6 @@ useEffect(() => {
                                 <div className="flex items-center gap-2">
                                   <FiChevronRight className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${isOpen ? "rotate-90" : ""}`} />
                                   <span className="font-semibold text-slate-900">{g.tipo}</span>
-                                  {loteState?.lotes && (
-                                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
-                                      {loteState.lotes.length} {loteState.lotes.length === 1 ? "lote" : "lotes"}
-                                    </span>
-                                  )}
                                 </div>
                               </td>
                               <td className="px-4 py-3 font-bold text-slate-900">{g.stockDisponible} {g.unidad}</td>
@@ -1398,20 +1495,43 @@ useEffect(() => {
                                       loteState.lotes.map((item) => (
                                         <div key={item.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-100 bg-white px-3 py-2">
                                           <div className="min-w-0 flex-1">
-                                            <div className="truncate text-sm text-slate-700">{item.ubicacion}</div>
+                                            <div className="flex items-center gap-2">
+                                              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${item.laboratorioId ? "bg-indigo-50 text-indigo-600" : "bg-slate-100 text-slate-500"}`}>
+                                                {item.ubicacionLote}
+                                              </span>
+                                            </div>
                                             {item.fechaVencimiento && (
-                                              <div className="text-xs text-slate-400">Vence {formatDate(item.fechaVencimiento)}</div>
+                                              <div className="mt-0.5 text-xs text-slate-400">Vence {formatDate(item.fechaVencimiento)}</div>
                                             )}
                                           </div>
                                           <StatusPill status={item.estado} />
                                           <span className="text-sm font-semibold text-slate-900">{item.cantidad} {g.unidad}</span>
+                                          {puedeGestionar && (
+                                            <button
+                                              type="button"
+                                              onClick={() => openTransferModal(item)}
+                                              className="rounded-lg p-2 text-indigo-500 bg-indigo-50 hover:bg-indigo-100 transition"
+                                              aria-label={`Mover lote de ${g.tipo}`}
+                                              title="Mover lote"
+                                            >
+                                              <FiMove />
+                                            </button>
+                                          )}
                                           <button
                                             type="button"
                                             onClick={() => openLoteEdit(item)}
                                             className="rounded-lg p-2 text-cyan-500 bg-cyan-50 hover:bg-cyan-100 transition"
-                                            aria-label={`Editar lote en ${item.ubicacion}`}
+                                            aria-label={`Editar lote en ${item.ubicacionLote}`}
                                           >
                                             <FiEdit2 />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleDeleteLote(item, g)}
+                                            className="rounded-lg p-2 text-rose-500 bg-rose-50 hover:bg-rose-100 transition"
+                                            aria-label={`Eliminar lote en ${item.ubicacionLote}`}
+                                          >
+                                            <FiTrash2 />
                                           </button>
                                         </div>
                                       ))
@@ -1493,7 +1613,7 @@ useEffect(() => {
         <section className="mt-6">
           <button
             type="button"
-            onClick={() => navigate("/historial?tab=descartes")}
+            onClick={() => navigate("/historial")}
             className="group flex w-full items-center gap-4 overflow-hidden rounded-[28px] border border-slate-200 bg-white px-5 py-5 text-left shadow-[0_14px_40px_rgba(15,23,42,0.06)] transition hover:border-emerald-300 hover:shadow-[0_18px_50px_rgba(16,185,129,0.14)] cursor-pointer sm:px-6"
           >
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition group-hover:bg-emerald-100">
@@ -1514,64 +1634,69 @@ useEffect(() => {
         </section>
       </div>
 
-      {/* ─── MODAL 1: FORMULARIO GENERAL (EQUIPO / EQUIPAMIENTO) ─── */}
-      {isFormOpen && (
-        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/45 backdrop-blur-sm sm:items-center sm:p-4" onClick={closeForm}>
-          <div className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-lg sm:rounded-[28px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:static sm:px-6">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">Registro</div>
-                  <h2 className="text-lg font-bold text-slate-900 sm:text-xl">
-                    {editingItem ? `Editar ${editingItem.tipo}` : {
-                      "Equipos": "Nuevo equipo",
-                      "Materiales": "Nuevo material",
-                      "Reactivos": "Nuevo reactivo",
-                      "Sustancias basicas": "Nueva sustancia básica",
-                    }[activeTab] || "Nuevo ítem"}
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-500">{editingItem ? "Actualiza los campos y guarda los cambios." : "Completa el formulario para registrar el ítem."}</p>
+        {/* ─── MODAL 1: FORMULARIO GENERAL (EQUIPO / EQUIPAMIENTO) ─── */}
+        {isFormOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 backdrop-blur-sm p-4"
+            onClick={closeForm}
+          >
+            <div
+              className="flex w-full max-w-lg max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:px-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">Registro</div>
+                    <h2 className="text-lg font-bold text-slate-900 sm:text-xl">
+                      {editingItem ? `Editar ${editingItem.tipo}` : {
+                        "Equipos": "Nuevo equipo",
+                        "Materiales": "Nuevo material",
+                        "Reactivos": "Nuevo reactivo",
+                        "Sustancias basicas": "Nueva sustancia básica",
+                      }[activeTab] || "Nuevo ítem"}
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">{editingItem ? "Actualiza los campos y guarda los cambios." : "Completa el formulario para registrar el ítem."}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={closeForm}
+                    aria-label="Cerrar formulario"
+                    title="Cerrar formulario"
+                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
+                  >
+                    <FiX className="h-4 w-4" aria-hidden="true" />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={closeForm}
-                  aria-label="Cerrar formulario"
-                  title="Cerrar formulario"
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
-                >
-                  <FiX className="h-4 w-4" aria-hidden="true" />
-                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+                {errorFormEquip && (
+                  <div className="mb-4 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+                    <span><strong>Error:</strong> {errorFormEquip}</span>
+                    <button onClick={() => setErrorFormEquip("")} className="ml-4 font-bold text-red-400 hover:text-red-600">✕</button>
+                  </div>
+                )}
+                {formMode === "item" ? (
+                  <FormularioItem formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} errores={erroresFormEquip} />
+                ) : activeTab === "Equipos" ? (
+                  <FormularioEquipo formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} errores={erroresFormEquip} />
+                ) : activeTab === "Materiales" ? (
+                  <FormularioMaterial formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} statusOptions={statusOptions} errores={erroresFormEquip} />
+                ) : activeTab === "Reactivos" ? (
+                  <FormularioReactivo formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} statusOptions={statusOptions} errores={erroresFormEquip} />
+                ) : (
+                  <FormularioSustancia formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} statusOptions={statusOptions} errores={erroresFormEquip} />
+                )}
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
-              {/* Errores de validación y backend del formulario */}
-              {errorFormEquip && (
-                <div className="mb-4 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-600">
-                  <span><strong>Error:</strong> {errorFormEquip}</span>
-                  <button onClick={() => setErrorFormEquip("")} className="ml-4 font-bold text-red-400 hover:text-red-600">✕</button>
-                </div>
-              )}
-              {formMode === "item" ? (
-                <FormularioItem formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} errores={erroresFormEquip} />
-              ) : activeTab === "Equipos" ? (
-                <FormularioEquipo formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} errores={erroresFormEquip} />
-              ) : activeTab === "Materiales" ? (
-                <FormularioMaterial formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} statusOptions={statusOptions} errores={erroresFormEquip} />
-              ) : activeTab === "Reactivos" ? (
-                <FormularioReactivo formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} statusOptions={statusOptions} errores={erroresFormEquip} />
-              ) : (
-                <FormularioSustancia formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} statusOptions={statusOptions} errores={erroresFormEquip} />
-              )}
-            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* ─── MODAL 2: REGISTRAR DESPERFECTO (NUEVO) ─── */}
       {isDesperfectoOpen && (
-        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/45 backdrop-blur-sm sm:items-center sm:p-4" onClick={closeDesperfectoModal}>
-          <div className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-lg sm:rounded-[28px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:static sm:px-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 backdrop-blur-sm p-4" onClick={closeDesperfectoModal}>
+          <div className="flex w-full max-w-lg max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:px-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">Registro</div>
@@ -1615,19 +1740,25 @@ useEffect(() => {
 
       {/* ─── MODAL 3: ACTUALIZAR ESTADO DEL EQUIPO ─── */}
       {isEstadoOpen && (
-        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/45 backdrop-blur-sm sm:items-center sm:p-4" onClick={closeEstadoModal}>
-          <div className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-md sm:rounded-[24px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]" onClick={(e) => e.stopPropagation()}>
-            <div className="border-b border-slate-100 px-6 py-4 bg-slate-50/80 flex items-center justify-between gap-4">
-              <h2 className="text-lg font-bold text-slate-900">Actualizar estado</h2>
-              <button
-                type="button"
-                onClick={closeEstadoModal}
-                aria-label="Cerrar formulario"
-                title="Cerrar formulario"
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
-              >
-                <FiX className="h-4 w-4" aria-hidden="true" />
-              </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 backdrop-blur-sm p-4" onClick={closeEstadoModal}>
+          <div className="flex w-full max-w-md max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:px-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">Estado</div>
+                  <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Actualizar estado</h2>
+                  <p className="mt-1 text-sm text-slate-500">Cambia el estado del equipo seleccionado.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeEstadoModal}
+                  aria-label="Cerrar formulario"
+                  title="Cerrar formulario"
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
+                >
+                  <FiX className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
               {estadoMsg && (
@@ -1642,7 +1773,6 @@ useEffect(() => {
               <FormularioActualizarEstado
                 equipo={estadoItem}
                 onSubmit={handleEstadoSubmit}
-                cerrarModal={closeEstadoModal}
                 enviando={estadoEnviando}
               />
             </div>
@@ -1652,14 +1782,14 @@ useEffect(() => {
 
       {/* ─── MODAL 4: EDITAR LOTE (UBICACIÓN / ESTADO) ─── */}
       {isLoteEditOpen && (
-        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/45 backdrop-blur-sm sm:items-center sm:p-4" onClick={closeLoteEdit}>
-          <div className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-md sm:rounded-[24px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:static sm:px-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 backdrop-blur-sm p-4" onClick={closeLoteEdit}>
+          <div className="flex w-full max-w-md max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:px-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">Lote</div>
                   <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Editar lote</h2>
-                  <p className="mt-1 text-sm text-slate-500">{loteEditItem?.tipo} · Actualiza la ubicación y el estado.</p>
+                  <p className="mt-1 text-sm text-slate-500">{loteEditItem?.tipo} · Actualiza la cantidad y el estado.</p>
                 </div>
                 <button
                   type="button"
@@ -1693,9 +1823,9 @@ useEffect(() => {
 
       {/* ─── MODAL 5: REGISTRAR ENTRADA (NUEVO LOTE) ─── */}
       {isAddLoteOpen && (
-        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/45 backdrop-blur-sm sm:items-center sm:p-4" onClick={closeAddLote}>
-          <div className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-md sm:rounded-[24px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:static sm:px-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 backdrop-blur-sm p-4" onClick={closeAddLote}>
+          <div className="flex w-full max-w-md max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:px-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">Entrada</div>
@@ -1730,6 +1860,47 @@ useEffect(() => {
           </div>
         </div>
       )}
+
+      {/* ─── MODAL 6: MOVER LOTE (TRANSFERIR / DEVOLVER) ─── */}
+      {isTransferOpen && (
+        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/45 backdrop-blur-sm sm:items-center sm:p-4" onClick={closeTransferModal}>
+          <div className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-md sm:rounded-[24px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-b from-indigo-50 to-white px-4 py-4 sm:static sm:px-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="mb-2 inline-flex rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-indigo-700">Lote</div>
+                  <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Mover lote</h2>
+                  <p className="mt-1 text-sm text-slate-500">{transferLote?.tipo} · Trasladá el lote a un laboratorio o devolvelo al depósito.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeTransferModal}
+                  aria-label="Cerrar formulario"
+                  title="Cerrar formulario"
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
+                >
+                  <FiX className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+              {errorTransfer && (
+                <div className="mb-4 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+                  <span><strong>Error:</strong> {errorTransfer}</span>
+                  <button onClick={() => setErrorTransfer("")} className="ml-4 font-bold text-red-400 hover:text-red-600">✕</button>
+                </div>
+              )}
+              <FormularioTransferirLote
+                lote={transferLote}
+                onSubmit={handleTransferSubmit}
+                cerrarModal={closeTransferModal}
+                enviando={transferEnviando}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -1,6 +1,6 @@
 // Formulario de edición a nivel de ÍTEM (no de lote): datos generales del
 // insumo compartidos por todos sus lotes — nombre, código, cantidad y unidad.
-// La ubicación y el estado se editan por lote en FormularioLote.
+// El estado se edita por lote en FormularioLote; la ubicación, por transferencia.
 export default function FormularioItem({
   formData,
   handleChange,

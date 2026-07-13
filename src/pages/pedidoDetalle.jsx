@@ -271,6 +271,22 @@ export default function PedidoDetalle() {
 
   const tieneConflictos = conflictos.length > 0;
 
+  // Reservas del pedido (para reflejar el consumo real tras finalizar, ver §3.4).
+  const materialesReservados =
+    pedido?.materialesReservados || pedido?.reserva?.materialesReservados || [];
+
+  const consumoRealPorRecurso = (recId) => {
+    if (!recId || pedido?.estado !== "Finalizado") return null;
+    const entrada = materialesReservados.find((m) => {
+      const mId = typeof m.itemId === "object" ? m.itemId?._id : m.itemId;
+      return (mId || "").toString() === recId.toString();
+    });
+    if (!entrada || entrada.cantidadConsumidaReal == null) return null;
+    const reservado = Number(entrada.cantidad ?? entrada.cantidadReservada ?? 0);
+    const consumido = Number(entrada.cantidadConsumidaReal);
+    return { reservado, consumido, devuelto: Math.max(0, reservado - consumido) };
+  };
+
   const nombresPorId = (() => {
     const map = {};
 
@@ -454,13 +470,29 @@ export default function PedidoDetalle() {
           motivo: recurso.motivoDefecto || "Desperfecto informado al finalizar el pedido",
         }));
 
-      const payload = { descartes, desperfectos };
+      const consumos = formFinalizacion.recursos
+        .filter((recurso) => recurso.esConsumible && recurso.tipo !== "Equipo" && recurso.registrarConsumo)
+        .map((recurso) => ({
+          itemId: recurso.recursoId,
+          cantidadConsumida: Math.max(0, Number(recurso.cantidadConsumida ?? recurso.cantidadSolicitada)),
+        }));
+
+      const payload = { consumos, descartes, desperfectos };
       const res = await api.patch(`/pedido/${id}/finalizar`, payload);
       setPedido(res.data.pedido || res.data);
       setMostrarFinalizar(false);
       setFormFinalizacion({ recursos: [] });
     } catch (err) {
-      setErrorAccion(err.response?.data?.error || "Error al finalizar el pedido.");
+      const status = err.response?.status;
+      const mensajePorStatus = {
+        403: "No tenés permisos para finalizar pedidos.",
+        404: "El pedido ya no existe.",
+      };
+      const fallback =
+        status === 400
+          ? "Datos de finalización inválidos. Revisá las cantidades o el estado del pedido."
+          : mensajePorStatus[status] || "Error al finalizar el pedido.";
+      setErrorAccion(err.response?.data?.error || fallback);
     }
   };
 
@@ -518,13 +550,16 @@ export default function PedidoDetalle() {
       .map((r) => {
         const recursoId = typeof r.recursoId === "object" ? r.recursoId?._id : r.recursoId;
         const tipoBase = r.tipoRecurso || r.tipo || "Item";
+        const esEquipo = tipoBase === "Equipo";
+        const item = typeof r.recursoId === "object" ? r.recursoId : null;
         return {
           id: recursoId,
           recursoId,
           nombre: r.recursoId?.nombre || r.nombre || nombresRecursos[recursoId] || "Recurso",
-          tipo: tipoBase === "Equipo" ? "Equipo" : "Item",
-          tipoDetalle: r.recursoId?.tipo || r.tipoDetalle || (tipoBase === "Equipo" ? "Equipo" : "Material"),
+          tipo: esEquipo ? "Equipo" : "Item",
+          tipoDetalle: r.recursoId?.tipo || r.tipoDetalle || (esEquipo ? "Equipo" : "Material"),
           cantidadSolicitada: Number(r.cantidad || 1),
+          esConsumible: esEquipo ? false : (item?.esConsumible ?? true),
         };
       });
 
@@ -541,6 +576,8 @@ export default function PedidoDetalle() {
           motivo: existente?.motivo || "",
           registrarDefecto: existente?.registrarDefecto || false,
           motivoDefecto: existente?.motivoDefecto || "",
+          registrarConsumo: existente?.registrarConsumo || false,
+          cantidadConsumida: existente?.cantidadConsumida ?? recurso.cantidadSolicitada,
         };
       }),
     }));
@@ -627,6 +664,7 @@ export default function PedidoDetalle() {
                     nombresRecursos[recId] ||
                     r.nombre ||
                     "Recurso";
+                  const consumo = consumoRealPorRecurso(recId);
                   return (
                     <div
                       key={recId || i}
@@ -635,6 +673,14 @@ export default function PedidoDetalle() {
                       <div>
                         <p className="text-sm font-medium text-slate-700">{nombreRecurso}</p>
                         <p className="text-xs text-slate-400 mt-1">{r.tipo || r.tipoRecurso || "—"}</p>
+                        {consumo && (
+                          <p className="text-xs text-slate-500 mt-1">
+                            Consumido: {consumo.consumido} / Reservado: {consumo.reservado}
+                            {consumo.devuelto > 0 && (
+                              <span className="text-emerald-600 font-medium"> · Devuelto: {consumo.devuelto}</span>
+                            )}
+                          </p>
+                        )}
                       </div>
                       <span className="text-xs font-bold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-md">
                         x{r.cantidad}
@@ -876,7 +922,8 @@ export default function PedidoDetalle() {
                 {/* INLINE FORM: FINALIZACIÓN */}
                 {mostrarFinalizar && (
                   <div className="border border-blue-300 bg-blue-50 rounded-xl p-4 space-y-4">
-                    <p className="text-sm font-semibold text-blue-800">Finalizar pedido e informar descartes/desperfectos</p>
+                    <p className="text-sm font-semibold text-blue-800">Finalizar pedido: reportá consumo real, descartes y desperfectos</p>
+                    <p className="text-xs text-blue-700">Los reutilizables y lo no consumido de cada consumible vuelven al stock automáticamente.</p>
 
                     <div className="space-y-3">
                       <p className="text-sm font-medium text-blue-700">Recursos solicitados</p>
@@ -884,6 +931,7 @@ export default function PedidoDetalle() {
                         {recursosFinalizacion.map((recurso) => {
                           const recursoForm = formFinalizacion.recursos.find((entry) => entry.recursoId === recurso.recursoId) || recurso;
                           const esEquipo = recurso.tipo === "Equipo";
+                          const esConsumible = !esEquipo && (recurso.esConsumible ?? true);
 
                           return (
                             <div key={recurso.recursoId} className="rounded-lg border border-blue-200 bg-white p-3 space-y-2">
@@ -950,6 +998,41 @@ export default function PedidoDetalle() {
                                   placeholder="Motivo del desperfecto"
                                 />
                               ) : null}
+
+                              {esConsumible && (
+                                <label className="flex items-center gap-2 text-sm text-slate-700">
+                                  <input
+                                    type="checkbox"
+                                    checked={!!recursoForm.registrarConsumo}
+                                    onChange={(e) => actualizarRecursoFinalizacion(recurso.recursoId, {
+                                      registrarConsumo: e.target.checked,
+                                      cantidadConsumida: recurso.cantidadSolicitada,
+                                    })}
+                                  />
+                                  Reportar consumo real
+                                </label>
+                              )}
+
+                              {esConsumible && recursoForm.registrarConsumo ? (
+                                <>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max={recurso.cantidadSolicitada}
+                                    value={recursoForm.cantidadConsumida ?? 0}
+                                    onChange={(e) => actualizarRecursoFinalizacion(recurso.recursoId, { cantidadConsumida: Number(e.target.value) })}
+                                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                    placeholder={`Consumido de ${recurso.cantidadSolicitada}`}
+                                  />
+                                  <p className="text-xs text-slate-500">
+                                    Lo no consumido vuelve al stock. Omitir el reporte cuenta como consumido al 100 %.
+                                  </p>
+                                </>
+                              ) : null}
+
+                              {!esEquipo && !esConsumible && (
+                                <p className="text-xs text-slate-500 italic">🔁 Reutilizable — vuelve al stock al finalizar.</p>
+                              )}
                             </div>
                           );
                         })}
