@@ -97,17 +97,20 @@ export const mapearItemsBackend = (items) => {
 // Mapea un lote del backend (GET /lotes) a una fila del frontend. Se usa tanto
 // en el desplegable de un item (lotes disponibles) como en el panel de
 // descartados. `itemId` puede venir poblado (objeto) o como ObjectId (string).
-export const mapearLoteBackend = (lote) => {
+// `labMap` (id -> nombre) resuelve el nombre del laboratorio cuando `laboratorioId`
+// llega como ObjectId plano (GET /lotes no lo popula).
+export const mapearLoteBackend = (lote, labMap = {}) => {
   const itemPoblado = typeof lote.itemId === 'object' && lote.itemId !== null ? lote.itemId : null;
   const itemId = itemPoblado ? (itemPoblado.id || itemPoblado._id) : lote.itemId;
   const loteId = lote.id || lote._id;
 
-  // Ubicación estructurada del lote (contrato /lotes): laboratorioId null = depósito,
+  // Único eje de ubicación del lote (contrato /lotes): laboratorioId null = depósito,
   // o el laboratorio físico donde está el lote (puede venir poblado o como ObjectId).
-  // Distinto de `ubicacion` (string libre, detalle físico fino como "Armario 3").
   const labPoblado = typeof lote.laboratorioId === 'object' && lote.laboratorioId !== null ? lote.laboratorioId : null;
   const laboratorioId = labPoblado ? (labPoblado.id || labPoblado._id) : (lote.laboratorioId ?? null);
-  const ubicacionLote = laboratorioId ? (labPoblado?.nombre || 'Laboratorio asignado') : 'Depósito';
+  const ubicacionLote = laboratorioId
+    ? (labPoblado?.nombre || labMap[String(laboratorioId)] || 'Laboratorio asignado')
+    : 'Depósito';
 
   return {
     id: loteId,
@@ -117,7 +120,6 @@ export const mapearLoteBackend = (lote) => {
     codigo: itemPoblado?.codigo,
     laboratorioId,
     ubicacionLote,
-    ubicacion: lote.ubicacion,
     estado: mapearEstado(lote.estado),
     cantidad: lote.cantidadDisponible,
     movilidad: lote.movilidad || "Fija",

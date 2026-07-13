@@ -61,21 +61,6 @@ export default function FormularioSustancia({
 
       <div>
         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-          Ubicación
-        </label>
-        <input
-          type="text"
-          name="ubicacion"
-          value={formData.ubicacion || ""}
-          onChange={handleChange}
-          placeholder="Ej. Lab 1 / Edif. A"
-          className={inputClass("ubicacion")}
-        />
-        {errores.ubicacion && <p className="text-red-500 text-xs mt-1">{errores.ubicacion}</p>}
-      </div>
-
-      <div>
-        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
           Estado
         </label>
         <select

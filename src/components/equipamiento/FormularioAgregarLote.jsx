@@ -33,21 +33,6 @@ export default function FormularioAgregarLote({
 
       <div>
         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-          Ubicación
-        </label>
-        <input
-          type="text"
-          name="ubicacion"
-          value={formData.ubicacion || ""}
-          onChange={handleChange}
-          placeholder="Ej. Depósito A - Estante 3"
-          className={inputClass("ubicacion")}
-        />
-        {errores.ubicacion && <p className="text-red-500 text-xs mt-1">{errores.ubicacion}</p>}
-      </div>
-
-      <div>
-        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
           Fecha de vencimiento (opcional)
         </label>
         <input

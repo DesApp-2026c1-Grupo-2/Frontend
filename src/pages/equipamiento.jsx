@@ -6,6 +6,8 @@ import Paginador from "../components/common/Paginador";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { useAuth } from "../context/AuthContext";
 import * as equipamientoService from "../services/equipamiento";
+import { obtenerEdificios } from "../services/edificioService";
+import { obtenerLaboratoriosPorEdificio } from "../services/laboratorioService";
 import {
   categoriaATipoItem,
   mapearItemsBackend,
@@ -18,7 +20,7 @@ import FormularioMaterial from "../components/equipamiento/FormularioMaterial";
 import FormularioReactivo from "../components/equipamiento/FormularioReactivo";
 import FormularioSustancia from "../components/equipamiento/FormularioSustancia";
 import FormularioItem from "../components/equipamiento/FormularioItem"; // Edición a nivel de ítem (nombre, código, cantidad, unidad)
-import FormularioLote from "../components/equipamiento/FormularioLote"; // Edición a nivel de lote (ubicación, estado)
+import FormularioLote from "../components/equipamiento/FormularioLote"; // Edición a nivel de lote (cantidad, estado)
 import FormularioAgregarLote from "../components/equipamiento/FormularioAgregarLote"; // Registrar entrada (nuevo lote sobre un ítem existente)
 import FormularioDesperfecto from "../components/equipamiento/FormularioDesperfecto"; // <-- Importamos tu nuevo formulario Desoerfecto
 import FormularioActualizarEstado from "../components/equipamiento/FormularioActualizarEstado"; // <-- Formulario de actualización de estado del equipo
@@ -259,9 +261,6 @@ function InventoryCard({ item, onEdit, onDelete, onReportDesperfecto, onUpdateEs
         <div className="rounded-xl bg-slate-50 p-3">
           <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">Ubicación</span>
           <span className="mt-1 block font-semibold text-slate-900">{item.ubicacionLote || item.ubicacion}</span>
-          {item.ubicacionLote && item.ubicacion && (
-            <span className="mt-0.5 block text-xs font-normal text-slate-400">{item.ubicacion}</span>
-          )}
         </div>
         {item.fechaVencimiento && (
           <div className="col-span-2 rounded-xl bg-slate-50 p-3">
@@ -370,20 +369,20 @@ function Equipamiento() {
   // "item" = edición a nivel de ítem consumible (FormularioItem).
   const [formMode, setFormMode] = useState("full");
 
-  // ─── MODAL DE EDICIÓN DE LOTE (ubicación / estado) ───
+  // ─── MODAL DE EDICIÓN DE LOTE (cantidad / estado) ───
   const [isLoteEditOpen, setIsLoteEditOpen] = useState(false);
   const [loteEditItem, setLoteEditItem] = useState(null);
-  const [loteEditData, setLoteEditData] = useState({ ubicacion: "", estado: "Disponible" });
+  const [loteEditData, setLoteEditData] = useState({ estado: "Disponible" });
   const [erroresLoteEdit, setErroresLoteEdit] = useState({});
   const [errorLoteEdit, setErrorLoteEdit] = useState("");
 
   // ─── MODAL DE REGISTRAR ENTRADA (nuevo lote sobre un ítem existente) ───
   const [isAddLoteOpen, setIsAddLoteOpen] = useState(false);
   const [addLoteGroup, setAddLoteGroup] = useState(null);
-  const [addLoteData, setAddLoteData] = useState({ cantidad: "1", ubicacion: "", fechaVencimiento: "" });
+  const [addLoteData, setAddLoteData] = useState({ cantidad: "1", fechaVencimiento: "" });
   const [erroresAddLote, setErroresAddLote] = useState({});
   const [errorAddLote, setErrorAddLote] = useState("");
-  const [formData, setFormData] = useState({ nombre: "", cantidad: "1", estado: "Disponible", ubicacion: "", unidad: "unidad", movilidad: "Fija" });
+  const [formData, setFormData] = useState({ nombre: "", cantidad: "1", estado: "Disponible", unidad: "unidad", movilidad: "Fija" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -409,6 +408,10 @@ function Equipamiento() {
   // ─── MODAL DE VISTA DE STOCK (GET /items/:id/stock) ───
   const [isStockOpen, setIsStockOpen] = useState(false);
   const [stockGroup, setStockGroup] = useState(null);
+
+  // Mapa laboratorioId -> nombre para etiquetar la ubicación de los lotes.
+  // GET /lotes no popula laboratorioId, así que resolvemos el nombre acá.
+  const [labMap, setLabMap] = useState({});
 
   // ─── MENSAJES INLINE (reemplazan alerts) ───
   const [errorOperacion, setErrorOperacion] = useState("");   // error al eliminar
@@ -502,6 +505,36 @@ function Equipamiento() {
     };
   }, []);
 
+  // ─── Mapa de laboratorios (id -> nombre) para etiquetar la ubicación de lotes.
+  // No hay endpoint "traer todos": se itera edificios y sus laboratorios (misma
+  // cascada que PanelMovimientos / FormularioTransferirLote).
+  useEffect(() => {
+    let cancelado = false;
+    const cargarLabs = async () => {
+      try {
+        const edificios = await obtenerEdificios();
+        const listas = await Promise.all(
+          (edificios || []).map((ed) =>
+            obtenerLaboratoriosPorEdificio(ed.id || ed._id).catch(() => [])
+          )
+        );
+        if (cancelado) return;
+        const mapa = {};
+        listas.flat().forEach((lab) => {
+          const id = lab?.id || lab?._id;
+          if (id) mapa[String(id)] = lab.nombre;
+        });
+        setLabMap(mapa);
+      } catch (err) {
+        console.error("Error al cargar laboratorios para el mapa de ubicaciones:", err);
+      }
+    };
+    cargarLabs();
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
   // ─── Efecto C: panel de descartados. Se pide SIEMPRE con page/limit para
   // recibir la forma paginada { total, page, limit, lotes }.
 useEffect(() => {
@@ -548,7 +581,7 @@ useEffect(() => {
     try {
       // Sin page/limit -> array FEFO (lo que vence primero, arriba). No reordenar.
       const data = await equipamientoService.getLotes({ itemId, estado: "disponible" });
-      const lotes = (data || []).map(mapearLoteBackend);
+      const lotes = (data || []).map((l) => mapearLoteBackend(l, labMap));
       setLotesPorItem((prev) => ({ ...prev, [itemId]: { lotes, loading: false, error: null } }));
       return lotes;
     } catch (err) {
@@ -617,7 +650,7 @@ useEffect(() => {
     }
   };
 
-  const resetForm = () => setFormData({ nombre: "", cantidad: "1", estado: "Disponible", ubicacion: "", unidad: "unidad", movilidad: "Fija" });
+  const resetForm = () => setFormData({ nombre: "", cantidad: "1", estado: "Disponible", unidad: "unidad", movilidad: "Fija" });
   
   const openForm = () => {
     setEditingItem(null);
@@ -625,7 +658,7 @@ useEffect(() => {
     if (activeTab === "Equipos") {
       setFormData({
         nombre: "", codigo: "", tipo: "", esFijo: "", estado: "disponible",
-        edificioId: "", laboratorioId: "", cantidad: "1", ubicacion: "", unidad: "unidad", movilidad: "Fija",
+        edificioId: "", laboratorioId: "", cantidad: "1", unidad: "unidad", movilidad: "Fija",
       });
     } else {
       resetForm();
@@ -649,7 +682,6 @@ useEffect(() => {
         edificioId: original.edificioId?._id || original.edificioId?.id || original.edificioId || "",
         laboratorioId: original.laboratorioId?._id || original.laboratorioId?.id || original.laboratorioId || "",
         cantidad: String(item.cantidad),
-        ubicacion: item.ubicacion,
         unidad: item.unidad || "unidad",
         movilidad: item.movilidad || "Fija",
       });
@@ -658,7 +690,6 @@ useEffect(() => {
         nombre: item.tipo,
         cantidad: String(item.cantidad),
         estado: item.estado,
-        ubicacion: item.ubicacion,
         unidad: item.unidad || "unidad",
         movilidad: item.movilidad || "Fija",
       });
@@ -681,7 +712,7 @@ useEffect(() => {
   const openItemEdit = async (group) => {
     const lotes = await ensureLotes(group.itemId);
     const rep = lotes[0] || {};
-    setEditingItem({ ...group, loteId: rep.loteId, ubicacion: rep.ubicacion, estado: rep.estado, movilidad: rep.movilidad });
+    setEditingItem({ ...group, loteId: rep.loteId, estado: rep.estado, movilidad: rep.movilidad });
     setFormMode("item");
     setActiveTab(group.categoria);
     setFormData({
@@ -718,10 +749,10 @@ useEffect(() => {
     }
   };
 
-  // ─── EDICIÓN A NIVEL DE LOTE (ubicación / estado) ───
+  // ─── EDICIÓN A NIVEL DE LOTE (cantidad / estado) ───
   const openLoteEdit = (lote) => {
     setLoteEditItem(lote);
-    setLoteEditData({ cantidad: String(lote.cantidad ?? ""), ubicacion: lote.ubicacion, estado: lote.estado });
+    setLoteEditData({ cantidad: String(lote.cantidad ?? ""), estado: lote.estado });
     setErroresLoteEdit({});
     setErrorLoteEdit("");
     setIsLoteEditOpen(true);
@@ -743,11 +774,9 @@ useEffect(() => {
     e.preventDefault();
     setErroresLoteEdit({});
     setErrorLoteEdit("");
-    const ubicacion = loteEditData.ubicacion.trim();
     const cantidad = Number.parseInt(loteEditData.cantidad, 10);
     const errs = {};
     if (Number.isNaN(cantidad) || cantidad < 1) errs.cantidad = "Ingresá una cantidad válida (mínimo 1).";
-    if (!ubicacion) errs.ubicacion = "La ubicación es obligatoria.";
     if (Object.keys(errs).length > 0) {
       setErroresLoteEdit(errs);
       return;
@@ -755,7 +784,6 @@ useEffect(() => {
     try {
       await equipamientoService.updateLote(loteEditItem.loteId, {
         cantidadDisponible: cantidad,
-        ubicacion,
         estado: estadoToBackend(loteEditData.estado),
         movilidad: loteEditItem.movilidad,
       });
@@ -771,7 +799,7 @@ useEffect(() => {
   // ─── REGISTRAR ENTRADA: crea un lote nuevo sobre el ítem del grupo ───
   const openAddLote = (group) => {
     setAddLoteGroup(group);
-    setAddLoteData({ cantidad: "1", ubicacion: "", fechaVencimiento: "" });
+    setAddLoteData({ cantidad: "1", fechaVencimiento: "" });
     setErroresAddLote({});
     setErrorAddLote("");
     setIsAddLoteOpen(true);
@@ -795,17 +823,14 @@ useEffect(() => {
     setErrorAddLote("");
 
     const cantidad = Number.parseInt(addLoteData.cantidad, 10);
-    const ubicacion = addLoteData.ubicacion.trim();
     const errs = {};
     if (Number.isNaN(cantidad) || cantidad < 1) errs.cantidad = "Ingresá una cantidad válida (mínimo 1).";
-    if (!ubicacion) errs.ubicacion = "La ubicación es obligatoria.";
     if (Object.keys(errs).length > 0) { setErroresAddLote(errs); return; }
 
     try {
       await equipamientoService.createLote({
         itemId: addLoteGroup.itemId,
         cantidadDisponible: cantidad,
-        ubicacion,
         estado: "disponible",
         movilidad: "Fija",
         ...(addLoteData.fechaVencimiento ? { fechaVencimiento: addLoteData.fechaVencimiento } : {}),
@@ -1008,7 +1033,6 @@ useEffect(() => {
         if (editingItem.loteId) {
           await equipamientoService.updateLote(editingItem.loteId, {
             cantidadDisponible: cantidad,
-            ubicacion: editingItem.ubicacion,
             estado: estadoToBackend(editingItem.estado),
             movilidad: editingItem.movilidad,
           });
@@ -1060,12 +1084,10 @@ useEffect(() => {
 
     const nombre = formData.nombre.trim();
     const cantidad = Number.parseInt(formData.cantidad, 10);
-    const ubicacion = formData.ubicacion.trim();
-    
+
     const errs = {};
     if (!nombre) errs.nombre = "El nombre es obligatorio.";
     if (Number.isNaN(cantidad) || cantidad < 1) errs.cantidad = "Ingresá una cantidad válida (mínimo 1).";
-    if (!ubicacion) errs.ubicacion = "La ubicación es obligatoria.";
     if (Object.keys(errs).length > 0) { setErroresFormEquip(errs); return; }
 
     try {
@@ -1075,7 +1097,7 @@ useEffect(() => {
           tipo: tipoItem, nombre, codigo: editingItem.codigo, unidad: formData.unidad, esConsumible: editingItem.esConsumible ?? true,
         });
         await equipamientoService.updateLote(editingItem.loteId, {
-          cantidadDisponible: cantidad, ubicacion, estado: estadoToBackend(formData.estado), movilidad: formData.movilidad,
+          cantidadDisponible: cantidad, estado: estadoToBackend(formData.estado), movilidad: formData.movilidad,
         });
         invalidarLotes(editingItem.itemId);
       } else {
@@ -1096,7 +1118,7 @@ useEffect(() => {
 
         try {
           await equipamientoService.createLote({
-            itemId: nuevoItemId, cantidadDisponible: cantidad, ubicacion, estado: estadoToBackend(formData.estado), movilidad: formData.movilidad,
+            itemId: nuevoItemId, cantidadDisponible: cantidad, estado: estadoToBackend(formData.estado), movilidad: formData.movilidad,
             ...(formData.fechaVencimiento ? { fechaVencimiento: formData.fechaVencimiento } : {}),
           });
         } catch (loteError) {
@@ -1511,9 +1533,6 @@ useEffect(() => {
                                               <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${item.laboratorioId ? "bg-indigo-50 text-indigo-600" : "bg-slate-100 text-slate-500"}`}>
                                                 {item.ubicacionLote}
                                               </span>
-                                              {item.ubicacion && (
-                                                <span className="truncate text-sm text-slate-700">{item.ubicacion}</span>
-                                              )}
                                             </div>
                                             {item.fechaVencimiento && (
                                               <div className="mt-0.5 text-xs text-slate-400">Vence {formatDate(item.fechaVencimiento)}</div>
@@ -1794,7 +1813,7 @@ useEffect(() => {
                 <div>
                   <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">Lote</div>
                   <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Editar lote</h2>
-                  <p className="mt-1 text-sm text-slate-500">{loteEditItem?.tipo} · Actualiza la cantidad, la ubicación y el estado.</p>
+                  <p className="mt-1 text-sm text-slate-500">{loteEditItem?.tipo} · Actualiza la cantidad y el estado.</p>
                 </div>
                 <button
                   type="button"

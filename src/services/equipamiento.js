@@ -92,12 +92,11 @@ export const getStockItem = async (itemId, { desde, hasta } = {}) => {
 // Obtener Lotes (orden FEFO). Respuesta DUAL:
 //  - sin page/limit  -> array de lotes (retrocompatible).
 //  - con page/limit   -> objeto { total, page, limit, lotes }.
-export const getLotes = async ({ itemId, estado, ubicacion, page, limit } = {}) => {
+export const getLotes = async ({ itemId, estado, page, limit } = {}) => {
   try {
     const params = new URLSearchParams();
     if (itemId) params.append("itemId", itemId);
     if (estado) params.append("estado", estado);
-    if (ubicacion) params.append("ubicacion", ubicacion);
     if (page) params.append("page", page);
     if (limit) params.append("limit", limit);
 
