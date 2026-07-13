@@ -30,6 +30,9 @@
 .fc-daygrid-day-number {
     color: #0f172a;
     font-weight: 600;
+    position: absolute;
+    top: 2px;
+    right: 2px;
 }
 
 .fc-daygrid-day {
@@ -38,6 +41,7 @@
 
 .fc-daygrid-day:hover {
     background: #f8fafc;
+    transition: background .2s;
 }
 
 .fc .fc-day-today {
@@ -50,4 +54,201 @@
 
 .fc .fc-daygrid-day.fc-day-today {
     background: white !important;
+}
+
+/* ===== Vista Mes ===== */
+
+.evento-resumen-mes {
+    background: #10b981;
+    color: white;
+    border-radius: 6px;
+    padding: 3px;
+    width: 100%;
+    box-sizing: border-box;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+
+    overflow: hidden;
+}
+
+.titulo-resumen {
+    font-size: 10px;
+    font-weight: 600;
+    text-align: center;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width:640px) {
+
+    .evento-resumen-mes {
+        padding: 2px;
+    }
+
+    .titulo-resumen {
+        text-align: center;
+        font-size: 9px;
+    }
+
+    .labs-resumen {
+        display: none;
+    }
+
+    .fc-daygrid-day-frame {
+        min-height: 90px;
+    }
+
+    .fc-scrollgrid {
+        border-radius: 30px;
+    }
+
+}
+
+.labs-resumen {
+    margin-top: 2px;
+    font-size: 10px;
+    font-weight: 500;
+    opacity: 0.9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    white-space: nowrap;
+}
+
+.evento-resumen-mes:hover {
+    background: #059669;
+}
+
+.fc-daygrid-day-events {
+    /*display: flex;
+    justify-content: center;
+    align-items: flex-start;*/
+    margin-top: 4px;
+}
+
+.fc-daygrid-event {
+    width: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.fc-daygrid-event-harness {
+    margin-bottom: 2px !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+}
+
+.fc-scrollgrid {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* ===== MINI CALENDARIO ===== */
+
+.fc .fc-toolbar.fc-header-toolbar {
+    margin-bottom: 1rem;
+}
+
+.fc .fc-toolbar-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.fc .fc-button {
+    background: transparent !important;
+    color: #64748b !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.fc .fc-button:hover {
+    background: #f1f5f9 !important;
+}
+
+.fc .fc-col-header-cell {
+    padding: 6px 0;
+}
+
+.fc .fc-col-header-cell-cushion {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: #64748b;
+    text-decoration: none;
+}
+
+.fc-daygrid-day-number {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: auto;
+    border-radius: 999px;
+}
+
+.dia-seleccionado .fc-daygrid-day-number {
+    background: #059669;
+    color: white;
+    font-weight: 700;
+}
+
+.fc-daygrid-day:hover .fc-daygrid-day-number {
+    background: #d1fae5;
+}
+
+.fc-day-today {
+    background: transparent !important;
+}
+
+.fc-daygrid-event {
+    background: transparent !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.fc-daygrid-event-dot {
+    display: none !important;
+}
+
+.fc-daygrid-event-harness {
+    display: flex;
+    justify-content: center;
+}
+
+.fc-daygrid-day-events {
+    min-height: 10px;
+}
+
+/*para reserva finalizada*/
+.evento-finalizado {
+    opacity: .40;
+    filter: grayscale(.8);
+}
+
+.evento-activo {
+    opacity: 1;
+}
+
+/* Animación */
+.fc-daygrid-event {
+    cursor: pointer;
+    transition: transform .15s ease,
+        filter .15s ease,
+        opacity .15s ease;
+}
+
+.evento-click .evento-resumen-mes {
+    background: #065f46;
+    transform: scale(.96);
+    transition: all .15s ease;
 }
