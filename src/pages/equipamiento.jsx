@@ -25,7 +25,6 @@ import FormularioAgregarLote from "../components/equipamiento/FormularioAgregarL
 import FormularioDesperfecto from "../components/equipamiento/FormularioDesperfecto"; // <-- Importamos tu nuevo formulario Desoerfecto
 import FormularioActualizarEstado from "../components/equipamiento/FormularioActualizarEstado"; // <-- Formulario de actualización de estado del equipo
 import FormularioTransferirLote from "../components/equipamiento/FormularioTransferirLote"; // Mover lote entre depósito y laboratorios
-import ModalStockItem from "../components/equipamiento/ModalStockItem"; // Vista de stock por ventana temporal
 
 import {
   FiEdit2, // Lapiz
@@ -39,7 +38,6 @@ import {
   FiChevronRight, // Chevron para el desplegable de grupos de ítems
   FiPlus, // Registrar entrada (agregar lote)
   FiMove, // Mover / transferir lote entre depósito y laboratorios
-  FiBarChart2, // Ver stock por ventana temporal
 } from "react-icons/fi";
 import { VscFileSubmodule } from "react-icons/vsc"; // Caja para materiales
 import { GiMaterialsScience } from "react-icons/gi"; // Materiales reactivos
@@ -404,10 +402,6 @@ function Equipamiento() {
   const [transferLote, setTransferLote] = useState(null);
   const [transferEnviando, setTransferEnviando] = useState(false);
   const [errorTransfer, setErrorTransfer] = useState("");
-
-  // ─── MODAL DE VISTA DE STOCK (GET /items/:id/stock) ───
-  const [isStockOpen, setIsStockOpen] = useState(false);
-  const [stockGroup, setStockGroup] = useState(null);
 
   // Mapa laboratorioId -> nombre para etiquetar la ubicación de los lotes.
   // GET /lotes no popula laboratorioId, así que resolvemos el nombre acá.
@@ -875,17 +869,6 @@ useEffect(() => {
     }
   };
 
-  // ─── VISTA DE STOCK (abre modal con GET /items/:id/stock) ───
-  const openStockModal = (group) => {
-    setStockGroup(group);
-    setIsStockOpen(true);
-  };
-
-  const closeStockModal = () => {
-    setIsStockOpen(false);
-    setStockGroup(null);
-  };
-
   // ─── ACCIONES DEL FORMULARIO DE DESPERFECTOS ───
   const openDesperfectoModal = (item) => {
     setDesperfectoItem(item);
@@ -1309,14 +1292,6 @@ useEffect(() => {
                             <div className="flex shrink-0 items-center gap-1">
                               <button
                                 type="button"
-                                onClick={() => openStockModal(g)}
-                                className="rounded-lg p-1.5 text-indigo-500 bg-indigo-50 hover:bg-indigo-100 transition"
-                                aria-label={`Ver stock de ${g.tipo}`}
-                              >
-                                <FiBarChart2 />
-                              </button>
-                              <button
-                                type="button"
                                 onClick={() => openAddLote(g)}
                                 className="rounded-lg p-1.5 text-emerald-500 bg-emerald-50 hover:bg-emerald-100 transition"
                                 aria-label={`Registrar entrada de ${g.tipo}`}
@@ -1480,15 +1455,6 @@ useEffect(() => {
                               <td className="px-4 py-3 text-slate-500">{g.codigo}</td>
                               <td className="px-4 py-3">
                                 <div className="flex items-center gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => { e.stopPropagation(); openStockModal(g); }}
-                                    className="rounded-lg p-2 text-indigo-500 bg-indigo-50 hover:bg-indigo-100 transition"
-                                    title="Ver stock"
-                                    aria-label={`Ver stock de ${g.tipo}`}
-                                  >
-                                    <FiBarChart2 />
-                                  </button>
                                   <button
                                     type="button"
                                     onClick={(e) => { e.stopPropagation(); openAddLote(g); }}
@@ -1935,34 +1901,6 @@ useEffect(() => {
         </div>
       )}
 
-      {/* ─── MODAL 7: VISTA DE STOCK POR VENTANA ─── */}
-      {isStockOpen && (
-        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/45 backdrop-blur-sm sm:items-center sm:p-4" onClick={closeStockModal}>
-          <div className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-lg sm:rounded-[24px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-b from-indigo-50 to-white px-4 py-4 sm:static sm:px-6">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="mb-2 inline-flex rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-indigo-700">Stock</div>
-                  <h2 className="text-lg font-bold text-slate-900 sm:text-xl">{stockGroup?.tipo}</h2>
-                  <p className="mt-1 text-sm text-slate-500">Código {stockGroup?.codigo} · Disponibilidad para reservar y stock físico presente.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={closeStockModal}
-                  aria-label="Cerrar"
-                  title="Cerrar"
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
-                >
-                  <FiX className="h-4 w-4" aria-hidden="true" />
-                </button>
-              </div>
-            </div>
-            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
-              <ModalStockItem group={stockGroup} />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
