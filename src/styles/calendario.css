@@ -30,6 +30,9 @@
 .fc-daygrid-day-number {
     color: #0f172a;
     font-weight: 600;
+    position: absolute;
+    top: 2px;
+    right: 2px;
 }
 
 .fc-daygrid-day {
@@ -50,4 +53,134 @@
 
 .fc .fc-daygrid-day.fc-day-today {
     background: white !important;
+}
+
+/* ===== Vista Mes ===== */
+
+.evento-resumen-mes {
+    background: #10b981;
+    color: white;
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: .2s;
+
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+
+    min-height: 72px;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.labs-resumen {
+    margin-top: 2px;
+    font-size: 10px;
+    font-weight: 500;
+    opacity: 0.9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    white-space: nowrap;
+}
+
+.evento-resumen-mes:hover {
+    background: #059669;
+}
+
+.fc-daygrid-day-events {
+    display: flex;
+    justify-content: center;
+    margin-top: 18px;
+}
+
+.fc-daygrid-event {
+    width: 100%;
+    margin: 0;
+}
+
+/* ===== MINI CALENDARIO ===== */
+
+.fc .fc-toolbar.fc-header-toolbar {
+    margin-bottom: 1rem;
+}
+
+.fc .fc-toolbar-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.fc .fc-button {
+    background: transparent !important;
+    color: #64748b !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.fc .fc-button:hover {
+    background: #f1f5f9 !important;
+}
+
+.fc .fc-col-header-cell {
+    padding: 6px 0;
+}
+
+.fc .fc-col-header-cell-cushion {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: #64748b;
+    text-decoration: none;
+}
+
+.fc-daygrid-day-number {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: auto;
+    border-radius: 999px;
+}
+
+.dia-seleccionado .fc-daygrid-day-number {
+    background: #059669;
+    color: white;
+    font-weight: 700;
+}
+
+.fc-daygrid-day:hover .fc-daygrid-day-number {
+    background: #d1fae5;
+}
+
+.fc-day-today {
+    background: transparent !important;
+}
+
+.fc-daygrid-event {
+    background: transparent !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.fc-daygrid-event-dot {
+    display: none !important;
+}
+
+.fc-daygrid-event-harness {
+    display: flex;
+    justify-content: center;
+}
+
+.fc-daygrid-day-events {
+    min-height: 10px;
 }
