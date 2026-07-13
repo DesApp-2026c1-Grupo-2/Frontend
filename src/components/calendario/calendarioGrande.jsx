@@ -9,6 +9,7 @@ import CalendarioDia from "./calendarioDia";
 import CalendarioMini from "./calendarioMini";
 import { obtenerEdificios } from "../../services/edificioService";
 import { obtenerLaboratoriosPorEdificio } from "../../services/laboratorioService";
+import { useAuth } from "../../context/AuthContext";
 
 import {
   FiTool,
@@ -91,6 +92,7 @@ export default function CalendarioGrande({
     setVistaActual,
     reservas,
   }) {
+  const { user } = useAuth();
   const calendarRef = useRef(null);
   
   const [tituloMes, setTituloMes] = useState("Junio 2026");
@@ -100,6 +102,7 @@ export default function CalendarioGrande({
   
   const [edificios, setEdificios] = useState([]);
   const [laboratorios, setLaboratorios] = useState([]);
+  const [todosLosLaboratorios, setTodosLosLaboratorios] = useState([]);
   console.log(laboratorios);
 
   useEffect(() => {
@@ -129,6 +132,21 @@ export default function CalendarioGrande({
 
         setLaboratorios(data);
 
+        // Guardamos todos los laboratorios que alguna vez fueron cargados
+        setTodosLosLaboratorios((prev) => {
+          const nuevos = [...prev];
+
+          data.forEach((lab) => {
+            const id = lab.id || lab._id;
+
+            if (!nuevos.some((l) => (l.id || l._id) === id)) {
+              nuevos.push(lab);
+            }
+          });
+
+          return nuevos;
+        });
+
         setLaboratorio("todos");
 
       } catch (error) {
@@ -156,17 +174,48 @@ export default function CalendarioGrande({
   console.log("Reserva ejemplo:");
   console.log(reservas[0]);
 
+  const esAdminOPersonal =
+    user?.rol === "ADMIN" || user?.rol === "PERSONAL";
 
- const reservasFiltradas = reservas.filter((reserva) => {
-    // "Todos": mostrar todos los laboratorios del edificio seleccionado
+  const reservasVisibles = esAdminOPersonal
+    ? reservas
+    : reservas.filter((r) => r.docenteId === user._id);
+
+  const edificiosDisponibles = esAdminOPersonal
+    ? edificios
+    : edificios.filter((ed) =>
+        todosLosLaboratorios.some((lab) => {
+          const laboratorioTieneReserva = reservasVisibles.some(
+            (r) => r.laboratorioId === (lab.id || lab._id)
+          );
+
+          return (
+            laboratorioTieneReserva &&
+            lab.edificioId === (ed.id || ed._id)
+          );
+        })
+      );
+
+  const laboratoriosDisponibles = esAdminOPersonal
+    ? laboratorios
+    : laboratorios.filter((lab) =>
+        reservasVisibles.some(
+          (r) => r.laboratorioId === (lab.id || lab._id)
+        )
+      );
+
+  const reservasFiltradas = reservasVisibles.filter((reserva) => {
+    // El laboratorio seleccionado es "Todos"
     if (laboratorio === "todos") {
       return laboratorios.some(
-        (lab) => (lab.id || lab._id) === reserva.laboratorioId
+        (lab) => (lab._id || lab.id) === reserva.laboratorioId
       );
     }
 
+    // No hay laboratorio seleccionado todavía
     if (!laboratorio) return false;
 
+    // Laboratorio específico
     return reserva.laboratorioId === laboratorio;
   });
  
@@ -287,8 +336,8 @@ export default function CalendarioGrande({
             setEdificio={setEdificio}
             laboratorio={laboratorio}
             setLaboratorio={setLaboratorio}
-            edificios={edificios}
-            laboratorios={laboratorios}
+            edificios={edificiosDisponibles}
+            laboratorios={laboratoriosDisponibles}
             vistaActual={vistaActual}
           />
         </div>

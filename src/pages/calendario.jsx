@@ -16,6 +16,7 @@ export default function Calendario() {
       .then((data) => {
         console.log(JSON.stringify(data, null, 2));
         const reservasAdaptadas = data.map((r) => {
+          console.log("LABORATORIO:", r.laboratorioId);
 
           const inicioClase = new Date(r.fechaHora);
 
@@ -33,6 +34,8 @@ export default function Calendario() {
 
           return {
             id: r._id,
+
+            docenteId: r.docenteId._id,
 
             edificio: r.laboratorioId.edificioId,
 
@@ -185,26 +188,6 @@ export default function Calendario() {
                       setVistaActual={setVistaActual}
                       reservas={reservas}
                   />
-
-              </div>
-
-              {/* RESUMEN */}
-
-              <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5">
-
-                <h3 className="font-semibold text-slate-800 mb-4">
-                  Resumen
-                </h3>
-
-                <div className="space-y-3 text-sm text-slate-600">
-
-                  <p>• 12 reservas hoy</p>
-
-                  <p>• 8 laboratorios ocupados</p>
-
-                  <p>• 3 próximas reservas</p>
-
-                </div>
 
               </div>
 
