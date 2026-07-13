@@ -1668,64 +1668,69 @@ useEffect(() => {
         </section>
       </div>
 
-      {/* ─── MODAL 1: FORMULARIO GENERAL (EQUIPO / EQUIPAMIENTO) ─── */}
-      {isFormOpen && (
-        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/45 backdrop-blur-sm sm:items-center sm:p-4" onClick={closeForm}>
-          <div className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-lg sm:rounded-[28px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:static sm:px-6">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">Registro</div>
-                  <h2 className="text-lg font-bold text-slate-900 sm:text-xl">
-                    {editingItem ? `Editar ${editingItem.tipo}` : {
-                      "Equipos": "Nuevo equipo",
-                      "Materiales": "Nuevo material",
-                      "Reactivos": "Nuevo reactivo",
-                      "Sustancias basicas": "Nueva sustancia básica",
-                    }[activeTab] || "Nuevo ítem"}
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-500">{editingItem ? "Actualiza los campos y guarda los cambios." : "Completa el formulario para registrar el ítem."}</p>
+        {/* ─── MODAL 1: FORMULARIO GENERAL (EQUIPO / EQUIPAMIENTO) ─── */}
+        {isFormOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 backdrop-blur-sm p-4"
+            onClick={closeForm}
+          >
+            <div
+              className="flex w-full max-w-lg max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:px-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">Registro</div>
+                    <h2 className="text-lg font-bold text-slate-900 sm:text-xl">
+                      {editingItem ? `Editar ${editingItem.tipo}` : {
+                        "Equipos": "Nuevo equipo",
+                        "Materiales": "Nuevo material",
+                        "Reactivos": "Nuevo reactivo",
+                        "Sustancias basicas": "Nueva sustancia básica",
+                      }[activeTab] || "Nuevo ítem"}
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">{editingItem ? "Actualiza los campos y guarda los cambios." : "Completa el formulario para registrar el ítem."}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={closeForm}
+                    aria-label="Cerrar formulario"
+                    title="Cerrar formulario"
+                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
+                  >
+                    <FiX className="h-4 w-4" aria-hidden="true" />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={closeForm}
-                  aria-label="Cerrar formulario"
-                  title="Cerrar formulario"
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
-                >
-                  <FiX className="h-4 w-4" aria-hidden="true" />
-                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+                {errorFormEquip && (
+                  <div className="mb-4 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+                    <span><strong>Error:</strong> {errorFormEquip}</span>
+                    <button onClick={() => setErrorFormEquip("")} className="ml-4 font-bold text-red-400 hover:text-red-600">✕</button>
+                  </div>
+                )}
+                {formMode === "item" ? (
+                  <FormularioItem formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} errores={erroresFormEquip} />
+                ) : activeTab === "Equipos" ? (
+                  <FormularioEquipo formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} errores={erroresFormEquip} />
+                ) : activeTab === "Materiales" ? (
+                  <FormularioMaterial formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} statusOptions={statusOptions} errores={erroresFormEquip} />
+                ) : activeTab === "Reactivos" ? (
+                  <FormularioReactivo formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} statusOptions={statusOptions} errores={erroresFormEquip} />
+                ) : (
+                  <FormularioSustancia formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} statusOptions={statusOptions} errores={erroresFormEquip} />
+                )}
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
-              {/* Errores de validación y backend del formulario */}
-              {errorFormEquip && (
-                <div className="mb-4 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-600">
-                  <span><strong>Error:</strong> {errorFormEquip}</span>
-                  <button onClick={() => setErrorFormEquip("")} className="ml-4 font-bold text-red-400 hover:text-red-600">✕</button>
-                </div>
-              )}
-              {formMode === "item" ? (
-                <FormularioItem formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} errores={erroresFormEquip} />
-              ) : activeTab === "Equipos" ? (
-                <FormularioEquipo formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} errores={erroresFormEquip} />
-              ) : activeTab === "Materiales" ? (
-                <FormularioMaterial formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} statusOptions={statusOptions} errores={erroresFormEquip} />
-              ) : activeTab === "Reactivos" ? (
-                <FormularioReactivo formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} statusOptions={statusOptions} errores={erroresFormEquip} />
-              ) : (
-                <FormularioSustancia formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} cerrarModal={closeForm} statusOptions={statusOptions} errores={erroresFormEquip} />
-              )}
-            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* ─── MODAL 2: REGISTRAR DESPERFECTO (NUEVO) ─── */}
       {isDesperfectoOpen && (
-        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/45 backdrop-blur-sm sm:items-center sm:p-4" onClick={closeDesperfectoModal}>
-          <div className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-lg sm:rounded-[28px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:static sm:px-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 backdrop-blur-sm p-4" onClick={closeDesperfectoModal}>
+          <div className="flex w-full max-w-lg max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:px-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">Registro</div>
@@ -1769,19 +1774,25 @@ useEffect(() => {
 
       {/* ─── MODAL 3: ACTUALIZAR ESTADO DEL EQUIPO ─── */}
       {isEstadoOpen && (
-        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/45 backdrop-blur-sm sm:items-center sm:p-4" onClick={closeEstadoModal}>
-          <div className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-md sm:rounded-[24px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]" onClick={(e) => e.stopPropagation()}>
-            <div className="border-b border-slate-100 px-6 py-4 bg-slate-50/80 flex items-center justify-between gap-4">
-              <h2 className="text-lg font-bold text-slate-900">Actualizar estado</h2>
-              <button
-                type="button"
-                onClick={closeEstadoModal}
-                aria-label="Cerrar formulario"
-                title="Cerrar formulario"
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
-              >
-                <FiX className="h-4 w-4" aria-hidden="true" />
-              </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 backdrop-blur-sm p-4" onClick={closeEstadoModal}>
+          <div className="flex w-full max-w-md max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:px-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">Estado</div>
+                  <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Actualizar estado</h2>
+                  <p className="mt-1 text-sm text-slate-500">Cambia el estado del equipo seleccionado.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeEstadoModal}
+                  aria-label="Cerrar formulario"
+                  title="Cerrar formulario"
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
+                >
+                  <FiX className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
               {estadoMsg && (
@@ -1796,7 +1807,6 @@ useEffect(() => {
               <FormularioActualizarEstado
                 equipo={estadoItem}
                 onSubmit={handleEstadoSubmit}
-                cerrarModal={closeEstadoModal}
                 enviando={estadoEnviando}
               />
             </div>
@@ -1806,9 +1816,9 @@ useEffect(() => {
 
       {/* ─── MODAL 4: EDITAR LOTE (UBICACIÓN / ESTADO) ─── */}
       {isLoteEditOpen && (
-        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/45 backdrop-blur-sm sm:items-center sm:p-4" onClick={closeLoteEdit}>
-          <div className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-md sm:rounded-[24px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:static sm:px-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 backdrop-blur-sm p-4" onClick={closeLoteEdit}>
+          <div className="flex w-full max-w-md max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:px-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">Lote</div>
@@ -1847,9 +1857,9 @@ useEffect(() => {
 
       {/* ─── MODAL 5: REGISTRAR ENTRADA (NUEVO LOTE) ─── */}
       {isAddLoteOpen && (
-        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/45 backdrop-blur-sm sm:items-center sm:p-4" onClick={closeAddLote}>
-          <div className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-white shadow-none sm:h-auto sm:max-w-md sm:rounded-[24px] sm:border sm:border-slate-200 sm:shadow-[0_30px_80px_rgba(15,23,42,0.22)]" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:static sm:px-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 backdrop-blur-sm p-4" onClick={closeAddLote}>
+          <div className="flex w-full max-w-md max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="border-b border-slate-200 bg-gradient-to-b from-emerald-50 to-white px-4 py-4 sm:px-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="mb-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700">Entrada</div>

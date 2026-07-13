@@ -338,7 +338,7 @@ export default function PedidoDetalle() {
         // 2. Función recursiva para buscar IDs huérfanos en el historial
         const extraerIdsHistorial = (obj) => {
           if (!obj || typeof obj !== "object") return;
-          
+
           // Buscar llaves comunes de IDs en tu estructura
           const posiblesLlaves = ["recursoId", "itemId", "equipoId"];
           posiblesLlaves.forEach(llave => {
@@ -365,14 +365,14 @@ export default function PedidoDetalle() {
         // 3. Obtener nombres faltantes
         if (idsPendientes.size > 0) {
           const nombresMap = {};
-          
+
           await Promise.all(
             Array.from(idsPendientes).map(async (recId) => {
               // Si el pedido ya lo trajo populado desde el backend, lo usamos
               const recursoPopulado = dataPedido.recursos?.find(
                 r => (r.recursoId?._id || r.recursoId) === recId
               );
-              
+
               if (recursoPopulado?.recursoId?.nombre) {
                 nombresMap[recId] = recursoPopulado.recursoId.nombre;
                 return;
@@ -380,7 +380,7 @@ export default function PedidoDetalle() {
 
               // Si no, lo buscamos en la API (Fallback para el historial)
               // Asumimos "item" por defecto si no encontramos el tipo en el escaneo
-              const tipo = tiposPorId[recId] === "equipo" ? "equipo" : "items"; 
+              const tipo = tiposPorId[recId] === "equipo" ? "equipo" : "items";
               try {
                 const resRecurso = await api.get(`/${tipo}/${recId}`);
                 if (resRecurso.data?.nombre) {
@@ -422,15 +422,15 @@ export default function PedidoDetalle() {
       setErrorAccion("Debe proporcionar un motivo de rechazo.");
       return;
     }
-    
+
     setErrorAccion("");
     try {
       // Magia pura: mandamos el motivo directamente en el estado
-      const res = await api.patch(`/pedido/${id}/estado`, { 
+      const res = await api.patch(`/pedido/${id}/estado`, {
         estado: "Rechazado",
-        motivoRechazo: motivRechazo 
+        motivoRechazo: motivRechazo
       });
-      
+
       setPedido(res.data);
       setMostrarMotivRechazo(false);
       setMotivRechazo("");
@@ -525,12 +525,12 @@ export default function PedidoDetalle() {
 
   const toggleEstadoTarea = async (index) => {
     if (!pedido || !pedido.checklist) return;
-    
+
     setErrorAccion("");
     const nuevaChecklist = [...pedido.checklist];
     const estadoActual = nuevaChecklist[index].estado;
     const nuevoEstado = estadoActual === "Completada" ? "Pendiente" : "Completada";
-    
+
     nuevaChecklist[index] = { ...nuevaChecklist[index], estado: nuevoEstado };
 
     try {
@@ -555,7 +555,7 @@ export default function PedidoDetalle() {
         return {
           id: recursoId,
           recursoId,
-          nombre: r.recursoId?.nombre || r.nombre || "Recurso",
+          nombre: r.recursoId?.nombre || r.nombre || nombresRecursos[recursoId] || "Recurso",
           tipo: esEquipo ? "Equipo" : "Item",
           tipoDetalle: r.recursoId?.tipo || r.tipoDetalle || (esEquipo ? "Equipo" : "Material"),
           cantidadSolicitada: Number(r.cantidad || 1),
@@ -581,7 +581,7 @@ export default function PedidoDetalle() {
         };
       }),
     }));
-  }, [pedido]);
+  }, [pedido, nombresRecursos]);
 
   useEffect(() => {
     const marcarVisto = async () => {
@@ -603,8 +603,7 @@ export default function PedidoDetalle() {
         <div className="relative">
           <div className="absolute bottom-0 left-0 w-full h-40 bg-emerald-100 opacity-20 rounded-[2rem]" />
           <div className="relative z-10 bg-white border border-slate-100 rounded-[2rem] shadow-lg p-6 sm:p-8">
-            <div className="absolute -top-5 left-10 right-10 h-6 bg-emerald-500 rounded-t-[1.5rem]" />
-            
+            <div className="absolute -top-5 left-10 right-10 h-6 rounded-t-[2rem] bg-stone-700 rounded-sm" />
             {/* HEADER */}
             <div className="flex justify-between items-start mb-6 pb-4 border-b border-slate-200">
               <div className="flex-1">
@@ -640,15 +639,14 @@ export default function PedidoDetalle() {
               </div>
               <div>
                 <p className="text-slate-400 mb-1">Estado</p>
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
-                  pedido.estado === "Aprobado" || pedido.estado === "Aceptado"
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${pedido.estado === "Aprobado" || pedido.estado === "Aceptado"
                     ? "bg-emerald-100 text-emerald-700"
                     : pedido.estado === "Rechazado"
-                    ? "bg-red-100 text-red-700"
-                    : pedido.estado === "Finalizado"
-                    ? "bg-slate-200 text-slate-700"
-                    : "bg-yellow-100 text-yellow-700"
-                }`}>
+                      ? "bg-red-100 text-red-700"
+                      : pedido.estado === "Finalizado"
+                        ? "bg-slate-200 text-slate-700"
+                        : "bg-yellow-100 text-yellow-700"
+                  }`}>
                   {pedido.estado === "Aceptado" ? "Aprobado" : pedido.estado}
                 </span>
               </div>
@@ -744,13 +742,12 @@ export default function PedidoDetalle() {
                           <p className="text-xs text-slate-400 mt-1">Tipo: {tarea.tipo}</p>
                         </div>
                       </div>
-                      <span className={`text-xs font-semibold px-2 py-1 rounded-md ${
-                        tarea.estado === "Completada"
+                      <span className={`text-xs font-semibold px-2 py-1 rounded-md ${tarea.estado === "Completada"
                           ? "bg-green-100 text-green-700"
                           : tarea.estado === "En Proceso"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-slate-200 text-slate-700"
-                      }`}>
+                            ? "bg-yellow-100 text-yellow-700"
+                            : "bg-slate-200 text-slate-700"
+                        }`}>
                         {tarea.estado}
                       </span>
                     </div>
@@ -837,23 +834,21 @@ export default function PedidoDetalle() {
                   return (
                     <div
                       key={comentario._id}
-                      className={`border rounded-xl p-4 hover:shadow-md transition-all ${
-                        esMotivRechazo 
-                          ? "border-red-300 bg-gradient-to-br from-red-50 to-orange-50" 
+                      className={`border rounded-xl p-4 hover:shadow-md transition-all ${esMotivRechazo
+                          ? "border-red-300 bg-gradient-to-br from-red-50 to-orange-50"
                           : "border-slate-200 bg-gradient-to-br from-white to-slate-50"
-                      }`}
+                        }`}
                     >
                       <div className="flex justify-between items-start mb-2 gap-2 flex-wrap">
                         <div className="flex items-center gap-2">
-                          <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
-                            esMotivRechazo
+                          <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${esMotivRechazo
                               ? "bg-red-200 text-red-700"
                               : comentario.usuario?.rol === "ADMIN"
-                              ? "bg-purple-100 text-purple-700"
-                              : comentario.usuario?.rol === "PERSONAL"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-emerald-100 text-emerald-700"
-                          }`}>
+                                ? "bg-purple-100 text-purple-700"
+                                : comentario.usuario?.rol === "PERSONAL"
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-emerald-100 text-emerald-700"
+                            }`}>
                             {esMotivRechazo ? "⚠️ RECHAZO" : comentario.usuario?.rol}
                           </span>
                           <span className={`font-semibold ${esMotivRechazo ? "text-red-700" : "text-slate-800"}`}>
@@ -905,7 +900,7 @@ export default function PedidoDetalle() {
                     <button onClick={() => setErrorAccion("")} className="ml-4 text-red-400 hover:text-red-600 font-bold text-lg">✕</button>
                   </div>
                 )}
-                
+
                 {/* INLINE FORM: RECHAZO */}
                 {mostrarMotivRechazo && (
                   <div className="border border-red-300 bg-red-50 rounded-xl p-4 space-y-3">
@@ -974,8 +969,13 @@ export default function PedidoDetalle() {
                                     type="number"
                                     min="1"
                                     max={recurso.cantidadSolicitada}
-                                    value={recursoForm.cantidadDescartada || 0}
-                                    onChange={(e) => actualizarRecursoFinalizacion(recurso.recursoId, { cantidadDescartada: Number(e.target.value) })}
+                                    value={recursoForm.cantidadDescartada === undefined ? "" : recursoForm.cantidadDescartada}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      actualizarRecursoFinalizacion(recurso.recursoId, {
+                                        cantidadDescartada: val === "" ? "" : Number(val)
+                                      });
+                                    }}
                                     className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                                     placeholder="Cantidad descartada"
                                   />
@@ -1045,19 +1045,18 @@ export default function PedidoDetalle() {
                     </div>
                   </div>
                 )}
-                
+
                 {/* BOTONES PRIMARIOS */}
                 {!mostrarMotivRechazo && !mostrarFinalizar && (
                   <div className="flex flex-wrap gap-3">
-                    
+
                     {pedido.estado === "Pendiente" && (
                       <>
                         <button
                           onClick={aprobar}
                           disabled={tieneConflictos}
-                          className={`flex-1 px-4 py-2.5 text-white rounded-lg font-semibold shadow-md ${
-                            tieneConflictos ? "bg-gray-400 cursor-not-allowed opacity-60" : "bg-emerald-600 hover:bg-emerald-700"
-                          }`}
+                          className={`flex-1 px-4 py-2.5 text-white rounded-lg font-semibold shadow-md ${tieneConflictos ? "bg-gray-400 cursor-not-allowed opacity-60" : "bg-emerald-600 hover:bg-emerald-700"
+                            }`}
                         >
                           ✅ Aprobar
                         </button>
