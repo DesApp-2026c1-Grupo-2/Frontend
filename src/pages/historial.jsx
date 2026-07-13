@@ -15,7 +15,7 @@ const tabs = [
 function Historial() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const activeTab = tabs.some((t) => t.id === tabParam) ? tabParam : "descartes";
+  const activeTab = tabs.some((t) => t.id === tabParam) ? tabParam : "movimientos";
 
   const setActiveTab = (id) => {
     setSearchParams({ tab: id });

@@ -1647,7 +1647,7 @@ useEffect(() => {
         <section className="mt-6">
           <button
             type="button"
-            onClick={() => navigate("/historial?tab=descartes")}
+            onClick={() => navigate("/historial")}
             className="group flex w-full items-center gap-4 overflow-hidden rounded-[28px] border border-slate-200 bg-white px-5 py-5 text-left shadow-[0_14px_40px_rgba(15,23,42,0.06)] transition hover:border-emerald-300 hover:shadow-[0_18px_50px_rgba(16,185,129,0.14)] cursor-pointer sm:px-6"
           >
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition group-hover:bg-emerald-100">
