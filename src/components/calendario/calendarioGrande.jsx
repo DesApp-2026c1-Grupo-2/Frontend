@@ -9,6 +9,7 @@ import CalendarioDia from "./calendarioDia";
 import CalendarioMini from "./calendarioMini";
 import { obtenerEdificios } from "../../services/edificioService";
 import { obtenerLaboratoriosPorEdificio } from "../../services/laboratorioService";
+import { useAuth } from "../../context/AuthContext";
 
 import {
   FiTool,
@@ -44,10 +45,7 @@ function agruparReservasPorHorario(reservas) {
     }
 
     grupos[key].reservas.push({
-      id: reserva.id,
-      laboratorio: reserva.laboratorio,
-      materia: reserva.materia,
-      profesor: reserva.profesor,
+      ...reserva
     });
   });
 
@@ -62,8 +60,31 @@ function agruparReservasPorHorario(reservas) {
   }));
 }
 
-function obtenerEstiloEvento(tipo) {
-  const colores = {
+function obtenerEstiloEvento(tipo, estado) {
+
+  const esFinalizada = estado === "Finalizada";
+
+  if (esFinalizada) {
+    return {
+      preparacion: {
+        fondo: "bg-slate-50",
+        texto: "text-slate-700",
+        borde: "border-slate-200",
+      },
+      clase: {
+        fondo: "bg-slate-400",
+        texto: "text-white",
+        borde: "border-slate-300",
+      },
+      mantenimiento: {
+        fondo: "bg-slate-50",
+        texto: "text-slate-700",
+        borde: "border-slate-200",
+      },
+    }[tipo];
+  }
+
+  return {
     preparacion: {
       fondo: "bg-slate-50",
       texto: "text-slate-700",
@@ -79,9 +100,7 @@ function obtenerEstiloEvento(tipo) {
       texto: "text-slate-700",
       borde: "border-slate-200",
     },
-  };
-
-  return colores[tipo];
+  }[tipo];
 }
 
 export default function CalendarioGrande({
@@ -91,7 +110,9 @@ export default function CalendarioGrande({
     setVistaActual,
     reservas,
   }) {
+  const { user } = useAuth();
   const calendarRef = useRef(null);
+  const [esMobile, setEsMobile] = useState(window.innerWidth < 768);
   
   const [tituloMes, setTituloMes] = useState("Junio 2026");
 
@@ -100,6 +121,7 @@ export default function CalendarioGrande({
   
   const [edificios, setEdificios] = useState([]);
   const [laboratorios, setLaboratorios] = useState([]);
+  const [todosLosLaboratorios, setTodosLosLaboratorios] = useState([]);
   console.log(laboratorios);
 
   useEffect(() => {
@@ -129,7 +151,26 @@ export default function CalendarioGrande({
 
         setLaboratorios(data);
 
-        setLaboratorio("todos");
+        // Guardamos todos los laboratorios que alguna vez fueron cargados
+        setTodosLosLaboratorios((prev) => {
+          const nuevos = [...prev];
+
+          data.forEach((lab) => {
+            const id = lab.id || lab._id;
+
+            if (!nuevos.some((l) => (l.id || l._id) === id)) {
+              nuevos.push(lab);
+            }
+          });
+
+          return nuevos;
+        });
+
+        if (vistaActual === "dayGridMonth") {
+          setLaboratorio("todos");
+        } else {
+          setLaboratorio(data[0]?._id || data[0]?.id || "");
+        }
 
       } catch (error) {
         console.error(error);
@@ -138,6 +179,38 @@ export default function CalendarioGrande({
 
     cargarLaboratorios();
   }, [edificio]);
+
+  useEffect(() => {
+    if (laboratorios.length === 0) return;
+
+    if (vistaActual === "dayGridMonth") {
+      setLaboratorio("todos");
+    } else if (laboratorio === "todos") {
+      setLaboratorio(laboratorios[0]._id || laboratorios[0].id);
+    }
+  }, [vistaActual, laboratorios]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setEsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (esMobile && vistaActual === "timeGridWeek") {
+      setVistaActual("dayGridMonth");
+    }
+
+    if (!esMobile && vistaActual === "dayGridMonth") {
+      setVistaActual("timeGridWeek");
+    }
+  }, [esMobile, vistaActual, setVistaActual]);
 
   const actualizarTitulo = (fecha) => {
     const f = new Date(fecha);
@@ -156,16 +229,46 @@ export default function CalendarioGrande({
   console.log("Reserva ejemplo:");
   console.log(reservas[0]);
 
+  const esAdminOPersonal =
+    user?.rol === "ADMIN" || user?.rol === "PERSONAL";
 
- const reservasFiltradas = reservas.filter((reserva) => {
-    // "Todos": mostrar todos los laboratorios del edificio seleccionado
-    if (laboratorio === "todos") {
-      return laboratorios.some(
-        (lab) => (lab.id || lab._id) === reserva.laboratorioId
+  const reservasVisibles = esAdminOPersonal
+    ? reservas
+    : reservas.filter((r) => r.docenteId === user._id);
+
+  const edificiosDisponibles = esAdminOPersonal
+    ? edificios
+    : edificios.filter((ed) =>
+        todosLosLaboratorios.some((lab) => {
+          const laboratorioTieneReserva = reservasVisibles.some(
+            (r) => r.laboratorioId === (lab.id || lab._id)
+          );
+
+          return (
+            laboratorioTieneReserva &&
+            lab.edificioId === (ed.id || ed._id)
+          );
+        })
       );
-    }
 
+  const laboratoriosDisponibles = esAdminOPersonal
+    ? laboratorios
+    : laboratorios.filter((lab) =>
+        reservasVisibles.some(
+          (r) => r.laboratorioId === (lab.id || lab._id)
+        )
+      );
+
+  const idsLaboratorios = laboratorios.map(
+    (l) => l._id || l.id
+  );
+
+  const reservasFiltradas = reservasVisibles.filter((reserva) => {
     if (!laboratorio) return false;
+
+    if (laboratorio === "todos") {
+      return idsLaboratorios.includes(reserva.laboratorioId);
+    }
 
     return reserva.laboratorioId === laboratorio;
   });
@@ -191,38 +294,58 @@ export default function CalendarioGrande({
 
   }, [vistaActual, fechaSeleccionada]);
 
-  const eventosSemana = reservasFiltradas
-    .flatMap((reserva) => [
-      // Preparación
-      {
-        id: `${reserva.id}-prep`,
+  console.table(
+    reservasFiltradas.map((r) => ({
+      materia: r.materia,
+      estado: r.estado,
+      laboratorio: r.laboratorio,
+    }))
+  );
+
+  useEffect(() => {
+    if (esMobile && vistaActual === "timeGridWeek") {
+      setVistaActual("dayGridMonth");
+    }
+  }, []);
+
+  const eventosSemana = reservasFiltradas.flatMap((reserva) => [
+    {
+      id: `${reserva.id}-prep`,
+      title: "Preparación",
+      start: reserva.preparacionInicio,
+      end: reserva.reservaInicio,
+
+      extendedProps: {
         tipo: "preparacion",
-        title: "Preparación",
-        start: reserva.preparacionInicio,
-        end: reserva.reservaInicio,
         reserva,
       },
+    },
 
-      // Clase
-      {
-        id: `${reserva.id}-clase`,
+    {
+      id: `${reserva.id}-clase`,
+      title: reserva.materia,
+      start: reserva.reservaInicio,
+      end: reserva.reservaFin,
+
+      extendedProps: {
         tipo: "clase",
-        title: reserva.materia,
-        start: reserva.reservaInicio,
-        end: reserva.reservaFin,
         reserva,
       },
+    },
 
-      // Mantenimiento
-      {
-        id: `${reserva.id}-mant`,
+    {
+      id: `${reserva.id}-mant`,
+      title: "Mantenimiento",
+      start: reserva.reservaFin,
+      end: reserva.mantenimientoFin,
+
+      extendedProps: {
         tipo: "mantenimiento",
-        title: "Mantenimiento",
-        start: reserva.reservaFin,
-        end: reserva.mantenimientoFin,
         reserva,
       },
-    ]);
+    },
+  ]);
+
 
   console.log("==========");
   console.log("Vista:", vistaActual);
@@ -239,30 +362,37 @@ export default function CalendarioGrande({
 
   const bloquesDia = agruparReservasPorHorario(reservasDelDia);
 
-  const reservasPorDia = reservasFiltradas
-    .reduce((acc, reserva) => {
-      const fecha = reserva.reservaInicio.split("T")[0];
+  const reservasPorDia = reservasFiltradas.reduce((acc, reserva) => {
+    const fecha = reserva.reservaInicio.split("T")[0];
 
-      if (!acc[fecha]) {
-        acc[fecha] = {
-          total: 0,
-          laboratorios: {},
-        };
-      }
+    if (!acc[fecha]) {
+      acc[fecha] = {
+        total: 0,
+        laboratorios: {},
+        tieneFinalizadas: false,
+      };
+    }
 
-      acc[fecha].total++;
+    acc[fecha].total++;
 
-      acc[fecha].laboratorios[reserva.laboratorio] =
-        (acc[fecha].laboratorios[reserva.laboratorio] || 0) + 1;
+    acc[fecha].laboratorios[reserva.laboratorio] =
+      (acc[fecha].laboratorios[reserva.laboratorio] || 0) + 1;
 
-      return acc;
-    }, {});
+    if (reserva.estado === "Finalizada") {
+      acc[fecha].tieneFinalizadas = true;
+    }
+
+    return acc;
+  }, {});
 
   const eventosMes = Object.entries(reservasPorDia).map(([fecha, datos]) => ({
     id: fecha,
     title: `${datos.total} ${datos.total === 1 ? "reserva" : "reservas"}`,
     start: fecha,
     allDay: true,
+    className: datos.tieneFinalizadas
+      ? "evento-finalizado"
+      : "evento-activo",
     extendedProps: {
       laboratorios: datos.laboratorios,
     },
@@ -272,8 +402,8 @@ export default function CalendarioGrande({
   console.log("Reservas filtradas:", reservasFiltradas);
   
   return (
-    <div className="bg-white">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-white px-2">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
 
       <div>
 
@@ -287,19 +417,19 @@ export default function CalendarioGrande({
             setEdificio={setEdificio}
             laboratorio={laboratorio}
             setLaboratorio={setLaboratorio}
-            edificios={edificios}
-            laboratorios={laboratorios}
+            edificios={edificiosDisponibles}
+            laboratorios={laboratoriosDisponibles}
             vistaActual={vistaActual}
           />
         </div>
 
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
 
         <button
           onClick={() => setVistaActual("dayGridMonth")}
-          className={`px-3 py-2 rounded-xl transition
+          className={`flex-1 sm:flex-none px-3 py-2 rounded-xl transition
             ${
               vistaActual === "dayGridMonth"
                 ? "bg-emerald-600 text-white"
@@ -309,26 +439,28 @@ export default function CalendarioGrande({
         >
           Mes
         </button>
-
-        <button
-          onClick={() => setVistaActual("timeGridWeek")}
-          className={`px-3 py-2 rounded-xl transition
-            ${
-              vistaActual === "timeGridWeek"
-                ? "bg-emerald-600 text-white"
-                : "border border-slate-200 bg-white hover:bg-slate-50 text-slate-500"
-            }
-          `}
-        >
-          Semana
-        </button>
+        
+        {!esMobile && (
+          <button
+            onClick={() => setVistaActual("timeGridWeek")}
+            className={`flex-1 sm:flex-none px-3 py-2 rounded-xl transition
+              ${
+                vistaActual === "timeGridWeek"
+                  ? "bg-emerald-600 text-white"
+                  : "border border-slate-200 bg-white hover:bg-slate-50 text-slate-500"
+              }
+            `}
+          >
+            Semana
+          </button>
+        )}
 
         <button
           onClick={() => {
               actualizarTitulo(fechaSeleccionada);
               setVistaActual("timeGridDay");
             }}
-          className={`px-3 py-2 rounded-xl transition
+          className={`flex-1 sm:flex-none px-3 py-2 rounded-xl transition
             ${
               vistaActual === "timeGridDay"
                 ? "bg-emerald-600 text-white"
@@ -386,7 +518,7 @@ export default function CalendarioGrande({
           initialView={vistaActual}
           headerToolbar={false}
           allDaySlot={false}
-          slotMinTime="07:00:00"
+          slotMinTime="06:00:00"
           slotMaxTime="23:00:00"
           expandRows={true}
           stickyHeaderDates={true}
@@ -412,8 +544,10 @@ export default function CalendarioGrande({
                 <div
                   className="evento-resumen-mes"
                 >
-                  <div className="font-semibold">
-                    {info.event.title}
+                  <div className="titulo-resumen">
+                    {window.innerWidth <= 640
+                      ? info.event.title.replace(" reserva", "").replace(" reservas", "")
+                      : info.event.title}
                   </div>
 
                   {laboratorio === "todos" && laboratorios.length > 0 && (
@@ -449,7 +583,14 @@ export default function CalendarioGrande({
 
             const esEventoCorto = duracion <= 30;
 
-            const estilo = obtenerEstiloEvento(tipo);
+            const estado = info.event.extendedProps.reserva?.estado;
+            console.log({
+              titulo: info.event.title,
+              tipo,
+              estado,
+              reserva: info.event.extendedProps.reserva,
+            })
+            const estilo = obtenerEstiloEvento(tipo, estado);
 
             return (
               <div
@@ -505,13 +646,12 @@ export default function CalendarioGrande({
           eventClick={(info) => {
 
             if (info.view.type !== "dayGridMonth") return;
-
-            setFechaSeleccionada(info.event.start);
-
-            actualizarTitulo(info.event.start);
-
-            setVistaActual("timeGridDay");
-
+            info.el.classList.add("evento-click");
+              setTimeout(() => {
+              setFechaSeleccionada(info.event.start);
+              actualizarTitulo(info.event.start);
+              setVistaActual("timeGridDay");
+            }, 120);
           }}
 
           dateClick={(info) => {

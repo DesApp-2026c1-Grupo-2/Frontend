@@ -3,7 +3,7 @@ import CalendarioGrande from "../components/calendario/CalendarioGrande";
 import { useState, useEffect } from "react";
 import CalendarioMini from "../components/calendario/calendarioMini";
 import { reservas } from "../components/calendario/reservas";
-import { getReservasActivas } from "../services/reservas";
+import { getReservasActivas, getReservasFinalizadas } from "../services/reservas";
 
 export default function Calendario() {
   const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
@@ -12,27 +12,40 @@ export default function Calendario() {
 
   //integracion 
   useEffect(() => {
-    getReservasActivas()
-      .then((data) => {
-        console.log(JSON.stringify(data, null, 2));
-        const reservasAdaptadas = data.map((r) => {
+    const cargarReservas = async () => {
+      try {
+        // Después esto va a salir del calendario.
+        // Por ahora traemos todo 2026.
+        const startDate = "2026-01-01";
+        const endDate = "2026-12-31";
 
+        const [activas, finalizadas] = await Promise.all([
+          getReservasActivas(startDate, endDate),
+          getReservasFinalizadas(startDate, endDate),
+        ]);
+
+        const todasLasReservas = [...activas, ...finalizadas];
+
+        console.log("ACTIVAS:", activas);
+        console.log("FINALIZADAS:", finalizadas);
+
+        const reservasAdaptadas = todasLasReservas.map((r) => {
           const inicioClase = new Date(r.fechaHora);
 
           const finClase = new Date(
             inicioClase.getTime() + r.duracionClase * 60000
           );
 
-          const inicioPreparacion = new Date(
-            inicioClase.getTime() - 60 * 60000
-          );
+          const inicioPreparacion = r.fechaInicioReal
+            ? new Date(r.fechaInicioReal)
+            : new Date(inicioClase.getTime() - 60 * 60000);
 
-          const finMantenimiento = new Date(
-            finClase.getTime() + 30 * 60000
-          );
+          const finMantenimiento = r.fechaFinReal
+            ? new Date(r.fechaFinReal)
+            : new Date(finClase.getTime() + 30 * 60000);
 
           return {
-            id: r._id,
+            id: r._id || r.id,
 
             edificio: r.laboratorioId.edificioId,
 
@@ -41,7 +54,7 @@ export default function Calendario() {
             laboratorio: r.laboratorioId.nombre,
 
             materia: r.pedidoId.materia,
-            
+
             profesor: `${r.docenteId.nombre} ${r.docenteId.apellido}`,
 
             preparacionInicio: inicioPreparacion.toISOString(),
@@ -51,17 +64,24 @@ export default function Calendario() {
 
             estado: r.estado,
           };
-
         });
 
-        console.log("RESPUESTA BACK:", data);
         console.log("RESERVAS ADAPTADAS:", reservasAdaptadas);
+        console.table(
+          reservasAdaptadas.map((r) => ({
+            materia: r.materia,
+            estado: r.estado,
+            inicio: r.reservaInicio,
+          }))
+        );
 
         setReservas(reservasAdaptadas);
+      } catch (error) {
+        console.error(error);
+      }
+    };
 
-      })
-      .catch(console.error);
-
+    cargarReservas();
   }, []);
 
   const hoy = new Date().toISOString().split("T")[0];
@@ -88,7 +108,7 @@ export default function Calendario() {
 
 
   return (
-    <div className="min-h-screen w-full bg-slate-100 px-6 py-6">
+    <div className="min-h-screen w-full bg-slate-100 px-2 md:px-6 py-6">
 
       {/* HEADER */}
       <div className="flex items-center justify-between">
@@ -148,19 +168,19 @@ export default function Calendario() {
             border border-slate-100
             rounded-[2.5rem]
             shadow-lg
-            p-8
+            p-2 md:p-6 xl:p-8
           "
         >
 
           {/* TECHO */}
           <div className="absolute -top-5 left-10 right-10 h-6 rounded-t-[2rem] bg-stone-700" />
 
-          <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 xl:gap-8">
 
             {/* PANEL IZQUIERDO */}
             <div className="xl:col-span-3">
 
-              <div className="bg-white rounded-3xl border border-emerald-200 shadow-sm p-6">
+             <div className="bg-white rounded-3xl border border-emerald-200 shadow-sm p-4 md:p-8">
                 <CalendarioGrande 
                   fechaSeleccionada={fechaSeleccionada}
                   setFechaSeleccionada={setFechaSeleccionada}
@@ -173,7 +193,7 @@ export default function Calendario() {
             </div>
 
             {/* PANEL DERECHO */}
-            <div className="space-y-5">
+            <div className="hidden xl:block space-y-5">
 
               {/* MINI CALENDARIO */}
 
@@ -185,26 +205,6 @@ export default function Calendario() {
                       setVistaActual={setVistaActual}
                       reservas={reservas}
                   />
-
-              </div>
-
-              {/* RESUMEN */}
-
-              <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5">
-
-                <h3 className="font-semibold text-slate-800 mb-4">
-                  Resumen
-                </h3>
-
-                <div className="space-y-3 text-sm text-slate-600">
-
-                  <p>• 12 reservas hoy</p>
-
-                  <p>• 8 laboratorios ocupados</p>
-
-                  <p>• 3 próximas reservas</p>
-
-                </div>
 
               </div>
 
