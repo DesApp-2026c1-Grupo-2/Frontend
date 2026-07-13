@@ -67,7 +67,7 @@ function obtenerEstiloEvento(tipo, estado) {
   if (esFinalizada) {
     return {
       preparacion: {
-        fondo: "bg-slate-100",
+        fondo: "bg-slate-500",
         texto: "text-slate-500",
         borde: "border-slate-300",
       },
@@ -112,6 +112,7 @@ export default function CalendarioGrande({
   }) {
   const { user } = useAuth();
   const calendarRef = useRef(null);
+  const esMobile = window.innerWidth < 768;
   
   const [tituloMes, setTituloMes] = useState("Junio 2026");
 
@@ -279,6 +280,12 @@ export default function CalendarioGrande({
     }))
   );
 
+  useEffect(() => {
+    if (esMobile && vistaActual === "timeGridWeek") {
+      setVistaActual("dayGridMonth");
+    }
+  }, []);
+
   const eventosSemana = reservasFiltradas.flatMap((reserva) => [
     {
       id: `${reserva.id}-prep`,
@@ -373,8 +380,8 @@ export default function CalendarioGrande({
   console.log("Reservas filtradas:", reservasFiltradas);
   
   return (
-    <div className="bg-white">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-white px-2">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
 
       <div>
 
@@ -396,11 +403,11 @@ export default function CalendarioGrande({
 
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
 
         <button
           onClick={() => setVistaActual("dayGridMonth")}
-          className={`px-3 py-2 rounded-xl transition
+          className={`flex-1 sm:flex-none px-3 py-2 rounded-xl transition
             ${
               vistaActual === "dayGridMonth"
                 ? "bg-emerald-600 text-white"
@@ -410,26 +417,28 @@ export default function CalendarioGrande({
         >
           Mes
         </button>
-
-        <button
-          onClick={() => setVistaActual("timeGridWeek")}
-          className={`px-3 py-2 rounded-xl transition
-            ${
-              vistaActual === "timeGridWeek"
-                ? "bg-emerald-600 text-white"
-                : "border border-slate-200 bg-white hover:bg-slate-50 text-slate-500"
-            }
-          `}
-        >
-          Semana
-        </button>
+        
+        {!esMobile && (
+          <button
+            onClick={() => setVistaActual("timeGridWeek")}
+            className={`flex-1 sm:flex-none px-3 py-2 rounded-xl transition
+              ${
+                vistaActual === "timeGridWeek"
+                  ? "bg-emerald-600 text-white"
+                  : "border border-slate-200 bg-white hover:bg-slate-50 text-slate-500"
+              }
+            `}
+          >
+            Semana
+          </button>
+        )}
 
         <button
           onClick={() => {
               actualizarTitulo(fechaSeleccionada);
               setVistaActual("timeGridDay");
             }}
-          className={`px-3 py-2 rounded-xl transition
+          className={`flex-1 sm:flex-none px-3 py-2 rounded-xl transition
             ${
               vistaActual === "timeGridDay"
                 ? "bg-emerald-600 text-white"
@@ -513,8 +522,10 @@ export default function CalendarioGrande({
                 <div
                   className="evento-resumen-mes"
                 >
-                  <div className="font-semibold">
-                    {info.event.title}
+                  <div className="titulo-resumen">
+                    {window.innerWidth <= 640
+                      ? info.event.title.replace(" reserva", "").replace(" reservas", "")
+                      : info.event.title}
                   </div>
 
                   {laboratorio === "todos" && laboratorios.length > 0 && (
@@ -613,13 +624,12 @@ export default function CalendarioGrande({
           eventClick={(info) => {
 
             if (info.view.type !== "dayGridMonth") return;
-
-            setFechaSeleccionada(info.event.start);
-
-            actualizarTitulo(info.event.start);
-
-            setVistaActual("timeGridDay");
-
+            info.el.classList.add("evento-click");
+              setTimeout(() => {
+              setFechaSeleccionada(info.event.start);
+              actualizarTitulo(info.event.start);
+              setVistaActual("timeGridDay");
+            }, 120);
           }}
 
           dateClick={(info) => {

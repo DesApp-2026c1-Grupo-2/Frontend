@@ -183,16 +183,25 @@ export default function CalendarioDia({ bloques }) {
 
                     <button
                         onClick={() => toggle(item.hora)}
-                        className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition"
+                        className="
+                            w-full
+                            px-3 sm:px-6
+                            py-3
+                            flex
+                            items-center
+                            justify-between
+                            hover:bg-slate-50
+                            transition
+                            "
                     >
 
-                        <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-3 flex-1">
 
-                            <div className="text-lg font-bold text-green-900 w-16 text-left">
+                            <div className="text-sm sm:text-base font-bold text-green-900 w-12 sm:w-16 text-left">
                                 {item.hora}
                             </div>
 
-                            <div className="flex gap-8">
+                            <div className="grid grid-cols-3 gap-2 flex-1">
 
                                 <div className="flex items-center gap-2">
 

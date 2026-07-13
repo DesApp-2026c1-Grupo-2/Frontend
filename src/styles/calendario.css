@@ -41,6 +41,7 @@
 
 .fc-daygrid-day:hover {
     background: #f8fafc;
+    transition: background .2s;
 }
 
 .fc .fc-day-today {
@@ -60,22 +61,51 @@
 .evento-resumen-mes {
     background: #10b981;
     color: white;
-    border-radius: 8px;
-    padding: 4px 8px;
-    font-size: 12px;
-    text-align: center;
-    cursor: pointer;
-    transition: .2s;
-
+    border-radius: 6px;
+    padding: 3px;
     width: 100%;
-    max-width: 100%;
     box-sizing: border-box;
-
-    min-height: 72px;
 
     display: flex;
     flex-direction: column;
     justify-content: center;
+
+    overflow: hidden;
+}
+
+.titulo-resumen {
+    font-size: 10px;
+    font-weight: 600;
+    text-align: center;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width:640px) {
+
+    .evento-resumen-mes {
+        padding: 2px;
+    }
+
+    .titulo-resumen {
+        text-align: center;
+        font-size: 9px;
+    }
+
+    .labs-resumen {
+        display: none;
+    }
+
+    .fc-daygrid-day-frame {
+        min-height: 90px;
+    }
+
+    .fc-scrollgrid {
+        border-radius: 30px;
+    }
+
 }
 
 .labs-resumen {
@@ -97,14 +127,28 @@
 }
 
 .fc-daygrid-day-events {
-    display: flex;
+    /*display: flex;
     justify-content: center;
-    margin-top: 18px;
+    align-items: flex-start;*/
+    margin-top: 4px;
 }
 
 .fc-daygrid-event {
     width: 100%;
-    margin: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.fc-daygrid-event-harness {
+    margin-bottom: 2px !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+}
+
+.fc-scrollgrid {
+    border-radius: 12px;
+    overflow: hidden;
 }
 
 /* ===== MINI CALENDARIO ===== */
@@ -187,10 +231,24 @@
 
 /*para reserva finalizada*/
 .evento-finalizado {
-    opacity: .55;
+    opacity: .40;
     filter: grayscale(.8);
 }
 
 .evento-activo {
     opacity: 1;
+}
+
+/* Animación */
+.fc-daygrid-event {
+    cursor: pointer;
+    transition: transform .15s ease,
+        filter .15s ease,
+        opacity .15s ease;
+}
+
+.evento-click .evento-resumen-mes {
+    background: #065f46;
+    transform: scale(.96);
+    transition: all .15s ease;
 }
