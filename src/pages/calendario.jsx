@@ -3,7 +3,7 @@ import CalendarioGrande from "../components/calendario/CalendarioGrande";
 import { useState, useEffect } from "react";
 import CalendarioMini from "../components/calendario/calendarioMini";
 import { reservas } from "../components/calendario/reservas";
-import { getReservasActivas } from "../services/reservas";
+import { getReservasActivas, getReservasFinalizadas } from "../services/reservas";
 
 export default function Calendario() {
   const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
@@ -12,30 +12,40 @@ export default function Calendario() {
 
   //integracion 
   useEffect(() => {
-    getReservasActivas()
-      .then((data) => {
-        console.log(JSON.stringify(data, null, 2));
-        const reservasAdaptadas = data.map((r) => {
-          console.log("LABORATORIO:", r.laboratorioId);
+    const cargarReservas = async () => {
+      try {
+        // Después esto va a salir del calendario.
+        // Por ahora traemos todo 2026.
+        const startDate = "2026-01-01";
+        const endDate = "2026-12-31";
 
+        const [activas, finalizadas] = await Promise.all([
+          getReservasActivas(startDate, endDate),
+          getReservasFinalizadas(startDate, endDate),
+        ]);
+
+        const todasLasReservas = [...activas, ...finalizadas];
+
+        console.log("ACTIVAS:", activas);
+        console.log("FINALIZADAS:", finalizadas);
+
+        const reservasAdaptadas = todasLasReservas.map((r) => {
           const inicioClase = new Date(r.fechaHora);
 
           const finClase = new Date(
             inicioClase.getTime() + r.duracionClase * 60000
           );
 
-          const inicioPreparacion = new Date(
-            inicioClase.getTime() - 60 * 60000
-          );
+          const inicioPreparacion = r.fechaInicioReal
+            ? new Date(r.fechaInicioReal)
+            : new Date(inicioClase.getTime() - 60 * 60000);
 
-          const finMantenimiento = new Date(
-            finClase.getTime() + 30 * 60000
-          );
+          const finMantenimiento = r.fechaFinReal
+            ? new Date(r.fechaFinReal)
+            : new Date(finClase.getTime() + 30 * 60000);
 
           return {
-            id: r._id,
-
-            docenteId: r.docenteId._id,
+            id: r._id || r.id,
 
             edificio: r.laboratorioId.edificioId,
 
@@ -44,7 +54,7 @@ export default function Calendario() {
             laboratorio: r.laboratorioId.nombre,
 
             materia: r.pedidoId.materia,
-            
+
             profesor: `${r.docenteId.nombre} ${r.docenteId.apellido}`,
 
             preparacionInicio: inicioPreparacion.toISOString(),
@@ -54,17 +64,24 @@ export default function Calendario() {
 
             estado: r.estado,
           };
-
         });
 
-        console.log("RESPUESTA BACK:", data);
         console.log("RESERVAS ADAPTADAS:", reservasAdaptadas);
+        console.table(
+          reservasAdaptadas.map((r) => ({
+            materia: r.materia,
+            estado: r.estado,
+            inicio: r.reservaInicio,
+          }))
+        );
 
         setReservas(reservasAdaptadas);
+      } catch (error) {
+        console.error(error);
+      }
+    };
 
-      })
-      .catch(console.error);
-
+    cargarReservas();
   }, []);
 
   const hoy = new Date().toISOString().split("T")[0];

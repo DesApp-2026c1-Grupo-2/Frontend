@@ -45,10 +45,7 @@ function agruparReservasPorHorario(reservas) {
     }
 
     grupos[key].reservas.push({
-      id: reserva.id,
-      laboratorio: reserva.laboratorio,
-      materia: reserva.materia,
-      profesor: reserva.profesor,
+      ...reserva
     });
   });
 
@@ -63,8 +60,31 @@ function agruparReservasPorHorario(reservas) {
   }));
 }
 
-function obtenerEstiloEvento(tipo) {
-  const colores = {
+function obtenerEstiloEvento(tipo, estado) {
+
+  const esFinalizada = estado === "Finalizada";
+
+  if (esFinalizada) {
+    return {
+      preparacion: {
+        fondo: "bg-slate-100",
+        texto: "text-slate-500",
+        borde: "border-slate-300",
+      },
+      clase: {
+        fondo: "bg-slate-400",
+        texto: "text-white",
+        borde: "border-slate-300",
+      },
+      mantenimiento: {
+        fondo: "bg-slate-100",
+        texto: "text-slate-500",
+        borde: "border-slate-300",
+      },
+    }[tipo];
+  }
+
+  return {
     preparacion: {
       fondo: "bg-slate-50",
       texto: "text-slate-700",
@@ -80,9 +100,7 @@ function obtenerEstiloEvento(tipo) {
       texto: "text-slate-700",
       borde: "border-slate-200",
     },
-  };
-
-  return colores[tipo];
+  }[tipo];
 }
 
 export default function CalendarioGrande({
@@ -147,7 +165,11 @@ export default function CalendarioGrande({
           return nuevos;
         });
 
-        setLaboratorio("todos");
+        if (vistaActual === "dayGridMonth") {
+          setLaboratorio("todos");
+        } else {
+          setLaboratorio(data[0]?._id || data[0]?.id || "");
+        }
 
       } catch (error) {
         console.error(error);
@@ -156,6 +178,16 @@ export default function CalendarioGrande({
 
     cargarLaboratorios();
   }, [edificio]);
+
+  useEffect(() => {
+    if (laboratorios.length === 0) return;
+
+    if (vistaActual === "dayGridMonth") {
+      setLaboratorio("todos");
+    } else if (laboratorio === "todos") {
+      setLaboratorio(laboratorios[0]._id || laboratorios[0].id);
+    }
+  }, [vistaActual, laboratorios]);
 
   const actualizarTitulo = (fecha) => {
     const f = new Date(fecha);
@@ -204,18 +236,17 @@ export default function CalendarioGrande({
         )
       );
 
-  const reservasFiltradas = reservasVisibles.filter((reserva) => {
-    // El laboratorio seleccionado es "Todos"
-    if (laboratorio === "todos") {
-      return laboratorios.some(
-        (lab) => (lab._id || lab.id) === reserva.laboratorioId
-      );
-    }
+  const idsLaboratorios = laboratorios.map(
+    (l) => l._id || l.id
+  );
 
-    // No hay laboratorio seleccionado todavía
+  const reservasFiltradas = reservasVisibles.filter((reserva) => {
     if (!laboratorio) return false;
 
-    // Laboratorio específico
+    if (laboratorio === "todos") {
+      return idsLaboratorios.includes(reserva.laboratorioId);
+    }
+
     return reserva.laboratorioId === laboratorio;
   });
  
@@ -240,38 +271,52 @@ export default function CalendarioGrande({
 
   }, [vistaActual, fechaSeleccionada]);
 
-  const eventosSemana = reservasFiltradas
-    .flatMap((reserva) => [
-      // Preparación
-      {
-        id: `${reserva.id}-prep`,
+  console.table(
+    reservasFiltradas.map((r) => ({
+      materia: r.materia,
+      estado: r.estado,
+      laboratorio: r.laboratorio,
+    }))
+  );
+
+  const eventosSemana = reservasFiltradas.flatMap((reserva) => [
+    {
+      id: `${reserva.id}-prep`,
+      title: "Preparación",
+      start: reserva.preparacionInicio,
+      end: reserva.reservaInicio,
+
+      extendedProps: {
         tipo: "preparacion",
-        title: "Preparación",
-        start: reserva.preparacionInicio,
-        end: reserva.reservaInicio,
         reserva,
       },
+    },
 
-      // Clase
-      {
-        id: `${reserva.id}-clase`,
+    {
+      id: `${reserva.id}-clase`,
+      title: reserva.materia,
+      start: reserva.reservaInicio,
+      end: reserva.reservaFin,
+
+      extendedProps: {
         tipo: "clase",
-        title: reserva.materia,
-        start: reserva.reservaInicio,
-        end: reserva.reservaFin,
         reserva,
       },
+    },
 
-      // Mantenimiento
-      {
-        id: `${reserva.id}-mant`,
+    {
+      id: `${reserva.id}-mant`,
+      title: "Mantenimiento",
+      start: reserva.reservaFin,
+      end: reserva.mantenimientoFin,
+
+      extendedProps: {
         tipo: "mantenimiento",
-        title: "Mantenimiento",
-        start: reserva.reservaFin,
-        end: reserva.mantenimientoFin,
         reserva,
       },
-    ]);
+    },
+  ]);
+
 
   console.log("==========");
   console.log("Vista:", vistaActual);
@@ -288,30 +333,37 @@ export default function CalendarioGrande({
 
   const bloquesDia = agruparReservasPorHorario(reservasDelDia);
 
-  const reservasPorDia = reservasFiltradas
-    .reduce((acc, reserva) => {
-      const fecha = reserva.reservaInicio.split("T")[0];
+  const reservasPorDia = reservasFiltradas.reduce((acc, reserva) => {
+    const fecha = reserva.reservaInicio.split("T")[0];
 
-      if (!acc[fecha]) {
-        acc[fecha] = {
-          total: 0,
-          laboratorios: {},
-        };
-      }
+    if (!acc[fecha]) {
+      acc[fecha] = {
+        total: 0,
+        laboratorios: {},
+        tieneFinalizadas: false,
+      };
+    }
 
-      acc[fecha].total++;
+    acc[fecha].total++;
 
-      acc[fecha].laboratorios[reserva.laboratorio] =
-        (acc[fecha].laboratorios[reserva.laboratorio] || 0) + 1;
+    acc[fecha].laboratorios[reserva.laboratorio] =
+      (acc[fecha].laboratorios[reserva.laboratorio] || 0) + 1;
 
-      return acc;
-    }, {});
+    if (reserva.estado === "Finalizada") {
+      acc[fecha].tieneFinalizadas = true;
+    }
+
+    return acc;
+  }, {});
 
   const eventosMes = Object.entries(reservasPorDia).map(([fecha, datos]) => ({
     id: fecha,
     title: `${datos.total} ${datos.total === 1 ? "reserva" : "reservas"}`,
     start: fecha,
     allDay: true,
+    className: datos.tieneFinalizadas
+      ? "evento-finalizado"
+      : "evento-activo",
     extendedProps: {
       laboratorios: datos.laboratorios,
     },
@@ -435,7 +487,7 @@ export default function CalendarioGrande({
           initialView={vistaActual}
           headerToolbar={false}
           allDaySlot={false}
-          slotMinTime="07:00:00"
+          slotMinTime="06:00:00"
           slotMaxTime="23:00:00"
           expandRows={true}
           stickyHeaderDates={true}
@@ -498,7 +550,14 @@ export default function CalendarioGrande({
 
             const esEventoCorto = duracion <= 30;
 
-            const estilo = obtenerEstiloEvento(tipo);
+            const estado = info.event.extendedProps.reserva?.estado;
+            console.log({
+              titulo: info.event.title,
+              tipo,
+              estado,
+              reserva: info.event.extendedProps.reserva,
+            })
+            const estilo = obtenerEstiloEvento(tipo, estado);
 
             return (
               <div

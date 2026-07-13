@@ -184,3 +184,13 @@
 .fc-daygrid-day-events {
     min-height: 10px;
 }
+
+/*para reserva finalizada*/
+.evento-finalizado {
+    opacity: .55;
+    filter: grayscale(.8);
+}
+
+.evento-activo {
+    opacity: 1;
+}
