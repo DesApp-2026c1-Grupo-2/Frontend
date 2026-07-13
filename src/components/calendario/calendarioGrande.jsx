@@ -67,9 +67,9 @@ function obtenerEstiloEvento(tipo, estado) {
   if (esFinalizada) {
     return {
       preparacion: {
-        fondo: "bg-slate-500",
-        texto: "text-slate-500",
-        borde: "border-slate-300",
+        fondo: "bg-slate-50",
+        texto: "text-slate-700",
+        borde: "border-slate-200",
       },
       clase: {
         fondo: "bg-slate-400",
@@ -77,9 +77,9 @@ function obtenerEstiloEvento(tipo, estado) {
         borde: "border-slate-300",
       },
       mantenimiento: {
-        fondo: "bg-slate-100",
-        texto: "text-slate-500",
-        borde: "border-slate-300",
+        fondo: "bg-slate-50",
+        texto: "text-slate-700",
+        borde: "border-slate-200",
       },
     }[tipo];
   }
@@ -112,7 +112,7 @@ export default function CalendarioGrande({
   }) {
   const { user } = useAuth();
   const calendarRef = useRef(null);
-  const esMobile = window.innerWidth < 768;
+  const [esMobile, setEsMobile] = useState(window.innerWidth < 768);
   
   const [tituloMes, setTituloMes] = useState("Junio 2026");
 
@@ -189,6 +189,28 @@ export default function CalendarioGrande({
       setLaboratorio(laboratorios[0]._id || laboratorios[0].id);
     }
   }, [vistaActual, laboratorios]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setEsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (esMobile && vistaActual === "timeGridWeek") {
+      setVistaActual("dayGridMonth");
+    }
+
+    if (!esMobile && vistaActual === "dayGridMonth") {
+      setVistaActual("timeGridWeek");
+    }
+  }, [esMobile, vistaActual, setVistaActual]);
 
   const actualizarTitulo = (fecha) => {
     const f = new Date(fecha);
