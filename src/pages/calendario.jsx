@@ -108,7 +108,7 @@ export default function Calendario() {
 
 
   return (
-    <div className="min-h-screen w-full bg-slate-100 px-6 py-6">
+    <div className="min-h-screen w-full bg-slate-100 px-2 md:px-6 py-6">
 
       {/* HEADER */}
       <div className="flex items-center justify-between">
@@ -168,19 +168,19 @@ export default function Calendario() {
             border border-slate-100
             rounded-[2.5rem]
             shadow-lg
-            p-8
+            p-2 md:p-6 xl:p-8
           "
         >
 
           {/* TECHO */}
           <div className="absolute -top-5 left-10 right-10 h-6 rounded-t-[2rem] bg-stone-700" />
 
-          <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 xl:gap-8">
 
             {/* PANEL IZQUIERDO */}
             <div className="xl:col-span-3">
 
-              <div className="bg-white rounded-3xl border border-emerald-200 shadow-sm p-6">
+             <div className="bg-white rounded-3xl border border-emerald-200 shadow-sm p-4 md:p-8">
                 <CalendarioGrande 
                   fechaSeleccionada={fechaSeleccionada}
                   setFechaSeleccionada={setFechaSeleccionada}
@@ -193,7 +193,7 @@ export default function Calendario() {
             </div>
 
             {/* PANEL DERECHO */}
-            <div className="space-y-5">
+            <div className="hidden xl:block space-y-5">
 
               {/* MINI CALENDARIO */}
 

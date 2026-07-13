@@ -16,7 +16,7 @@ export default function BarraFiltros({
   console.log("Opciones laboratorios:", opcionesLaboratorios);
   
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex flex-col sm:flex-row gap-3">
 
       <div>
         <label className="block text-xs text-slate-500 mb-1">
@@ -30,7 +30,7 @@ export default function BarraFiltros({
             setLaboratorio("Todos");
           }}
           className="
-            min-w-[180px]
+            w-full sm:min-w-[180px]
             pl-4
             pr-10
             py-2
@@ -66,7 +66,7 @@ export default function BarraFiltros({
           value={laboratorio}
           onChange={(e) => setLaboratorio(e.target.value)}
           className="
-            min-w-[180px]
+            w-full sm:min-w-[180px]
             pl-4
             pr-10
             py-2
