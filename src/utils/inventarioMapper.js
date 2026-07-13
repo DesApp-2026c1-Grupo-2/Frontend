@@ -102,12 +102,21 @@ export const mapearLoteBackend = (lote) => {
   const itemId = itemPoblado ? (itemPoblado.id || itemPoblado._id) : lote.itemId;
   const loteId = lote.id || lote._id;
 
+  // Ubicación estructurada del lote (contrato /lotes): laboratorioId null = depósito,
+  // o el laboratorio físico donde está el lote (puede venir poblado o como ObjectId).
+  // Distinto de `ubicacion` (string libre, detalle físico fino como "Armario 3").
+  const labPoblado = typeof lote.laboratorioId === 'object' && lote.laboratorioId !== null ? lote.laboratorioId : null;
+  const laboratorioId = labPoblado ? (labPoblado.id || labPoblado._id) : (lote.laboratorioId ?? null);
+  const ubicacionLote = laboratorioId ? (labPoblado?.nombre || 'Laboratorio asignado') : 'Depósito';
+
   return {
     id: loteId,
     loteId,
     itemId,
     tipo: itemPoblado?.nombre,
     codigo: itemPoblado?.codigo,
+    laboratorioId,
+    ubicacionLote,
     ubicacion: lote.ubicacion,
     estado: mapearEstado(lote.estado),
     cantidad: lote.cantidadDisponible,

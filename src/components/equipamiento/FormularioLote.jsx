@@ -1,5 +1,5 @@
-// Formulario de edición a nivel de LOTE: solo los datos propios de cada lote
-// físico — ubicación y estado. El nombre/código/cantidad del ítem se editan en
+// Formulario de edición a nivel de LOTE: los datos propios de cada lote
+// físico — cantidad, ubicación y estado. El nombre/código del ítem se editan en
 // FormularioItem.
 export default function FormularioLote({
   formData,
@@ -17,6 +17,22 @@ export default function FormularioLote({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 px-3 py-3">
+      <div>
+        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+          Cantidad
+        </label>
+        <input
+          type="number"
+          name="cantidad"
+          min="1"
+          value={formData.cantidad ?? ""}
+          onChange={handleChange}
+          placeholder="Ej. 10"
+          className={inputClass("cantidad")}
+        />
+        {errores.cantidad && <p className="text-red-500 text-xs mt-1">{errores.cantidad}</p>}
+      </div>
+
       <div>
         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
           Ubicación

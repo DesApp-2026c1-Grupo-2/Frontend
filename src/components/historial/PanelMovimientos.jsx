@@ -32,9 +32,18 @@ function laboratorioMovimiento(m) {
   return origen || destino || "—";
 }
 
-// Cantidad con signo explícito (los negativos ya traen "-").
+// Un movimiento con cantidad 0 es un cambio de UBICACIÓN (transferencia o
+// devolución de lote entre depósito y laboratorio): no altera el stock, así que
+// el delta y el "stock anterior → nuevo" no aportan y se muestran como ubicación.
+function esMovimientoUbicacion(m) {
+  return m.cantidad === 0;
+}
+
+// Cantidad con signo explícito (los negativos ya traen "-"). En movimientos de
+// ubicación no hay delta de stock.
 function formatCantidad(n) {
   if (typeof n !== "number") return "—";
+  if (n === 0) return "Ubicación";
   return n > 0 ? `+${n}` : `${n}`;
 }
 
@@ -65,7 +74,7 @@ function MovimientoCard({ movimiento: m }) {
         <div>
           <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">Stock</span>
           <span className="mt-1 block font-semibold text-slate-900">
-            {m.cantidadAnterior} → {m.cantidadNueva}
+            {esMovimientoUbicacion(m) ? "—" : `${m.cantidadAnterior} → ${m.cantidadNueva}`}
           </span>
         </div>
         <div>
@@ -369,7 +378,7 @@ function PanelMovimientos() {
                               <span className="block text-xs text-slate-400">{ref.codigo || "—"}</span>
                             </td>
                             <td className={`px-4 py-3 font-semibold ${cantidadClass(m.cantidad)}`}>{formatCantidad(m.cantidad)}</td>
-                            <td className="px-4 py-3 text-slate-500">{m.cantidadAnterior} → {m.cantidadNueva}</td>
+                            <td className="px-4 py-3 text-slate-500">{esMovimientoUbicacion(m) ? "—" : `${m.cantidadAnterior} → ${m.cantidadNueva}`}</td>
                             <td className="px-4 py-3 text-slate-500">{laboratorioMovimiento(m)}</td>
                             <td className="px-4 py-3 text-slate-500">{responsableMovimiento(m)}</td>
                             <td className="px-4 py-3 text-slate-500">{m.observacion || "—"}</td>

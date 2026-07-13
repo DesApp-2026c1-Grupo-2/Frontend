@@ -69,6 +69,26 @@ export const getItemById = async (itemId) => {
   }
 };
 
+// Vista de stock de un Item por ventana temporal (GET /items/:id/stock).
+// `desde`/`hasta` (ISO) opcionales; omitidos = el día actual. Devuelve
+// { itemId, desde, hasta, total, disponible, aceptado[], enUso[] }, donde:
+//  - total: stock físico PRESENTE ahora (baja si hay stock "en uso").
+//  - disponible: lo RESERVABLE en la ventana (usar SIEMPRE este valor para "cuánto
+//    puedo reservar"; total − (aceptado + enUso) NO equivale a disponible).
+//  - aceptado/enUso: reservas Pendiente / En Curso que pesan sobre la ventana.
+export const getStockItem = async (itemId, { desde, hasta } = {}) => {
+  try {
+    const params = {};
+    if (desde) params.desde = desde;
+    if (hasta) params.hasta = hasta;
+    const response = await api.get(`/items/${itemId}/stock`, { params });
+    return response.data;
+  } catch (error) {
+    console.error(`Error al obtener stock del item ${itemId}:`, error);
+    throw error;
+  }
+};
+
 // Obtener Lotes (orden FEFO). Respuesta DUAL:
 //  - sin page/limit  -> array de lotes (retrocompatible).
 //  - con page/limit   -> objeto { total, page, limit, lotes }.
@@ -181,6 +201,26 @@ export const deleteLote = async (loteId) => {
     return response.data;
   } catch (error) {
     console.error(`Error al eliminar lote ${loteId}:`, error);
+    throw error;
+  }
+};
+
+// Transferir / devolver un Lote entre depósito y laboratorios (POST /lotes/:id/transferir).
+// - laboratorioDestinoId: ObjectId del laboratorio destino, o null para DEVOLVER al depósito. Obligatorio.
+// - cantidad (opcional): traslado PARCIAL (entero > 0). Omitida = mueve el lote completo.
+// - observacion (opcional, máx 500).
+// El backend deriva el tipo (DEVOLUCION si destino null, TRANSFERENCIA si no).
+// Devuelve el lote resultante; en un parcial es el LOTE DESTINO nuevo (refrescar el
+// listado del ítem porque el origen quedó con menos cantidad). Requiere rol PERSONAL/ADMIN.
+export const transferirLote = async (loteId, { laboratorioDestinoId, cantidad, observacion } = {}) => {
+  try {
+    const payload = { laboratorioDestinoId: laboratorioDestinoId ?? null };
+    if (cantidad != null) payload.cantidad = cantidad;
+    if (observacion) payload.observacion = observacion;
+    const response = await api.post(`/lotes/${loteId}/transferir`, payload);
+    return response.data;
+  } catch (error) {
+    console.error(`Error al transferir lote ${loteId}:`, error);
     throw error;
   }
 };
