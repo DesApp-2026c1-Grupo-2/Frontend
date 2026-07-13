@@ -3,38 +3,18 @@ export default function BarraFiltros({
   setEdificio,
   laboratorio,
   setLaboratorio,
+  edificios,
+  laboratorios,
+  vistaActual,
 }) {
-  const edificios = [
-    "HC",
-    "MA",
-    "MB",
-    "SM",
-  ];
 
-  const laboratoriosPorEdificio = {
-    HC: [
-      "Todos",
-      "Laboratorio 1",
-      "Laboratorio 2",
-      "Laboratorio 3",
-    ],
-    MA: [
-      "Todos",
-      "Laboratorio 1",
-      "Laboratorio 2",
-    ],
-    MB: [
-      "Todos",
-      "Laboratorio 1",
-      "Laboratorio 2",
-      "Laboratorio 3",
-    ],
-    SM: [
-      "Todos",
-      "Laboratorio 1",
-    ],
-  };
+  const opcionesLaboratorios =
+    vistaActual === "timeGridWeek"
+      ? laboratorios
+      : [{ _id: "todos", nombre: "todos" }, ...laboratorios];
 
+  console.log("Opciones laboratorios:", opcionesLaboratorios);
+  
   return (
     <div className="flex items-center gap-4">
 
@@ -67,7 +47,12 @@ export default function BarraFiltros({
         "
         >
           {edificios.map((ed) => (
-            <option key={ed}>{ed}</option>
+            <option
+              key={ed.id || ed._id}
+              value={ed.id || ed._id}
+            >
+              {ed.nombre}
+            </option>
           ))}
         </select>
       </div>
@@ -97,8 +82,13 @@ export default function BarraFiltros({
             shadow-sm
           "
         >
-          {laboratoriosPorEdificio[edificio].map((lab) => (
-            <option key={lab}>{lab}</option>
+          {opcionesLaboratorios.map((lab) => (
+            <option
+              key={lab.id || lab._id}
+              value={lab.id || lab._id}
+            >
+              {lab.nombre}
+            </option>
           ))}
         </select>
       </div>

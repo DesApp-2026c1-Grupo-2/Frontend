@@ -20,6 +20,7 @@ export function useCalendarReservas(initialStartDate, initialEndDate) {
       setError(null);
       try {
         const data = await getReservasActivas(dateRange.startDate, dateRange.endDate);
+        console.log("Data recibida del service:", data);
         setReservas(data);
       } catch (err) {
         setError(err.response?.data?.message || err.message || "Error al cargar las reservas");
@@ -107,11 +108,63 @@ export function useCalendarReservas(initialStartDate, initialEndDate) {
     return Array.from(labsMap.values());
   };
 
+  //para calendarioGrande
+  const reservasCalendario = reservas.map((reserva) => {
+    console.log(reserva.laboratorioId);
+
+    const inicioClase = new Date(reserva.fechaHora);
+
+    const finClase = new Date(
+      inicioClase.getTime() + reserva.duracionClase * 60000
+    );
+
+    const inicioPreparacion = new Date(
+      inicioClase.getTime() - 60 * 60000
+    );
+
+    const finMantenimiento = new Date(
+      finClase.getTime() + 30 * 60000
+    );
+
+    return {
+      id: reserva.id || reserva._id,
+
+      edificio: String(reserva.laboratorioId?.edificioId),
+
+      laboratorio: String(
+        reserva.laboratorioId?.id ??
+        reserva.laboratorioId?._id
+      ),
+
+      materia:
+        reserva.pedidoId?.materia,
+
+      profesor:
+        `${reserva.docenteId?.nombre ?? ""} ${reserva.docenteId?.apellido ?? ""}`,
+
+      preparacionInicio:
+        inicioPreparacion.toISOString(),
+
+      reservaInicio:
+        inicioClase.toISOString(),
+
+      reservaFin:
+        finClase.toISOString(),
+
+      mantenimientoFin:
+        finMantenimiento.toISOString(),
+
+      estado:
+        reserva.estado,
+    };
+  });
+
   return {
     loading,
     error,
     dateRange,
     handleDateRangeChange,
+    reservasCalendario,
     eventosFullCalendar: getEventosFullCalendar(),
     eventosLabCalendar: getEventosLabCalendar(),
   };
