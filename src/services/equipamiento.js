@@ -34,6 +34,30 @@ export const getEstadisticasItems = async () => {
   }
 };
 
+// Estadísticas de uso de equipos (ranking por cantidad de reservas Finalizadas
+// en un período). Sirve para priorizar mantenimiento: los primeros del ranking
+// son los más usados. GET /equipo/estadisticas-uso ->
+//   { periodo, desde, hasta, paginacion: { page, limit, total, totalPaginas },
+//     equipos: [{ equipoId, usos, nombre, codigo, tipo, estado }] }  (usos desc)
+// Requiere rol PERSONAL/ADMIN (el JWT lo agrega el interceptor).
+export const getEstadisticasUso = async ({ periodo, fecha, laboratorioId, equipoId, page, limit } = {}) => {
+  try {
+    const params = new URLSearchParams();
+    if (periodo) params.append("periodo", periodo);
+    if (fecha) params.append("fecha", fecha instanceof Date ? fecha.toISOString() : fecha);
+    if (laboratorioId) params.append("laboratorioId", laboratorioId);
+    if (equipoId) params.append("equipoId", equipoId);
+    if (page) params.append("page", page);
+    if (limit) params.append("limit", limit);
+
+    const response = await api.get(`/equipo/estadisticas-uso${params.toString() ? "?" + params.toString() : ""}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error al obtener estadísticas de uso de equipos:", error);
+    throw error;
+  }
+};
+
 // Obtener un Item por ID
 export const getItemById = async (itemId) => {
   try {
