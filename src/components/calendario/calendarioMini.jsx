@@ -7,20 +7,38 @@ import { useRef, useEffect } from "react";
 export default function CalendarioMini({
     fechaSeleccionada,
     setFechaSeleccionada,
-    vistaActual,
     setVistaActual,
     reservas,
 }) {
     const calendarRef = useRef(null);
 
-    const dias = [...new Set(
-        reservas.map((r) => r.reservaInicio.split("T")[0])
-    )];
+    // Agrupamos por día registrando si tiene reservas activas y/o finalizadas,
+    // para pintar un punto verde (activas) y/o gris (finalizadas) por día,
+    // igual que el calendario grande.
+    const diasPorEstado = reservas.reduce((acc, r) => {
+        const fecha = r.reservaInicio.split("T")[0];
 
-    const eventos = dias.map((fecha) => ({
+        if (!acc[fecha]) {
+            acc[fecha] = { activas: false, finalizadas: false };
+        }
+
+        if (r.estado === "Finalizada") {
+            acc[fecha].finalizadas = true;
+        } else {
+            acc[fecha].activas = true;
+        }
+
+        return acc;
+    }, {});
+
+    const eventos = Object.entries(diasPorEstado).map(([fecha, datos]) => ({
         id: fecha,
         start: fecha,
         title: "•",
+        extendedProps: {
+            activas: datos.activas,
+            finalizadas: datos.finalizadas,
+        },
     }));
 
     useEffect(() => {
@@ -68,11 +86,22 @@ export default function CalendarioMini({
 
                 }}
 
-                eventContent={() => (
-                    <div className="flex justify-center items-center w-full">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                    </div>
-                )}
+                eventContent={(info) => {
+                    const { activas, finalizadas } =
+                        info.event.extendedProps;
+
+                    return (
+                        <div className="flex justify-center items-center gap-0.5 w-full">
+                            {activas && (
+                                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                            )}
+
+                            {finalizadas && (
+                                <div className="w-2 h-2 rounded-full bg-slate-400" />
+                            )}
+                        </div>
+                    );
+                }}
 
                 dayCellClassNames={(info) => {
 
@@ -84,11 +113,17 @@ export default function CalendarioMini({
                         : [];
                 }}
             />
-            <div className="mt-3 flex items-center justify-center gap-2 text-xs text-slate-500">
+            <div className="mt-3 flex items-center justify-center gap-4 text-xs text-slate-500">
 
-                <div className="w-2 h-2 rounded-full bg-emerald-500"/>
+                <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500"/>
+                    <span>Activas</span>
+                </div>
 
-                <span>Día con reservas</span>
+                <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-slate-400"/>
+                    <span>Finalizadas</span>
+                </div>
 
             </div>
 
