@@ -45,7 +45,7 @@ export default function UsuariosStatsCard() {
 
       {/* Header */}
 
-      <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-5 sm:px-6 py-5 border-b border-slate-100">
 
         <div className="flex items-center gap-3">
 
@@ -75,6 +75,7 @@ export default function UsuariosStatsCard() {
         <button
           onClick={() => navigate("/aprobacion-usuarios")}
           className="
+            self-start sm:self-auto
             flex items-center gap-2
             text-sm
             font-medium
@@ -92,39 +93,39 @@ export default function UsuariosStatsCard() {
 
       {/* Body */}
 
-      <div className="grid grid-cols-3 gap-4 p-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-5">
 
-        <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
+        <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5">
 
           <p className="text-sm text-slate-500">
             Total
           </p>
 
-          <p className="mt-2 text-3xl font-bold text-slate-800">
+          <p className="mt-2 text-2xl lg:text-3xl font-bold text-slate-800">
             {stats.total}
           </p>
 
         </div>
 
-        <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4">
+        <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 sm:p-5">
 
           <p className="text-sm text-amber-700">
             Pendientes
           </p>
 
-          <p className="mt-2 text-3xl font-bold text-amber-800">
+          <p className="mt-2 text-2xl lg:text-3xl font-bold text-amber-800">
             {stats.pendientes}
           </p>
 
         </div>
 
-        <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4">
+        <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 sm:p-5">
 
           <p className="text-sm text-emerald-700">
             Activos
           </p>
 
-          <p className="mt-2 text-3xl font-bold text-emerald-800">
+          <p className="mt-2 text-2xl lg:text-3xl font-bold text-emerald-800">
             {stats.activos}
           </p>
 

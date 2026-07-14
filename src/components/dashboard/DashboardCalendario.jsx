@@ -212,10 +212,10 @@ export default function DashboardCalendario() {
 
 
   return (
-    <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
+    <div className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
 
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between px-5 sm:px-6 py-5 border-b border-slate-100">
 
         <div className="flex items-center gap-3">
 
@@ -241,6 +241,7 @@ export default function DashboardCalendario() {
         <button
           onClick={() => navigate("/calendario")}
           className="
+            self-start lg:self-auto
             flex items-center gap-2
             text-sm
             font-medium
@@ -258,7 +259,7 @@ export default function DashboardCalendario() {
 
       {/* Calendario */}
 
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
 
         <BarraFiltros
             edificio={edificio}
@@ -270,7 +271,7 @@ export default function DashboardCalendario() {
             vistaActual="dayGridMonth"
         />
 
-         <div className="mt-6">
+         <div className="mt-4 sm:mt-6">
             <CalendarioDia bloques={bloques} />
          </div>
 

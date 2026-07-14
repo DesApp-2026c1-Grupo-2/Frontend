@@ -13,9 +13,9 @@ export default function DashboardPedidos({
       : 0;
 
   return (
-    <div className="h-full bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-
-      <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+    <div className="h-full rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-5 sm:px-6 py-5 border-b border-slate-100">
 
         <div className="flex items-center gap-3">
 
@@ -31,7 +31,7 @@ export default function DashboardPedidos({
               Pedidos
             </h2>
 
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500 leading-relaxed">
               Estado general de las solicitudes.
             </p>
           </div>
@@ -41,6 +41,8 @@ export default function DashboardPedidos({
         <button
           onClick={() => navigate("/pedidos")}
           className="
+            self-start
+            sm:self-auto
             flex items-center gap-2
             text-sm
             font-medium
@@ -56,7 +58,7 @@ export default function DashboardPedidos({
 
       </div>
 
-      <div className="grid grid-cols-2 gap-4 p-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5">
 
         <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
 
@@ -64,7 +66,7 @@ export default function DashboardPedidos({
             Total de pedidos
           </p>
 
-          <p className="mt-2 text-3xl font-bold text-slate-800">
+          <p className="mt-2 text-2xl sm:text-3xl font-bold text-slate-800">
             {totalPedidos}
           </p>
 
