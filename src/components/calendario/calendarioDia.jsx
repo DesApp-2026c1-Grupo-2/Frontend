@@ -15,7 +15,7 @@ function formatHora(fecha) {
     });
 }
 
-function generarResumenPorHora(bloques) {
+function generarResumenPorHora(bloques, soloClase = false) {
     const horas = {};
 
     bloques.forEach((bloque) => {
@@ -36,8 +36,15 @@ function generarResumenPorHora(bloques) {
             bloque.extendedProps.mantenimientoFin
         );
 
-        const inicio = prepInicio.getHours();
-        const fin = mantenimientoFin.getHours();
+        // El DOCENTE (soloClase) solo ve la franja de la clase; ADMIN/PERSONAL
+        // ven también la preparación y el mantenimiento.
+        const inicio = soloClase
+            ? reservaInicio.getHours()
+            : prepInicio.getHours();
+
+        const fin = soloClase
+            ? reservaFin.getHours()
+            : mantenimientoFin.getHours();
 
         for (let hora = inicio; hora <= fin; hora++) {
 
@@ -63,6 +70,7 @@ function generarResumenPorHora(bloques) {
             // PREPARACIÓN
 
             if (
+                !soloClase &&
                 prepInicio < finHora &&
                 reservaInicio > inicioHora
             ) {
@@ -105,6 +113,7 @@ function generarResumenPorHora(bloques) {
             // MANTENIMIENTO
 
             if (
+                !soloClase &&
                 reservaFin < finHora &&
                 mantenimientoFin > inicioHora
             ) {
@@ -132,11 +141,11 @@ function generarResumenPorHora(bloques) {
     );
 }
 
-export default function CalendarioDia({ bloques }) {
+export default function CalendarioDia({ bloques, soloClase = false }) {
 
     const horas = useMemo(
-        () => generarResumenPorHora(bloques),
-        [bloques]
+        () => generarResumenPorHora(bloques, soloClase),
+        [bloques, soloClase]
     );
 
     const [abiertas, setAbiertas] = useState({});
@@ -201,25 +210,31 @@ export default function CalendarioDia({ bloques }) {
                                 {item.hora}
                             </div>
 
-                            <div className="grid grid-cols-3 gap-2 flex-1">
+                            <div
+                                className={`grid gap-2 flex-1 ${
+                                    soloClase ? "grid-cols-1" : "grid-cols-3"
+                                }`}
+                            >
 
-                                <div className="flex items-center gap-2">
+                                {!soloClase && (
+                                    <div className="flex items-center gap-2">
 
-                                    <FiClipboard className="text-slate-500" />
+                                        <FiClipboard className="text-slate-500" />
 
-                                    <div>
+                                        <div>
 
-                                        <div className="text-xs text-slate-500">
-                                            Preparación
-                                        </div>
+                                            <div className="text-xs text-slate-500">
+                                                Preparación
+                                            </div>
 
-                                        <div className="font-semibold text-slate-600">
-                                            {item.preparacion.length}
+                                            <div className="font-semibold text-slate-600">
+                                                {item.preparacion.length}
+                                            </div>
+
                                         </div>
 
                                     </div>
-
-                                </div>
+                                )}
 
                                 <div className="flex items-center gap-2">
 
@@ -239,23 +254,25 @@ export default function CalendarioDia({ bloques }) {
 
                                 </div>
 
-                                <div className="flex items-center gap-2">
+                                {!soloClase && (
+                                    <div className="flex items-center gap-2">
 
-                                    <FiTool className="text-slate-500" />
+                                        <FiTool className="text-slate-500" />
 
-                                    <div>
+                                        <div>
 
-                                        <div className="text-xs text-slate-500">
-                                            Mantenimiento
-                                        </div>
+                                            <div className="text-xs text-slate-500">
+                                                Mantenimiento
+                                            </div>
 
-                                        <div className="font-semibold text-slate-600">
-                                            {item.mantenimiento.length}
+                                            <div className="font-semibold text-slate-600">
+                                                {item.mantenimiento.length}
+                                            </div>
+
                                         </div>
 
                                     </div>
-
-                                </div>
+                                )}
 
                             </div>
 
@@ -334,7 +351,7 @@ function Seccion({ titulo, icono, datos }) {
                             {r.laboratorio}
                         </div>
 
-                        <div className="text-sm text-slate-500 mt-1">
+                        <div className="text-base text-slate-500 mt-1">
                             {r.inicio} - {r.fin}
                         </div>
 

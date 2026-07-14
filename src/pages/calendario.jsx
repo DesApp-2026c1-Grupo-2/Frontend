@@ -2,10 +2,11 @@ import { PageHeader } from "../components/SharedUi";
 import CalendarioGrande from "../components/calendario/CalendarioGrande";
 import { useState, useEffect } from "react";
 import CalendarioMini from "../components/calendario/calendarioMini";
-import { reservas } from "../components/calendario/reservas";
 import { getReservasActivas, getReservasFinalizadas } from "../services/reservas";
+import { useAuth } from "../context/AuthContext";
 
 export default function Calendario() {
+  const { user } = useAuth();
   const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
   const [vistaActual, setVistaActual] = useState("timeGridWeek");
   const [reservas, setReservas] = useState([]);
@@ -29,42 +30,54 @@ export default function Calendario() {
         console.log("ACTIVAS:", activas);
         console.log("FINALIZADAS:", finalizadas);
 
-        const reservasAdaptadas = todasLasReservas.map((r) => {
-          const inicioClase = new Date(r.fechaHora);
+        const reservasAdaptadas = todasLasReservas
+          // Una reserva sin laboratorio o sin fecha no se puede ubicar en el
+          // calendario. La descartamos en vez de romper todo el .map (que
+          // dejaría el calendario vacío ante un solo registro incompleto).
+          .filter((r) => r?.laboratorioId && r?.fechaHora)
+          .map((r) => {
+            const inicioClase = new Date(r.fechaHora);
 
-          const finClase = new Date(
-            inicioClase.getTime() + r.duracionClase * 60000
-          );
+            const finClase = new Date(
+              inicioClase.getTime() + r.duracionClase * 60000
+            );
 
-          const inicioPreparacion = r.fechaInicioReal
-            ? new Date(r.fechaInicioReal)
-            : new Date(inicioClase.getTime() - 60 * 60000);
+            const inicioPreparacion = r.fechaInicioReal
+              ? new Date(r.fechaInicioReal)
+              : new Date(inicioClase.getTime() - 60 * 60000);
 
-          const finMantenimiento = r.fechaFinReal
-            ? new Date(r.fechaFinReal)
-            : new Date(finClase.getTime() + 30 * 60000);
+            const finMantenimiento = r.fechaFinReal
+              ? new Date(r.fechaFinReal)
+              : new Date(finClase.getTime() + 30 * 60000);
 
-          return {
-            id: r._id || r.id,
+            return {
+              id: r._id || r.id,
 
-            edificio: r.laboratorioId.edificioId,
+              edificio: r.laboratorioId.edificioId,
 
-            laboratorioId: r.laboratorioId._id || r.laboratorioId.id,
+              laboratorioId: r.laboratorioId._id || r.laboratorioId.id,
 
-            laboratorio: r.laboratorioId.nombre,
+              laboratorio: r.laboratorioId.nombre,
 
-            materia: r.pedidoId.materia,
+              materia: r.pedidoId?.materia ?? "Sin materia",
 
-            profesor: `${r.docenteId.nombre} ${r.docenteId.apellido}`,
+              profesor: r.docenteId
+                ? `${r.docenteId.nombre} ${r.docenteId.apellido}`
+                : "Sin docente",
 
-            preparacionInicio: inicioPreparacion.toISOString(),
-            reservaInicio: inicioClase.toISOString(),
-            reservaFin: finClase.toISOString(),
-            mantenimientoFin: finMantenimiento.toISOString(),
+              // Id del docente para filtrar las reservas por usuario: la vista
+              // del docente muestra solo sus propias reservas. El backend lo
+              // puebla como objeto { _id, nombre, apellido, email }.
+              docenteId: r.docenteId?._id ?? r.docenteId?.id ?? null,
 
-            estado: r.estado,
-          };
-        });
+              preparacionInicio: inicioPreparacion.toISOString(),
+              reservaInicio: inicioClase.toISOString(),
+              reservaFin: finClase.toISOString(),
+              mantenimientoFin: finMantenimiento.toISOString(),
+
+              estado: r.estado,
+            };
+          });
 
         console.log("RESERVAS ADAPTADAS:", reservasAdaptadas);
         console.table(
@@ -84,12 +97,23 @@ export default function Calendario() {
     cargarReservas();
   }, []);
 
+  // Filtro por rol centralizado: ADMIN/PERSONAL ven todas las reservas, el
+  // DOCENTE solo las suyas. Se computa una única vez acá y se pasa tanto al
+  // calendario grande como al mini para que siempre estén en sync (antes el
+  // mini recibía todas las reservas y pintaba días de otros docentes).
+  const esAdminOPersonal =
+    user?.rol === "ADMIN" || user?.rol === "PERSONAL";
+
+  const reservasVisibles = esAdminOPersonal
+    ? reservas
+    : reservas.filter((r) => r.docenteId === (user?.id || user?._id));
+
   const hoy = new Date().toISOString().split("T")[0];
 
-  const reservasHoy = reservas.filter((r) =>
+  const reservasHoy = reservasVisibles.filter((r) =>
     r.reservaInicio.startsWith(hoy)
   );
-  
+
   const laboratoriosOcupados = new Set(
     reservasHoy.map((r) => r.laboratorio)
   ).size;
@@ -101,7 +125,7 @@ export default function Calendario() {
   const finSemana = new Date(inicioSemana);
   finSemana.setDate(finSemana.getDate() + 7);
 
-  const reservasSemana = reservas.filter((r) => {
+  const reservasSemana = reservasVisibles.filter((r) => {
     const fecha = new Date(r.reservaInicio);
     return fecha >= inicioSemana && fecha < finSemana;
   });
@@ -181,12 +205,12 @@ export default function Calendario() {
             <div className="xl:col-span-3">
 
              <div className="bg-white rounded-3xl border border-emerald-200 shadow-sm p-4 md:p-8">
-                <CalendarioGrande 
+                <CalendarioGrande
                   fechaSeleccionada={fechaSeleccionada}
                   setFechaSeleccionada={setFechaSeleccionada}
                   vistaActual={vistaActual}
                   setVistaActual={setVistaActual}
-                  reservas={reservas}
+                  reservas={reservasVisibles}
                 />
               </div>
 
@@ -203,7 +227,7 @@ export default function Calendario() {
                       setFechaSeleccionada={setFechaSeleccionada}
                       vistaActual={vistaActual}
                       setVistaActual={setVistaActual}
-                      reservas={reservas}
+                      reservas={reservasVisibles}
                   />
 
               </div>
