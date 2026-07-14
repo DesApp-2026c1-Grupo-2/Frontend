@@ -455,7 +455,7 @@ export default function PedidoDetalle() {
     setErrorAccion("");
     try {
       const descartes = formFinalizacion.recursos
-        .filter((recurso) => recurso.registrarDescarte && recurso.tipo !== "Equipo")
+        .filter((recurso) => recurso.registrarDescarte && recurso.tipo !== "Equipo" && !recurso.esConsumible)
         .map((recurso) => ({
           tipo: recurso.tipoDetalle?.toLowerCase() === "reactivo" ? "reactivo" : "material",
           itemId: recurso.recursoId,
@@ -943,7 +943,7 @@ export default function PedidoDetalle() {
                                 <span className="text-xs font-medium text-blue-700">{esEquipo ? "Equipo" : "Inventario"}</span>
                               </div>
 
-                              {!esEquipo && (
+                              {!esEquipo && !esConsumible && (
                                 <label className="flex items-center gap-2 text-sm text-slate-700">
                                   <input
                                     type="checkbox"

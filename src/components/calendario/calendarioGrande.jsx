@@ -166,7 +166,18 @@ export default function CalendarioGrande({
           return nuevos;
         });
 
-        if (vistaActual === "dayGridMonth") {
+        // Mes y Día muestran todos los laboratorios ("todos"). La vista semanal
+        // se acota a un laboratorio concreto para ADMIN/PERSONAL, pero el
+        // DOCENTE también arranca en "todos" para ver sus reservas en todos los
+        // laboratorios de un vistazo.
+        const esAdminOPersonal =
+          user?.rol === "ADMIN" || user?.rol === "PERSONAL";
+
+        if (
+          vistaActual === "dayGridMonth" ||
+          vistaActual === "timeGridDay" ||
+          !esAdminOPersonal
+        ) {
           setLaboratorio("todos");
         } else {
           setLaboratorio(data[0]?._id || data[0]?.id || "");
@@ -183,7 +194,14 @@ export default function CalendarioGrande({
   useEffect(() => {
     if (laboratorios.length === 0) return;
 
-    if (vistaActual === "dayGridMonth") {
+    const esAdminOPersonal =
+      user?.rol === "ADMIN" || user?.rol === "PERSONAL";
+
+    if (
+      vistaActual === "dayGridMonth" ||
+      vistaActual === "timeGridDay" ||
+      !esAdminOPersonal
+    ) {
       setLaboratorio("todos");
     } else if (laboratorio === "todos") {
       setLaboratorio(laboratorios[0]._id || laboratorios[0].id);
@@ -203,12 +221,11 @@ export default function CalendarioGrande({
   }, []);
 
   useEffect(() => {
+    // En mobile el botón "Semana" está oculto y esa vista queda muy apretada:
+    // si el usuario quedó en vista semanal al achicar la pantalla, pasamos a mes.
+    // En desktop NO forzamos ninguna vista: las tres (mes/semana/día) son válidas.
     if (esMobile && vistaActual === "timeGridWeek") {
       setVistaActual("dayGridMonth");
-    }
-
-    if (!esMobile && vistaActual === "dayGridMonth") {
-      setVistaActual("timeGridWeek");
     }
   }, [esMobile, vistaActual, setVistaActual]);
 
@@ -229,18 +246,19 @@ export default function CalendarioGrande({
   console.log("Reserva ejemplo:");
   console.log(reservas[0]);
 
+  // Las reservas ya llegan filtradas por rol desde la página (el DOCENTE solo
+  // recibe las suyas), por eso acá usamos el prop `reservas` directamente.
+  // `esAdminOPersonal` se conserva solo para decidir qué edificios/labs se
+  // ofrecen en los filtros: ADMIN/PERSONAL ven todos; el DOCENTE, únicamente
+  // los que tienen reservas suyas.
   const esAdminOPersonal =
     user?.rol === "ADMIN" || user?.rol === "PERSONAL";
-
-  const reservasVisibles = esAdminOPersonal
-    ? reservas
-    : reservas.filter((r) => r.docenteId === user._id);
 
   const edificiosDisponibles = esAdminOPersonal
     ? edificios
     : edificios.filter((ed) =>
         todosLosLaboratorios.some((lab) => {
-          const laboratorioTieneReserva = reservasVisibles.some(
+          const laboratorioTieneReserva = reservas.some(
             (r) => r.laboratorioId === (lab.id || lab._id)
           );
 
@@ -254,7 +272,7 @@ export default function CalendarioGrande({
   const laboratoriosDisponibles = esAdminOPersonal
     ? laboratorios
     : laboratorios.filter((lab) =>
-        reservasVisibles.some(
+        reservas.some(
           (r) => r.laboratorioId === (lab.id || lab._id)
         )
       );
@@ -263,7 +281,7 @@ export default function CalendarioGrande({
     (l) => l._id || l.id
   );
 
-  const reservasFiltradas = reservasVisibles.filter((reserva) => {
+  const reservasFiltradas = reservas.filter((reserva) => {
     if (!laboratorio) return false;
 
     if (laboratorio === "todos") {
@@ -302,26 +320,8 @@ export default function CalendarioGrande({
     }))
   );
 
-  useEffect(() => {
-    if (esMobile && vistaActual === "timeGridWeek") {
-      setVistaActual("dayGridMonth");
-    }
-  }, []);
-
-  const eventosSemana = reservasFiltradas.flatMap((reserva) => [
-    {
-      id: `${reserva.id}-prep`,
-      title: "Preparación",
-      start: reserva.preparacionInicio,
-      end: reserva.reservaInicio,
-
-      extendedProps: {
-        tipo: "preparacion",
-        reserva,
-      },
-    },
-
-    {
+  const eventosSemana = reservasFiltradas.flatMap((reserva) => {
+    const bloqueClase = {
       id: `${reserva.id}-clase`,
       title: reserva.materia,
       start: reserva.reservaInicio,
@@ -331,25 +331,112 @@ export default function CalendarioGrande({
         tipo: "clase",
         reserva,
       },
-    },
+    };
 
-    {
-      id: `${reserva.id}-mant`,
-      title: "Mantenimiento",
-      start: reserva.reservaFin,
-      end: reserva.mantenimientoFin,
+    // El DOCENTE solo ve la clase; ADMIN/PERSONAL ven también los bloques de
+    // preparación y mantenimiento.
+    if (!esAdminOPersonal) {
+      return [bloqueClase];
+    }
 
-      extendedProps: {
-        tipo: "mantenimiento",
-        reserva,
+    return [
+      {
+        id: `${reserva.id}-prep`,
+        title: "Preparación",
+        start: reserva.preparacionInicio,
+        end: reserva.reservaInicio,
+
+        extendedProps: {
+          tipo: "preparacion",
+          reserva,
+        },
       },
-    },
-  ]);
+
+      bloqueClase,
+
+      {
+        id: `${reserva.id}-mant`,
+        title: "Mantenimiento",
+        start: reserva.reservaFin,
+        end: reserva.mantenimientoFin,
+
+        extendedProps: {
+          tipo: "mantenimiento",
+          reserva,
+        },
+      },
+    ];
+  });
 
 
   console.log("==========");
   console.log("Vista:", vistaActual);
   console.log("Fecha seleccionada:", fechaSeleccionada);
+
+  // --- Rango horario dinámico de la vista semana ---
+  // Si la semana visible tiene pocas reservas (<= UMBRAL), recortamos la grilla
+  // para que arranque en la primera reserva y termine en la última, de modo que
+  // queden arriba y visibles sin scroll. Con más reservas (o en otras vistas)
+  // usamos el rango completo por defecto.
+  const SLOT_MIN_DEFECTO = "06:00:00";
+  const SLOT_MAX_DEFECTO = "23:00:00";
+  const UMBRAL_POCAS_RESERVAS = 5;
+
+  let slotMinTime = SLOT_MIN_DEFECTO;
+  let slotMaxTime = SLOT_MAX_DEFECTO;
+
+  if (vistaActual === "timeGridWeek") {
+    // Lunes de la semana que contiene la fecha seleccionada (firstDay = 1).
+    const inicioSemanaVista = new Date(fechaSeleccionada);
+    inicioSemanaVista.setHours(0, 0, 0, 0);
+    const diaSemana = inicioSemanaVista.getDay();
+    const diffALunes = diaSemana === 0 ? -6 : 1 - diaSemana;
+    inicioSemanaVista.setDate(inicioSemanaVista.getDate() + diffALunes);
+
+    const finSemanaVista = new Date(inicioSemanaVista);
+    finSemanaVista.setDate(finSemanaVista.getDate() + 7);
+
+    const reservasSemanaVista = reservasFiltradas.filter((r) => {
+      const inicio = new Date(r.reservaInicio);
+      return inicio >= inicioSemanaVista && inicio < finSemanaVista;
+    });
+
+    if (
+      reservasSemanaVista.length > 0 &&
+      reservasSemanaVista.length <= UMBRAL_POCAS_RESERVAS
+    ) {
+      // Franja más temprana y más tardía visibles, en hora local, para que
+      // todos los bloques de cada reserva entren en el rango. El DOCENTE solo
+      // ve la clase, así que su rango se basa en la clase (no en la
+      // preparación/mantenimiento, que no se muestran).
+      let minHora = 23;
+      let maxHora = 0;
+
+      reservasSemanaVista.forEach((r) => {
+        const inicio = new Date(
+          esAdminOPersonal ? r.preparacionInicio : r.reservaInicio
+        );
+        const fin = new Date(
+          esAdminOPersonal ? r.mantenimientoFin : r.reservaFin
+        );
+
+        minHora = Math.min(minHora, inicio.getHours());
+
+        const horaFin =
+          fin.getMinutes() > 0 ? fin.getHours() + 1 : fin.getHours();
+        maxHora = Math.max(maxHora, horaFin);
+      });
+
+      minHora = Math.max(0, minHora);
+      maxHora = Math.min(24, maxHora);
+
+      // Solo aplicamos el recorte si el rango resultante es coherente.
+      if (maxHora > minHora) {
+        slotMinTime = `${String(minHora).padStart(2, "0")}:00:00`;
+        slotMaxTime = `${String(maxHora).padStart(2, "0")}:00:00`;
+      }
+    }
+  }
 
   const reservasDelDia = reservasFiltradas.filter((reserva) => {
     const fechaReserva = reserva.reservaInicio.split("T")[0];
@@ -367,33 +454,34 @@ export default function CalendarioGrande({
 
     if (!acc[fecha]) {
       acc[fecha] = {
-        total: 0,
+        activas: 0,
+        finalizadas: 0,
         laboratorios: {},
-        tieneFinalizadas: false,
       };
     }
 
-    acc[fecha].total++;
+    if (reserva.estado === "Finalizada") {
+      acc[fecha].finalizadas++;
+    } else {
+      acc[fecha].activas++;
+    }
 
     acc[fecha].laboratorios[reserva.laboratorio] =
       (acc[fecha].laboratorios[reserva.laboratorio] || 0) + 1;
-
-    if (reserva.estado === "Finalizada") {
-      acc[fecha].tieneFinalizadas = true;
-    }
 
     return acc;
   }, {});
 
   const eventosMes = Object.entries(reservasPorDia).map(([fecha, datos]) => ({
     id: fecha,
-    title: `${datos.total} ${datos.total === 1 ? "reserva" : "reservas"}`,
+    title: `${datos.activas + datos.finalizadas} ${
+      datos.activas + datos.finalizadas === 1 ? "reserva" : "reservas"
+    }`,
     start: fecha,
     allDay: true,
-    className: datos.tieneFinalizadas
-      ? "evento-finalizado"
-      : "evento-activo",
     extendedProps: {
+      activas: datos.activas,
+      finalizadas: datos.finalizadas,
       laboratorios: datos.laboratorios,
     },
   }));
@@ -420,6 +508,7 @@ export default function CalendarioGrande({
             edificios={edificiosDisponibles}
             laboratorios={laboratoriosDisponibles}
             vistaActual={vistaActual}
+            permitirTodosEnSemana={!esAdminOPersonal}
           />
         </div>
 
@@ -480,11 +569,12 @@ export default function CalendarioGrande({
 
         <CalendarioDia
             bloques={bloquesDia}
+            soloClase={!esAdminOPersonal}
         />
 
       ) : (
         <FullCalendar
-          key={`${vistaActual}-${fechaSeleccionada.toISOString()}`}
+          key={`${vistaActual}-${fechaSeleccionada.toISOString()}-${slotMinTime}-${slotMaxTime}`}
           datesSet={(info) => {
             const fecha = info.view.currentStart;
 
@@ -518,8 +608,8 @@ export default function CalendarioGrande({
           initialView={vistaActual}
           headerToolbar={false}
           allDaySlot={false}
-          slotMinTime="06:00:00"
-          slotMaxTime="23:00:00"
+          slotMinTime={slotMinTime}
+          slotMaxTime={slotMaxTime}
           expandRows={true}
           stickyHeaderDates={true}
           height="auto"
@@ -540,15 +630,35 @@ export default function CalendarioGrande({
                 info.event.extendedProps.laboratorios || {}
               );
 
+              const activas = info.event.extendedProps.activas || 0;
+              const finalizadas = info.event.extendedProps.finalizadas || 0;
+              const esMobileVista = window.innerWidth <= 640;
+
               return (
-                <div
-                  className="evento-resumen-mes"
-                >
-                  <div className="titulo-resumen">
-                    {window.innerWidth <= 640
-                      ? info.event.title.replace(" reserva", "").replace(" reservas", "")
-                      : info.event.title}
-                  </div>
+                <div className="flex flex-col gap-1">
+                  {activas > 0 && (
+                    <div className="evento-resumen-mes">
+                      <div className="titulo-resumen">
+                        {esMobileVista
+                          ? activas
+                          : `${activas} ${
+                              activas === 1 ? "activa" : "activas"
+                            }`}
+                      </div>
+                    </div>
+                  )}
+
+                  {finalizadas > 0 && (
+                    <div className="evento-resumen-mes evento-resumen-mes-finalizado">
+                      <div className="titulo-resumen">
+                        {esMobileVista
+                          ? finalizadas
+                          : `${finalizadas} ${
+                              finalizadas === 1 ? "finalizada" : "finalizadas"
+                            }`}
+                      </div>
+                    </div>
+                  )}
 
                   {laboratorio === "todos" && laboratorios.length > 0 && (
                     <div className="labs-resumen mt-1 text-[11px] leading-4">
@@ -620,7 +730,7 @@ export default function CalendarioGrande({
 
                 {!esEventoCorto && (
                   <div
-                    className={`text-[10px] ${
+                    className={`text-[12px] ${
                       tipo === "clase"
                         ? "text-white/80"
                         : "text-slate-500"

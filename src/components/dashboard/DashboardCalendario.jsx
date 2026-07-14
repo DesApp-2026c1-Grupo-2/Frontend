@@ -272,7 +272,10 @@ export default function DashboardCalendario() {
         />
 
          <div className="mt-4 sm:mt-6">
-            <CalendarioDia bloques={bloques} />
+            <CalendarioDia
+                bloques={bloques}
+                soloClase={!esAdminOPersonal}
+            />
          </div>
 
       </div>
