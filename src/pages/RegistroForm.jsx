@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
-import { FiMonitor } from "react-icons/fi";
+import { FiMonitor, FiSmile } from "react-icons/fi";
 import logo from "../assets/logo.png";
 
 function RegistroForm() {
@@ -77,7 +77,7 @@ function RegistroForm() {
 
         await api.post("/usuarios", payload);
 
-        setSuccess("Usuario creado correctamente");
+        setSuccess("Ok");
 
             setForm({
             nombre: "",
@@ -106,7 +106,58 @@ function RegistroForm() {
                 "Error al crear usuario"
             );
         }
-    }; 
+    };
+
+    if (success) {
+        return (
+            <div className="min-h-screen bg-slate-100 flex items-center justify-center px-4 sm:px-6">
+                <div className="bg-white rounded-3xl shadow-lg border border-emerald-200 p-6 sm:p-10 max-w-xl w-full text-center">
+
+                    <div className="flex items-center justify-center gap-3 mb-6">
+                        <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center">
+                            <FiSmile
+                                size={28}
+                                className="text-emerald-600"
+                            />
+                        </div>
+
+                        <h2 className="text-2xl sm:text-3xl font-bold text-slate-800">
+                            ¡Perfecto!
+                        </h2>
+                    </div>
+                    <p className="text-slate-600 leading-7">
+                        Tu usuario será enviado a revisión.
+                        <br /><br />
+                        Te vamos a notificar por mail cuando sea aprobado o rechazado.
+                        <br /><br />
+                        Gracias por registrarte en nuestra página.
+                    </p>
+
+                    <p className="text-sm text-slate-400 mt-6">
+                        Serás redirigido automáticamente al inicio de sesión en 5 segundos.
+                    </p>
+
+                    <button
+                        onClick={() => navigate("/login")}
+                        className="mt-8 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6 py-3 rounded-xl transition"
+                    >
+                        Ir al inicio de sesión
+                    </button>
+
+                </div>
+            </div>
+        );
+    }
+
+    useEffect(() => {
+        if (!success) return;
+
+        const timer = setTimeout(() => {
+            navigate("/login");
+        }, 5000);
+
+        return () => clearTimeout(timer);
+    }, [success, navigate]);
     
     return (
         <div className="min-h-screen bg-slate-100">

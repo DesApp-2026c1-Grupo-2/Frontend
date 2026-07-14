@@ -35,7 +35,7 @@ function Navbar() {
 
   return (
     <header className="fixed top-0 left-0 z-50 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md shadow-sm">
-      <div className="mx-auto flex h-[78px] w-full max-w-[1440px] items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-[78px] w-full max-w-[1700px] items-center justify-between gap-6 px-6 xl:px-10">
         <button
           type="button"
           onClick={() => navigate("/dashboard")} /*PRUEBA */
@@ -51,7 +51,7 @@ function Navbar() {
 
 
         {/* DESKTOP NAV */}
-        <nav className="hidden md:flex items-center gap-2 sm:gap-4">
+        <nav className="hidden xl:flex items-center gap-1">
           <button
             onClick={() => navigate("/dashboard")} /*PRUEBA */
             className={navButtonClass("/dashboard")}
@@ -147,7 +147,7 @@ function Navbar() {
         {/* MOBILE BUTTON */}
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          className="md:hidden flex flex-col justify-center items-center gap-1.5 w-11 h-11 rounded-xl hover:bg-white/20 transition"
+          className="xl:hidden flex flex-col justify-center items-center gap-1.5 w-11 h-11 rounded-xl hover:bg-white/20 transition"
         >
           <span className={`block h-0.5 w-6 bg-slate-900 transition ${menuOpen ? "rotate-45 translate-y-2" : ""}`} />
           <span className={`block h-0.5 w-6 bg-slate-900 transition ${menuOpen ? "opacity-0" : ""}`} />
@@ -158,7 +158,7 @@ function Navbar() {
 
       {/* MOBILE MENU */}
       {menuOpen && (
-        <div className="md:hidden border-t border-slate-200 bg-white/95 backdrop-blur-md px-4 py-4 shadow-lg">
+        <div className="xl:hidden border-t border-slate-200 bg-white/95 backdrop-blur-md px-4 py-4 shadow-lg">
           {user && (
             <div className="mb-4 flex items-center gap-3 border-b border-slate-200 pb-4">
               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-100 font-semibold text-emerald-700">

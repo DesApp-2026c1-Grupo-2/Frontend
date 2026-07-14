@@ -25,11 +25,11 @@ export default function DashboardEquipamiento({
   ];
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+    <div className="h-full rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
 
       {/* Header */}
 
-      <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+     <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between px-5 sm:px-6 py-5 border-b border-slate-100">
 
         <div className="flex items-center gap-3">
 
@@ -57,6 +57,7 @@ export default function DashboardEquipamiento({
         <button
           onClick={() => navigate("/equipamiento")}
           className="
+            self-start lg:self-auto
             flex items-center gap-2
             text-sm font-medium
             text-emerald-700
@@ -71,7 +72,7 @@ export default function DashboardEquipamiento({
 
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 p-6">
+      <div className="grid grid-cols-1 2xl:grid-cols-2 gap-6 p-6">
 
         {/* ================= USO ================= */}
 
@@ -83,7 +84,7 @@ export default function DashboardEquipamiento({
             </div>
           )}
 
-          <div className="flex items-start justify-between mb-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-5">
 
             <div>
 
@@ -111,7 +112,7 @@ export default function DashboardEquipamiento({
 
             </div>
 
-            <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1">
+            <div className="inline-flex flex-wrap rounded-xl border border-slate-200 bg-white p-1">
 
               {PERIODOS.map((op) => (
 
@@ -119,7 +120,7 @@ export default function DashboardEquipamiento({
                   key={op.value}
                   onClick={() => setPeriodo(op.value)}
                   className={`
-                    px-3 py-1 text-xs rounded-lg transition
+                    px-2 sm:px-3 py-1 text-xs rounded-lg transition
                     ${
                       periodo === op.value
                         ? "bg-emerald-600 text-white"
@@ -144,7 +145,7 @@ export default function DashboardEquipamiento({
 
                 <div
                   key={item.equipoId || index}
-                  className="flex items-center gap-3 rounded-xl bg-white border border-slate-200 p-3"
+                  className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl bg-white border border-slate-200 p-3"
                 >
 
                   <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center font-bold text-emerald-700">
@@ -157,7 +158,7 @@ export default function DashboardEquipamiento({
                       {item.nombre}
                     </p>
 
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs self-start sm:self-auto text-slate-500">
                       {[item.codigo, item.tipo]
                         .filter(Boolean)
                         .join(" · ")}
@@ -197,7 +198,7 @@ export default function DashboardEquipamiento({
             </div>
           )}
 
-          <div className="flex items-center gap-2 mb-5">
+          <div className="flex flex-wrap items-center gap-2 mb-5">
 
             <FiAlertTriangle className="text-amber-600" />
 
@@ -205,13 +206,13 @@ export default function DashboardEquipamiento({
               Alerta de stock
             </h3>
 
-            <span className="ml-auto rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
               {stockAlerts.length} materiales
             </span>
 
           </div>
 
-          <div className="space-y-3 max-h-80 overflow-y-auto">
+          <div className="space-y-3 max-h-72 lg:max-h-80 overflow-y-auto">
 
             {stockAlerts.length > 0 ? (
 
