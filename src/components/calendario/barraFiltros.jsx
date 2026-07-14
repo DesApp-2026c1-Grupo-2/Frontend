@@ -6,12 +6,18 @@ export default function BarraFiltros({
   edificios,
   laboratorios,
   vistaActual,
+  permitirTodosEnSemana = false,
 }) {
 
-  const opcionesLaboratorios =
-    vistaActual === "timeGridWeek"
-      ? laboratorios
-      : [{ _id: "todos", nombre: "todos" }, ...laboratorios];
+  // En mes/día siempre se ofrece "todos". En la vista semanal solo se ofrece
+  // cuando `permitirTodosEnSemana` está activo (caso DOCENTE, para ver sus
+  // reservas en todos los laboratorios).
+  const incluirTodos =
+    vistaActual !== "timeGridWeek" || permitirTodosEnSemana;
+
+  const opcionesLaboratorios = incluirTodos
+    ? [{ _id: "todos", nombre: "todos" }, ...laboratorios]
+    : laboratorios;
 
   console.log("Opciones laboratorios:", opcionesLaboratorios);
   
@@ -27,7 +33,7 @@ export default function BarraFiltros({
           value={edificio}
           onChange={(e) => {
             setEdificio(e.target.value);
-            setLaboratorio("Todos");
+            setLaboratorio("todos");
           }}
           className="
             w-full sm:min-w-[180px]

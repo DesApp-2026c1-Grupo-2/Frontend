@@ -33,24 +33,52 @@ describe('mapearLoteBackend', () => {
       id: 'l1',
       itemId: { id: 'it1', nombre: 'Cloruro', codigo: 'SUS-002' },
       cantidadDisponible: 500,
-      ubicacion: 'Depósito A',
       estado: 'disponible',
       fechaVencimiento: '2027-01-03T00:00:00.000Z',
     });
     expect(lote).toMatchObject({
       id: 'l1', loteId: 'l1', itemId: 'it1', tipo: 'Cloruro', codigo: 'SUS-002',
-      ubicacion: 'Depósito A', estado: 'Disponible', cantidad: 500,
+      estado: 'Disponible', cantidad: 500,
     });
   });
 
   test('resuelve itemId como string (sin poblar)', () => {
     const lote = mapearLoteBackend({
-      _id: 'l2', itemId: 'it2', cantidadDisponible: 10, ubicacion: 'B', estado: 'descartado',
+      _id: 'l2', itemId: 'it2', cantidadDisponible: 10, estado: 'descartado',
     });
     expect(lote.itemId).toBe('it2');
     expect(lote.loteId).toBe('l2');
     expect(lote.estado).toBe('Descartado');
     expect(lote.tipo).toBeUndefined();
+  });
+
+  test('sin laboratorioId la ubicación es "Depósito"', () => {
+    const lote = mapearLoteBackend({ id: 'l3', itemId: 'it3', cantidadDisponible: 5, estado: 'disponible' });
+    expect(lote.laboratorioId).toBeNull();
+    expect(lote.ubicacionLote).toBe('Depósito');
+  });
+
+  test('con laboratorioId resuelve el nombre real desde labMap', () => {
+    const lote = mapearLoteBackend(
+      { id: 'l4', itemId: 'it4', cantidadDisponible: 8, estado: 'disponible', laboratorioId: 'lab-1' },
+      { 'lab-1': 'Laboratorio de Química' }
+    );
+    expect(lote.laboratorioId).toBe('lab-1');
+    expect(lote.ubicacionLote).toBe('Laboratorio de Química');
+  });
+
+  test('con laboratorioId poblado usa su nombre aunque no haya labMap', () => {
+    const lote = mapearLoteBackend({
+      id: 'l5', itemId: 'it5', cantidadDisponible: 3, estado: 'disponible',
+      laboratorioId: { id: 'lab-2', nombre: 'Laboratorio de Física' },
+    });
+    expect(lote.laboratorioId).toBe('lab-2');
+    expect(lote.ubicacionLote).toBe('Laboratorio de Física');
+  });
+
+  test('con laboratorioId sin match en labMap cae al genérico', () => {
+    const lote = mapearLoteBackend({ id: 'l6', itemId: 'it6', cantidadDisponible: 2, estado: 'disponible', laboratorioId: 'lab-x' }, {});
+    expect(lote.ubicacionLote).toBe('Laboratorio asignado');
   });
 });
 

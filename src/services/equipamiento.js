@@ -34,6 +34,30 @@ export const getEstadisticasItems = async () => {
   }
 };
 
+// Estadísticas de uso de equipos (ranking por cantidad de reservas Finalizadas
+// en un período). Sirve para priorizar mantenimiento: los primeros del ranking
+// son los más usados. GET /equipo/estadisticas-uso ->
+//   { periodo, desde, hasta, paginacion: { page, limit, total, totalPaginas },
+//     equipos: [{ equipoId, usos, nombre, codigo, tipo, estado }] }  (usos desc)
+// Requiere rol PERSONAL/ADMIN (el JWT lo agrega el interceptor).
+export const getEstadisticasUso = async ({ periodo, fecha, laboratorioId, equipoId, page, limit } = {}) => {
+  try {
+    const params = new URLSearchParams();
+    if (periodo) params.append("periodo", periodo);
+    if (fecha) params.append("fecha", fecha instanceof Date ? fecha.toISOString() : fecha);
+    if (laboratorioId) params.append("laboratorioId", laboratorioId);
+    if (equipoId) params.append("equipoId", equipoId);
+    if (page) params.append("page", page);
+    if (limit) params.append("limit", limit);
+
+    const response = await api.get(`/equipo/estadisticas-uso${params.toString() ? "?" + params.toString() : ""}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error al obtener estadísticas de uso de equipos:", error);
+    throw error;
+  }
+};
+
 // Obtener un Item por ID
 export const getItemById = async (itemId) => {
   try {
@@ -45,15 +69,34 @@ export const getItemById = async (itemId) => {
   }
 };
 
+// Vista de stock de un Item por ventana temporal (GET /items/:id/stock).
+// `desde`/`hasta` (ISO) opcionales; omitidos = el día actual. Devuelve
+// { itemId, desde, hasta, total, disponible, aceptado[], enUso[] }, donde:
+//  - total: stock físico PRESENTE ahora (baja si hay stock "en uso").
+//  - disponible: lo RESERVABLE en la ventana (usar SIEMPRE este valor para "cuánto
+//    puedo reservar"; total − (aceptado + enUso) NO equivale a disponible).
+//  - aceptado/enUso: reservas Pendiente / En Curso que pesan sobre la ventana.
+export const getStockItem = async (itemId, { desde, hasta } = {}) => {
+  try {
+    const params = {};
+    if (desde) params.desde = desde;
+    if (hasta) params.hasta = hasta;
+    const response = await api.get(`/items/${itemId}/stock`, { params });
+    return response.data;
+  } catch (error) {
+    console.error(`Error al obtener stock del item ${itemId}:`, error);
+    throw error;
+  }
+};
+
 // Obtener Lotes (orden FEFO). Respuesta DUAL:
 //  - sin page/limit  -> array de lotes (retrocompatible).
 //  - con page/limit   -> objeto { total, page, limit, lotes }.
-export const getLotes = async ({ itemId, estado, ubicacion, page, limit } = {}) => {
+export const getLotes = async ({ itemId, estado, page, limit } = {}) => {
   try {
     const params = new URLSearchParams();
     if (itemId) params.append("itemId", itemId);
     if (estado) params.append("estado", estado);
-    if (ubicacion) params.append("ubicacion", ubicacion);
     if (page) params.append("page", page);
     if (limit) params.append("limit", limit);
 
@@ -161,6 +204,26 @@ export const deleteLote = async (loteId) => {
   }
 };
 
+// Transferir / devolver un Lote entre depósito y laboratorios (POST /lotes/:id/transferir).
+// - laboratorioDestinoId: ObjectId del laboratorio destino, o null para DEVOLVER al depósito. Obligatorio.
+// - cantidad (opcional): traslado PARCIAL (entero > 0). Omitida = mueve el lote completo.
+// - observacion (opcional, máx 500).
+// El backend deriva el tipo (DEVOLUCION si destino null, TRANSFERENCIA si no).
+// Devuelve el lote resultante; en un parcial es el LOTE DESTINO nuevo (refrescar el
+// listado del ítem porque el origen quedó con menos cantidad). Requiere rol PERSONAL/ADMIN.
+export const transferirLote = async (loteId, { laboratorioDestinoId, cantidad, observacion } = {}) => {
+  try {
+    const payload = { laboratorioDestinoId: laboratorioDestinoId ?? null };
+    if (cantidad != null) payload.cantidad = cantidad;
+    if (observacion) payload.observacion = observacion;
+    const response = await api.post(`/lotes/${loteId}/transferir`, payload);
+    return response.data;
+  } catch (error) {
+    console.error(`Error al transferir lote ${loteId}:`, error);
+    throw error;
+  }
+};
+
 // --- Servicios para la colección Equipos ---
 
 // Obtener Equipos paginados. Devuelve { total, page, limit, equipos }.
@@ -247,6 +310,22 @@ export const finalizarMantenimiento = async (equipoId, data = {}) => {
     return response.data;
   } catch (error) {
     console.error(`Error al finalizar mantenimiento del equipo ${equipoId}:`, error);
+    throw error;
+  }
+};
+
+// Historial de mantenimiento de un equipo (paginado). Ojo: shape distinto al
+// resto de listados → { paginacion: { page, limit, total, totalPaginas },
+// registros: [...] }. `responsableId` viene populado (o null); los registros
+// van ordenados por `fecha` descendente.
+export const getMantenimientos = async (equipoId, { tipo, page = 1, limit = 20 } = {}) => {
+  try {
+    const params = { page, limit };
+    if (tipo) params.tipo = tipo;
+    const { data } = await api.get(`/equipo/${equipoId}/mantenimientos`, { params });
+    return data; // { paginacion, registros }
+  } catch (error) {
+    console.error(`Error al obtener mantenimientos del equipo ${equipoId}:`, error);
     throw error;
   }
 };

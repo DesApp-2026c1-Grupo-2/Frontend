@@ -7,6 +7,7 @@ import * as equipamientoService from '../../services/equipamiento';
 // Mock completo del servicio de equipamiento (nuevo contrato paginado)
 vi.mock('../../services/equipamiento', () => ({
   getItems: vi.fn(),
+  getAllItems: vi.fn(),
   getEstadisticasItems: vi.fn(),
   getLotes: vi.fn(),
   getLotesByItemId: vi.fn(),
@@ -22,6 +23,19 @@ vi.mock('../../services/equipamiento', () => ({
   deleteEquipo: vi.fn(),
   registrarMantenimiento: vi.fn(),
   finalizarMantenimiento: vi.fn(),
+}));
+
+// Mock de los servicios usados para armar el mapa laboratorioId -> nombre.
+vi.mock('../../services/edificioService', () => ({
+  obtenerEdificios: vi.fn(() => Promise.resolve([])),
+}));
+vi.mock('../../services/laboratorioService', () => ({
+  obtenerLaboratoriosPorEdificio: vi.fn(() => Promise.resolve([])),
+}));
+
+// useAuth: la página lo usa para permisos; en el test alcanza con un usuario ADMIN.
+vi.mock('../../context/AuthContext', () => ({
+  useAuth: () => ({ user: { rol: 'ADMIN' } }),
 }));
 
 // Simplificamos PageHeader
@@ -55,6 +69,7 @@ describe('Equipamiento Component', () => {
     // Valores por defecto: listados vacíos.
     equipamientoService.getEquipos.mockResolvedValue({ total: 0, page: 1, limit: 20, equipos: [] });
     equipamientoService.getItems.mockResolvedValue({ total: 0, page: 1, limit: 20, items: [] });
+    equipamientoService.getAllItems.mockResolvedValue([]);
     equipamientoService.getEstadisticasItems.mockResolvedValue({
       equipos: 2, materiales: 4, reactivos: 3, sustancias: 1, descartes: 1,
     });
@@ -108,7 +123,7 @@ describe('Equipamiento Component', () => {
       if (page) return Promise.resolve({ total: 0, page: 1, limit: 10, lotes: [] });
       if (itemId === 'abc') {
         return Promise.resolve([
-          { id: 'l1', itemId: { id: 'abc', nombre: 'Cloruro de Sodio', codigo: 'MT-002' }, cantidadDisponible: 300, ubicacion: 'Depósito A', estado: 'disponible' },
+          { id: 'l1', itemId: { id: 'abc', nombre: 'Cloruro de Sodio', codigo: 'MT-002' }, cantidadDisponible: 300, estado: 'disponible' },
         ]);
       }
       return Promise.resolve([]);
@@ -125,7 +140,8 @@ describe('Equipamiento Component', () => {
       expect(equipamientoService.getLotes).toHaveBeenCalledWith(
         expect.objectContaining({ itemId: 'abc', estado: 'disponible' })
       );
-      expect(screen.getAllByText('Depósito A').length).toBeGreaterThan(0);
+      // Sin laboratorioId, la ubicación del lote se muestra como "Depósito".
+      expect(screen.getAllByText('Depósito').length).toBeGreaterThan(0);
     });
   });
 
@@ -177,23 +193,18 @@ describe('Equipamiento Component', () => {
     });
   });
 
-  test('el panel de descartados lista los lotes descartados paginados', async () => {
-    equipamientoService.getLotes.mockImplementation(({ page } = {}) =>
-      page
-        ? Promise.resolve({
-            total: 1, page: 1, limit: 10,
-            lotes: [
-              { id: 'd1', itemId: { id: 'x', nombre: 'Reactivo Vencido', codigo: 'RC-009' }, cantidadDisponible: 2, ubicacion: 'Depósito B', estado: 'descartado' },
-            ],
-          })
-        : Promise.resolve([])
-    );
+  test('el panel de alertas lista los materiales con bajo stock', async () => {
+    // El panel "Alertas de inventario" pide todos los materiales (getAllItems) y
+    // filtra los que tienen stockDisponible <= 5.
+    equipamientoService.getAllItems.mockResolvedValue([
+      { id: 'x', nombre: 'Reactivo Vencido', tipo: 'material', codigo: 'RC-009', unidad: 'ml', esConsumible: true, stockDisponible: 2 },
+    ]);
 
     renderPage();
 
     await waitFor(() => {
       expect(screen.getByText('Reactivo Vencido')).toBeInTheDocument();
-      expect(screen.getByText('1 descartados')).toBeInTheDocument();
+      expect(screen.getByText('1 bajo stock')).toBeInTheDocument();
     });
   });
 });
