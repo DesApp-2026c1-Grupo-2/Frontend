@@ -204,73 +204,60 @@ export default function CalendarioDia({ bloques, soloClase = false }) {
                             "
                     >
 
-                        <div className="flex items-center gap-3 flex-1">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1">
 
-                            <div className="text-sm sm:text-base font-bold text-green-900 w-12 sm:w-16 text-left">
+                            <div className="font-bold text-green-900 text-base shrink-0 sm:w-16">
                                 {item.hora}
                             </div>
 
                             <div
-                                className={`grid gap-2 flex-1 ${
-                                    soloClase ? "grid-cols-1" : "grid-cols-3"
+                                className={`grid gap-3 flex-1 ${
+                                    soloClase
+                                        ? "grid-cols-1"
+                                        : "grid-cols-1 sm:grid-cols-3"
                                 }`}
                             >
 
                                 {!soloClase && (
-                                    <div className="flex items-center gap-2">
-
-                                        <FiClipboard className="text-slate-500" />
-
-                                        <div>
-
-                                            <div className="text-xs text-slate-500">
+                                    <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
+                                        <div className="flex items-center gap-2">
+                                            <FiClipboard className="text-slate-500 shrink-0" />
+                                            <span className="text-xs text-slate-500">
                                                 Preparación
-                                            </div>
-
-                                            <div className="font-semibold text-slate-600">
-                                                {item.preparacion.length}
-                                            </div>
-
+                                            </span>
                                         </div>
 
-                                    </div>
+                                        <span className="font-semibold text-slate-700">
+                                            {item.preparacion.length}
+                                        </span>
+                                </div>
                                 )}
 
-                                <div className="flex items-center gap-2">
-
-                                    <FiCalendar className="text-emerald-600" />
-
-                                    <div>
-
-                                        <div className="text-xs text-slate-500">
-                                            Clase
+                                <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
+                                        <div className="flex items-center gap-2">
+                                            <FiCalendar className="text-emerald-500 shrink-0" />
+                                            <span className="text-xs text-emerald-500">
+                                                Clase
+                                            </span>
                                         </div>
 
-                                        <div className="font-semibold text-slate-500">
+                                        <span className="font-semibold text-emerald-700">
                                             {item.clase.length}
-                                        </div>
-
-                                    </div>
-
+                                        </span>
                                 </div>
 
                                 {!soloClase && (
-                                    <div className="flex items-center gap-2">
-
-                                        <FiTool className="text-slate-500" />
-
-                                        <div>
-
-                                            <div className="text-xs text-slate-500">
+                                    <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
+                                        <div className="flex items-center gap-2">
+                                            <FiTool className="text-slate-500 shrink-0" />
+                                            <span className="text-xs text-slate-500">
                                                 Mantenimiento
-                                            </div>
-
-                                            <div className="font-semibold text-slate-600">
-                                                {item.mantenimiento.length}
-                                            </div>
-
+                                            </span>
                                         </div>
 
+                                        <span className="font-semibold text-slate-700">
+                                            {item.mantenimiento.length}
+                                        </span>
                                     </div>
                                 )}
 
@@ -289,23 +276,23 @@ export default function CalendarioDia({ bloques, soloClase = false }) {
 
                     {abiertas[item.hora] && (
 
-                        <div className="border-t bg-slate-50 px-6 py-5 space-y-6">
+                        <div className="border-t bg-slate-50 px-4 sm:px-6 py-5 space-y-6">
 
                             <Seccion
                                 titulo="Preparación"
-                                icono={<FiTool className="text-amber-500"/>}
+                                icono={<FiClipboard className="text-slate-500"/>}
                                 datos={item.preparacion}
                             />
 
                             <Seccion
                                 titulo="Clase"
-                                icono={<FiClipboard className="text-emerald-600"/>}
+                                icono={<FiCalendar className="text-emerald-600"/>}
                                 datos={item.clase}
                             />
 
                             <Seccion
                                 titulo="Mantenimiento"
-                                icono={<FiCalendar className="text-slate-500"/>}
+                                icono={<FiTool className="text-slate-500"/>}
                                 datos={item.mantenimiento}
                             />
 
