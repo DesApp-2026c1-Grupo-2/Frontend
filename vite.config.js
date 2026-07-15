@@ -9,5 +9,12 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/setupTests.js',
+    coverage: {
+      // Sin `all`, v8 solo mide los archivos que algún test importa, lo que
+      // deja fuera del denominador a los módulos que no tienen tests.
+      all: true,
+      include: ['src/**/*.{js,jsx,tsx}'],
+      exclude: ['src/test/**', 'src/setupTests.js'],
+    },
   },
 })
