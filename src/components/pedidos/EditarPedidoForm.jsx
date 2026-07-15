@@ -255,9 +255,6 @@ export default function EditarPedidoForm({ pedido, onClose, onGuardar }) {
     try {
       await onGuardar(payload);
     } catch (err) {
-      console.log("STATUS:", err.response?.status);
-      console.log("DATA:", err.response?.data);
-      console.log("PAYLOAD:", payload);   //eliminaraaaaaaaaaaaaaaaaaaaaaaaaaa   
       console.error("Error al guardar:", err);
       setErrorGuardar(err.response?.data?.error || "Error al actualizar el pedido.");
     } finally {
