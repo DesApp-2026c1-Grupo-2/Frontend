@@ -6,7 +6,7 @@ import {
   rechazarUsuario,
 } from "../services/usuarioService";
 import { PageHeader } from "../components/SharedUi";
-
+import ConfirmModal from "../components/common/ConfirmModal";
 import {
   FiMail,
   FiHash,
@@ -43,7 +43,11 @@ export default function AprobacionUsuarios() {
   const [busqueda, setBusqueda] = useState("");
   const [errorOperacion, setErrorOperacion] = useState("");
   const [procesandoId, setProcesandoId] = useState(null);
-
+  const [confirmConfig, setConfirmConfig] = useState({
+    isOpen: false,
+    usuario: null,
+    accion: null, // "aprobar" | "rechazar"
+  });
   const totalPaginas = Math.max(1, Math.ceil(total / LIMIT));
 
   // KPIs correctos: se toman de la metadata `total` de cada endpoint, no del
@@ -139,51 +143,67 @@ export default function AprobacionUsuarios() {
   };
 
   // ─── Lógica aislada para swapear window.confirm por un modal en el futuro ───
-  const handleAprobar = async (usuario) => {
+  const handleAprobar = async () => {
+    const usuario = confirmConfig.usuario;
+    if (!usuario) return;
+
     const id = idDe(usuario);
-    const confirmar = window.confirm(
-      `¿Aprobar a ${usuario.nombre} ${usuario.apellido}? Se activará su cuenta y se le enviará un correo.`
-    );
-    if (!confirmar) return;
 
     setProcesandoId(id);
+
     try {
       await aprobarUsuario(id);
       await recargarTrasAccion();
     } catch (error) {
       console.error("Error al aprobar usuario:", error.response?.data || error);
+
       const msg =
         error.response?.status === 403
           ? "No tenés permisos para aprobar usuarios."
           : error.response?.status === 409
-          ? "El usuario ya no está pendiente de aprobación."
-          : error.response?.data?.error || "No se pudo aprobar el usuario.";
+            ? "El usuario ya no está pendiente de aprobación."
+            : error.response?.data?.error || "No se pudo aprobar el usuario.";
+
       mostrarError(msg);
     } finally {
       setProcesandoId(null);
+
+      setConfirmConfig({
+        isOpen: false,
+        usuario: null,
+        accion: null,
+      });
     }
   };
 
-  const handleRechazar = async (usuario) => {
+  const handleRechazar = async () => {
+    const usuario = confirmConfig.usuario;
+    if (!usuario) return;
+
     const id = idDe(usuario);
-    const confirmar = window.confirm(
-      `¿Rechazar la solicitud de ${usuario.nombre} ${usuario.apellido}? Esta acción no se puede deshacer.`
-    );
-    if (!confirmar) return;
 
     setProcesandoId(id);
+
     try {
       await rechazarUsuario(id);
       await recargarTrasAccion();
     } catch (error) {
       console.error("Error al rechazar usuario:", error.response?.data || error);
+
       const msg =
         error.response?.status === 403
           ? "No tenés permisos para rechazar usuarios."
           : error.response?.data?.error || "No se pudo rechazar el usuario.";
+
       mostrarError(msg);
     } finally {
       setProcesandoId(null);
+
+      setConfirmConfig({
+        isOpen: false,
+        usuario: null,
+        accion: null,
+      });
     }
   };
 
@@ -192,12 +212,12 @@ export default function AprobacionUsuarios() {
   const termino = busqueda.trim().toLowerCase();
   const lista = termino
     ? usuarios.filter((u) => {
-        const nombreCompleto = `${u.nombre || ""} ${u.apellido || ""}`.toLowerCase();
-        return (
-          nombreCompleto.includes(termino) ||
-          (u.email || "").toLowerCase().includes(termino)
-        );
-      })
+      const nombreCompleto = `${u.nombre || ""} ${u.apellido || ""}`.toLowerCase();
+      return (
+        nombreCompleto.includes(termino) ||
+        (u.email || "").toLowerCase().includes(termino)
+      );
+    })
     : usuarios;
 
   if (isLoading) {
@@ -251,11 +271,10 @@ export default function AprobacionUsuarios() {
             <button
               key={t}
               onClick={() => cambiarTab(t)}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                tab === t
-                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                  : "text-slate-500 bg-white border border-slate-200 hover:text-emerald-600 hover:border-emerald-200"
-              }`}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === t
+                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                : "text-slate-500 bg-white border border-slate-200 hover:text-emerald-600 hover:border-emerald-200"
+                }`}
             >
               {t === "pendientes" ? `Pendientes (${kpis.pendientes})` : "Todos"}
             </button>
@@ -292,8 +311,8 @@ export default function AprobacionUsuarios() {
               {termino
                 ? "No se encontraron usuarios en esta página."
                 : tab === "pendientes"
-                ? "No hay usuarios pendientes de aprobación."
-                : "No se encontraron usuarios."}
+                  ? "No hay usuarios pendientes de aprobación."
+                  : "No se encontraron usuarios."}
             </p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -316,7 +335,13 @@ export default function AprobacionUsuarios() {
                         <div className="flex gap-2">
                           <button
                             title="Aprobar usuario"
-                            onClick={() => handleAprobar(u)}
+                            onClick={() =>
+                              setConfirmConfig({
+                                isOpen: true,
+                                usuario: u,
+                                accion: "aprobar",
+                              })
+                            }
                             disabled={procesando}
                             className="p-1 rounded-lg hover:bg-emerald-50 text-emerald-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
                           >
@@ -324,7 +349,13 @@ export default function AprobacionUsuarios() {
                           </button>
                           <button
                             title="Rechazar usuario"
-                            onClick={() => handleRechazar(u)}
+                            onClick={() =>
+                              setConfirmConfig({
+                                isOpen: true,
+                                usuario: u,
+                                accion: "rechazar",
+                              })
+                            }
                             disabled={procesando}
                             className="p-1 rounded-lg hover:bg-red-50 text-red-600 transition disabled:opacity-40 disabled:cursor-not-allowed"
                           >
@@ -358,13 +389,12 @@ export default function AprobacionUsuarios() {
 
                     <div className="flex justify-end items-center mt-4">
                       <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
-                          u.estado === "ACTIVO"
-                            ? "bg-emerald-100 text-emerald-700"
-                            : u.estado === "SUSPENDIDO"
+                        className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${u.estado === "ACTIVO"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : u.estado === "SUSPENDIDO"
                             ? "bg-slate-200 text-slate-700"
                             : "bg-yellow-100 text-yellow-700"
-                        }`}
+                          }`}
                       >
                         {u.estado?.toLowerCase()}
                       </span>
@@ -401,6 +431,43 @@ export default function AprobacionUsuarios() {
           </button>
         </div>
       )}
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        onClose={() =>
+          setConfirmConfig({
+            isOpen: false,
+            usuario: null,
+            accion: null,
+          })
+        }
+        onConfirm={
+          confirmConfig.accion === "aprobar"
+            ? handleAprobar
+            : handleRechazar
+        }
+        title={
+          confirmConfig.accion === "aprobar"
+            ? "¿Aprobar usuario?"
+            : "¿Rechazar usuario?"
+        }
+        message={
+          confirmConfig.usuario &&
+          (confirmConfig.accion === "aprobar"
+            ? `Se aprobará la cuenta de ${confirmConfig.usuario.nombre} ${confirmConfig.usuario.apellido} y podrá ingresar al sistema.`
+            : `Se rechazará la solicitud de ${confirmConfig.usuario.nombre} ${confirmConfig.usuario.apellido}. Esta acción no se puede deshacer.`)
+        }
+        confirmText={
+          confirmConfig.accion === "aprobar"
+            ? "Sí, aprobar"
+            : "Sí, rechazar"
+        }
+        cancelText="Cancelar"
+        tipo={
+          confirmConfig.accion === "aprobar"
+            ? "success"
+            : "danger"
+        }
+      />
     </div>
   );
 }
