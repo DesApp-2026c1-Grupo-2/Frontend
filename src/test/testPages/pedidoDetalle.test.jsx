@@ -43,6 +43,8 @@ const finalizarConsumos = async () => {
   fireEvent.click(await screen.findByRole('button', { name: /Finalizar Pedido/i }));
   // Confirmar.
   fireEvent.click(await screen.findByRole('button', { name: /Confirmar Finalización/i }));
+  // Aceptar el ConfirmModal de acción crítica.
+  fireEvent.click(await screen.findByRole('button', { name: /Sí, finalizar/i }));
   const finalizarCall = await waitFor(() => {
     const call = api.patch.mock.calls.find(([url]) => url === '/pedido/pedido-1/finalizar');
     expect(call).toBeTruthy();
@@ -89,6 +91,7 @@ describe('PedidoDetalle — finalización con consumos[]', () => {
 
     // Confirmar.
     fireEvent.click(screen.getByRole('button', { name: /Confirmar Finalización/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Sí, finalizar/i }));
 
     const payload = await waitFor(() => {
       const call = api.patch.mock.calls.find(([url]) => url === '/pedido/pedido-1/finalizar');
@@ -153,6 +156,7 @@ describe('PedidoDetalle — descartes solo para reutilizables', () => {
 
     fireEvent.click(checkDescarte);
     fireEvent.click(screen.getByRole('button', { name: /Confirmar Finalización/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Sí, finalizar/i }));
 
     const payload = await waitFor(() => {
       const call = api.patch.mock.calls.find(([url]) => url === '/pedido/pedido-1/finalizar');
@@ -164,5 +168,180 @@ describe('PedidoDetalle — descartes solo para reutilizables', () => {
       { tipo: 'material', itemId: 'item-2', cantidad: 5, motivo: 'Finalización de pedido' },
     ]);
     expect(payload.consumos).toEqual([]);
+  });
+});
+
+describe('PedidoDetalle — historial de actividad', () => {
+  const usuario = { nombre: 'Ana', apellido: 'Pérez', rol: 'PERSONAL' };
+
+  const pedidoConHistorial = {
+    ...pedidoAceptado,
+    historial: [
+      {
+        _id: 'h-1',
+        accion: 'CREACION',
+        descripcion: 'Pedido creado',
+        createdAt: '2026-05-01T10:00:00.000Z',
+        usuario,
+        cambios: {},
+      },
+      {
+        _id: 'h-2',
+        accion: 'MODIFICACION',
+        descripcion: 'Se modificó el pedido',
+        createdAt: '2026-05-02T10:00:00.000Z',
+        usuario,
+        cambios: {
+          // Campo simple: dispara CambioCampoSimple.
+          alumnos: { antes: 10, despues: 20 },
+          materia: { antes: 'Química', despues: 'Química Orgánica' },
+          // Dispara CambioHorario.
+          horario: {
+            antes: { inicio: '2026-05-10T10:00:00.000Z', fin: '2026-05-10T12:00:00.000Z' },
+            despues: { inicio: '2026-05-10T14:00:00.000Z', fin: '2026-05-10T16:00:00.000Z' },
+          },
+          // Dispara CambioRecursos.
+          recursos: {
+            antes: [{ recursoId: { _id: 'item-1', nombre: 'Alcohol etílico' }, tipoRecurso: 'Item', cantidad: 5 }],
+            despues: [{ recursoId: { _id: 'item-1', nombre: 'Alcohol etílico' }, tipoRecurso: 'Item', cantidad: 8 }],
+          },
+        },
+      },
+      {
+        _id: 'h-3',
+        accion: 'CAMBIO_ESTADO',
+        descripcion: 'Cambió el estado',
+        createdAt: '2026-05-03T10:00:00.000Z',
+        usuario,
+        cambios: { estado: { antes: 'Pendiente', despues: 'Aceptado' } },
+      },
+      {
+        _id: 'h-4',
+        accion: 'APROBACION',
+        descripcion: 'Pedido aprobado',
+        createdAt: '2026-05-04T10:00:00.000Z',
+        usuario,
+      },
+      {
+        _id: 'h-5',
+        accion: 'RECHAZO',
+        descripcion: 'Pedido rechazado',
+        createdAt: '2026-05-05T10:00:00.000Z',
+        usuario,
+      },
+      {
+        _id: 'h-6',
+        accion: 'FINALIZACION',
+        descripcion: 'Pedido finalizado',
+        createdAt: '2026-05-06T10:00:00.000Z',
+        usuario,
+        // Sin antes/despues: cae en ResumenValorHistorial (utils/historialFormat).
+        cambios: {
+          reporteFinal: {
+            descartes: [{ tipo: 'material', itemId: 'item-2', cantidad: 2, motivo: 'roto' }],
+            desperfectos: [{ equipoId: 'eq-1', motivo: 'no enciende' }],
+          },
+        },
+      },
+      {
+        _id: 'h-7',
+        accion: 'COMENTARIO',
+        descripcion: 'Nuevo comentario',
+        createdAt: '2026-05-07T10:00:00.000Z',
+        usuario,
+      },
+      {
+        _id: 'h-8',
+        accion: 'ELIMINACION',
+        descripcion: 'Recurso eliminado',
+        createdAt: '2026-05-08T10:00:00.000Z',
+        usuario,
+      },
+    ],
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    api.get.mockResolvedValue({ data: pedidoConHistorial });
+    api.patch.mockResolvedValue({ data: { pedido: pedidoConHistorial } });
+  });
+
+  const renderDetalle = async () => {
+    render(
+      <MemoryRouter>
+        <PedidoDetalle />
+      </MemoryRouter>
+    );
+    await screen.findByText('Historial de actividad');
+  };
+
+  test('lista todos los eventos del historial con su descripción', async () => {
+    await renderDetalle();
+
+    expect(screen.getByText('Pedido creado')).toBeInTheDocument();
+    expect(screen.getByText('Se modificó el pedido')).toBeInTheDocument();
+    expect(screen.getByText('Pedido aprobado')).toBeInTheDocument();
+    expect(screen.getByText('Pedido rechazado')).toBeInTheDocument();
+    expect(screen.getByText('Pedido finalizado')).toBeInTheDocument();
+    expect(screen.getByText('Nuevo comentario')).toBeInTheDocument();
+    expect(screen.getByText('Recurso eliminado')).toBeInTheDocument();
+  });
+
+  test('muestra el diff de un campo simple', async () => {
+    await renderDetalle();
+
+    // ETIQUETAS_CAMPO traduce la clave del cambio.
+    expect(screen.getByText('Alumnos:')).toBeInTheDocument();
+    expect(screen.getByText('Materia:')).toBeInTheDocument();
+    // El valor viejo se tacha y el nuevo queda plano ("Química" también es la
+    // materia del pedido en el encabezado, de ahí el filtro por line-through).
+    const tachados = screen.getAllByText('Química').filter((n) => /line-through/.test(n.className));
+    expect(tachados.length).toBe(1);
+    expect(screen.getByText('Química Orgánica')).toBeInTheDocument();
+    expect(screen.getByText('20')).toBeInTheDocument();
+  });
+
+  test('muestra el cambio de horario como rango legible', async () => {
+    await renderDetalle();
+
+    expect(screen.getByText('Horario:')).toBeInTheDocument();
+    // fmtRango arma "fecha de HH:MM a HH:MM"; el locale del runner define el formato exacto.
+    expect(screen.getAllByText(/\d{1,2}:\d{2}/).length).toBeGreaterThan(0);
+  });
+
+  test('muestra el cambio de recursos con nombre y cantidad', async () => {
+    await renderDetalle();
+
+    expect(screen.getByText('Materiales/equipos:')).toBeInTheDocument();
+    expect(screen.getAllByText(/Alcohol etílico/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/×5/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/×8/).length).toBeGreaterThan(0);
+  });
+
+  test('resume el reporte final de descartes y desperfectos', async () => {
+    await renderDetalle();
+
+    expect(screen.getByText('Reporte final:')).toBeInTheDocument();
+    expect(screen.getByText(/Descartes/)).toBeInTheDocument();
+    expect(screen.getByText(/Desperfectos/)).toBeInTheDocument();
+    expect(screen.getByText(/no enciende/)).toBeInTheDocument();
+  });
+
+  test('el botón de historial colapsa y vuelve a expandir la lista', async () => {
+    await renderDetalle();
+
+    fireEvent.click(screen.getByText('Historial de actividad'));
+    expect(screen.queryByText('Pedido creado')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Historial de actividad'));
+    expect(screen.getByText('Pedido creado')).toBeInTheDocument();
+  });
+
+  test('muestra el vacío cuando el pedido no tiene historial', async () => {
+    api.get.mockResolvedValue({ data: { ...pedidoAceptado, historial: [] } });
+
+    await renderDetalle();
+
+    expect(screen.getByText('No hay actividad registrada.')).toBeInTheDocument();
   });
 });
