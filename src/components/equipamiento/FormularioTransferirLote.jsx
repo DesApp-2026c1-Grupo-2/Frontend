@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import CustomSelect from "../common/CustomSelect";
 import { obtenerEdificios } from "../../services/edificioService";
 import { obtenerLaboratoriosPorEdificio } from "../../services/laboratorioService";
 
@@ -121,8 +122,12 @@ export default function FormularioTransferirLote({
     });
   };
 
-  const selectClass =
-    "w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition disabled:bg-slate-100 disabled:text-slate-400";
+  // Si el lote ya está en el depósito, devolverlo no es un destino posible: se
+  // omite la opción en vez de mostrarla deshabilitada.
+  const opcionesDestino = [
+    { value: "laboratorio", label: "Trasladar a un laboratorio" },
+    ...(enDeposito ? [] : [{ value: "deposito", label: "Devolver al depósito" }]),
+  ];
 
   return (
     <form onSubmit={submit} className="space-y-4 px-3 py-3">
@@ -144,20 +149,15 @@ export default function FormularioTransferirLote({
         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
           Destino
         </label>
-        <select
+        <CustomSelect
           name="modo"
           value={modo}
           onChange={(e) => {
             setModo(e.target.value);
             setErrores({});
           }}
-          className={selectClass}
-        >
-          <option value="laboratorio">Trasladar a un laboratorio</option>
-          <option value="deposito" disabled={enDeposito}>
-            Devolver al depósito{enDeposito ? " (ya está en el depósito)" : ""}
-          </option>
-        </select>
+          options={opcionesDestino}
+        />
       </div>
 
       {/* CASCADA EDIFICIO → LABORATORIO */}
@@ -171,46 +171,41 @@ export default function FormularioTransferirLote({
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
               Edificio
             </label>
-            <select
+            <CustomSelect
+              name="edificioId"
               value={edificioId}
               onChange={(e) => cambiarEdificio(e.target.value)}
               disabled={loadingEdificios}
-              className={selectClass}
-            >
-              <option value="">
-                {loadingEdificios ? "Cargando edificios..." : "Seleccionar edificio"}
-              </option>
-              {edificios.map((edificio) => (
-                <option key={edificio.id || edificio._id} value={edificio.id || edificio._id}>
-                  {edificio.nombre}
-                </option>
-              ))}
-            </select>
+              placeholder={loadingEdificios ? "Cargando edificios..." : "Seleccionar edificio"}
+              options={edificios.map((edificio) => ({
+                value: edificio.id || edificio._id,
+                label: edificio.nombre,
+              }))}
+            />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
               Laboratorio
             </label>
-            <select
+            <CustomSelect
+              name="laboratorioId"
               value={laboratorioId}
               onChange={(e) => setLaboratorioId(e.target.value)}
               disabled={!edificioId || loadingLaboratorios}
-              className={selectClass}
-            >
-              <option value="">
-                {!edificioId
+              error={!!errores.laboratorioId}
+              placeholder={
+                !edificioId
                   ? "Elegí un edificio primero"
                   : loadingLaboratorios
                   ? "Cargando laboratorios..."
-                  : "Seleccionar laboratorio"}
-              </option>
-              {laboratorios.map((lab) => (
-                <option key={lab.id || lab._id} value={lab.id || lab._id}>
-                  {lab.nombre} · {lab.tipo} (cap. {lab.capacidad})
-                </option>
-              ))}
-            </select>
+                  : "Seleccionar laboratorio"
+              }
+              options={laboratorios.map((lab) => ({
+                value: lab.id || lab._id,
+                label: `${lab.nombre} · ${lab.tipo} (cap. ${lab.capacidad})`,
+              }))}
+            />
             {errores.laboratorioId && (
               <p className="text-red-500 text-xs mt-1">{errores.laboratorioId}</p>
             )}
