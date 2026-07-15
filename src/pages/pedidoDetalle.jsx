@@ -5,6 +5,20 @@ import { ResumenValorHistorial } from "../utils/historialFormat";
 import ConfirmModal from "../components/common/ConfirmModal";
 import { FiTool, FiCheckCircle, FiAlertTriangle, FiCheck, FiClipboard, FiUser, FiMessageSquare, FiXCircle, FiX, FiFlag, FiSlash, FiRepeat } from "react-icons/fi";
 
+const getDisplayTipo = (r) => {
+  const tipoItem = r.recursoId?.tipo || r.tipo;
+  if (r.tipoRecurso === 'Equipo' || tipoItem?.toLowerCase() === 'equipo') return 'Equipo';
+  
+  if (tipoItem) {
+    const t = String(tipoItem).toLowerCase();
+    if (t === 'sustancia') return 'Sustancia Básica';
+    if (t === 'reactivo') return 'Reactivo';
+    if (t === 'material') return 'Material';
+  }
+  
+  return r.tipoRecurso === 'Item' ? 'Item' : (r.tipoRecurso || r.tipo || '—');
+};
+
 const PENDING_STATES = ["Pendiente"];
 
 const formatDocente = (doc) => {
@@ -155,7 +169,7 @@ const CambioRecursos = ({ antes, despues, nombresPorId = {} }) => {
             <li key={id || i} className="text-xs flex items-start gap-1 break-words">
               <span className="font-bold shrink-0">•</span>
               <span className="flex-1">
-                <span className="font-medium">{r.tipoRecurso || r.tipo || "Recurso"}</span>
+                <span className="font-medium">{getDisplayTipo(r)}</span>
                 {nombre ? <span> — <span className="break-all">{nombre}</span></span> : null}
                 {!nombre && id ? <span> — <span className="break-all">{id}</span></span> : null}
                 {!nombre && !id ? <span> — recurso</span> : null} ×{r.cantidad}
@@ -682,7 +696,9 @@ export default function PedidoDetalle() {
                     >
                       <div>
                         <p className="text-sm font-medium text-slate-700">{nombreRecurso}</p>
-                        <p className="text-xs text-slate-400 mt-1">{r.tipo || r.tipoRecurso || "—"}</p>
+                        <p className="text-xs text-slate-400 mt-1">
+                          {getDisplayTipo(r)}
+                        </p>
                         {consumo && (
                           <p className="text-xs text-slate-500 mt-1">
                             Consumido: {consumo.consumido} / Reservado: {consumo.reservado}
