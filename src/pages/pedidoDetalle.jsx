@@ -269,6 +269,7 @@ export default function PedidoDetalle() {
   const [mostrarConfirmCancelar, setMostrarConfirmCancelar] = useState(false);
   const [mostrarConfirmRechazo, setMostrarConfirmRechazo] = useState(false);
   const [mostrarConfirmFinalizar, setMostrarConfirmFinalizar] = useState(false);
+  const [mostrarConfirmAprobacion, setMostrarConfirmAprobacion] = useState(false);
   const [mostrarFinalizar, setMostrarFinalizar] = useState(false);
   const [formFinalizacion, setFormFinalizacion] = useState({ recursos: [] });
   const [recursosFinalizacion, setRecursosFinalizacion] = useState([]);
@@ -1062,9 +1063,11 @@ export default function PedidoDetalle() {
                     {pedido.estado === "Pendiente" && (
                       <>
                         <button
-                          onClick={aprobar}
+                          onClick={() => setMostrarConfirmAprobacion(true)}
                           disabled={tieneConflictos}
-                          className={`flex-1 px-4 py-2.5 flex items-center justify-center gap-2 text-white rounded-lg font-semibold shadow-md ${tieneConflictos ? "bg-gray-400 cursor-not-allowed opacity-60" : "bg-emerald-600 hover:bg-emerald-700"
+                          className={`flex-1 px-4 py-2.5 flex items-center justify-center gap-2 text-white rounded-lg font-semibold shadow-md ${tieneConflictos
+                            ? "bg-gray-400 cursor-not-allowed opacity-60"
+                            : "bg-emerald-600 hover:bg-emerald-700"
                             }`}
                         >
                           <FiCheckCircle /> Aprobar
@@ -1130,6 +1133,19 @@ export default function PedidoDetalle() {
               confirmText="Sí, cancelar"
               cancelText="Volver"
               tipo="warning"
+            />
+            <ConfirmModal
+              isOpen={mostrarConfirmAprobacion}
+              onClose={() => setMostrarConfirmAprobacion(false)}
+              onConfirm={async () => {
+                await aprobar();
+                setMostrarConfirmAprobacion(false);
+              }}
+              title="¿Aprobar pedido?"
+              message="El pedido cambiará al estado 'Aceptado' y se reservarán los recursos necesarios."
+              confirmText="Sí, aprobar"
+              cancelText="Volver"
+              tipo="success"
             />
           </div>
 
