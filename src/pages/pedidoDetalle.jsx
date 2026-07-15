@@ -267,7 +267,8 @@ export default function PedidoDetalle() {
   const [mostrarMotivRechazo, setMostrarMotivRechazo] = useState(false);
   const [motivRechazo, setMotivRechazo] = useState("");
   const [mostrarConfirmCancelar, setMostrarConfirmCancelar] = useState(false);
-
+  const [mostrarConfirmRechazo, setMostrarConfirmRechazo] = useState(false);
+  const [mostrarConfirmFinalizar, setMostrarConfirmFinalizar] = useState(false);
   const [mostrarFinalizar, setMostrarFinalizar] = useState(false);
   const [formFinalizacion, setFormFinalizacion] = useState({ recursos: [] });
   const [recursosFinalizacion, setRecursosFinalizacion] = useState([]);
@@ -921,7 +922,7 @@ export default function PedidoDetalle() {
                       className="w-full border border-red-300 rounded-lg p-3 text-sm resize-none"
                     />
                     <div className="flex gap-2">
-                      <button onClick={ejecutarRechazo} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold">Confirmar Rechazo</button>
+                      <button onClick={() => setMostrarConfirmRechazo(true)} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold">Confirmar Rechazo</button>
                       <button onClick={() => setMostrarMotivRechazo(false)} className="flex-1 px-4 py-2 border border-slate-300 hover:bg-slate-100 rounded-lg text-sm font-semibold">Cancelar</button>
                     </div>
                   </div>
@@ -1048,7 +1049,7 @@ export default function PedidoDetalle() {
                     </div>
 
                     <div className="flex gap-2">
-                      <button onClick={ejecutarFinalizacion} className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold">Confirmar Finalización</button>
+                      <button onClick={() => setMostrarConfirmFinalizar(true)} className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold">Confirmar Finalización</button>
                       <button onClick={() => setMostrarFinalizar(false)} className="flex-1 px-4 py-2 border border-slate-300 hover:bg-slate-100 rounded-lg text-sm font-semibold">Volver</button>
                     </div>
                   </div>
@@ -1091,21 +1092,47 @@ export default function PedidoDetalle() {
                 )}
               </div>
             )}
-
+            <ConfirmModal
+              isOpen={mostrarConfirmFinalizar}
+              onClose={() => setMostrarConfirmFinalizar(false)}
+              onConfirm={async () => {
+                await ejecutarFinalizacion();
+                setMostrarConfirmFinalizar(false);
+              }}
+              title="¿Finalizar pedido?"
+              message="El pedido será marcado como finalizado. Los recursos serán devueltos al stock según corresponda. Esta acción no se puede deshacer."
+              confirmText="Sí, finalizar"
+              cancelText="Volver"
+              tipo="success"
+            />
+            <ConfirmModal
+              isOpen={mostrarConfirmRechazo}
+              onClose={() => setMostrarConfirmRechazo(false)}
+              onConfirm={async () => {
+                await ejecutarRechazo();
+                setMostrarConfirmRechazo(false);
+              }}
+              title="¿Rechazar pedido?"
+              message="El pedido será rechazado y el docente será notificado. Esta acción no se puede deshacer."
+              confirmText="Sí, rechazar"
+              cancelText="Volver"
+              tipo="warning"
+            />
+            <ConfirmModal
+              isOpen={mostrarConfirmCancelar}
+              onClose={() => setMostrarConfirmCancelar(false)}
+              onConfirm={async () => {
+                await cancelarPedido();
+                setMostrarConfirmCancelar(false);
+              }}
+              title="¿Cancelar pedido?"
+              message="El pedido será cancelado y se liberarán todas las reservas asociadas. Esta acción no se puede deshacer."
+              confirmText="Sí, cancelar"
+              cancelText="Volver"
+              tipo="warning"
+            />
           </div>
-          <ConfirmModal
-            isOpen={mostrarConfirmCancelar}
-            onClose={() => setMostrarConfirmCancelar(false)}
-            onConfirm={async () => {
-              await cancelarPedido();
-              setMostrarConfirmCancelar(false);
-            }}
-            title="¿Cancelar pedido?"
-            message="El pedido será cancelado y se liberarán todas las reservas asociadas. Esta acción no se puede deshacer."
-            confirmText="Sí, cancelar"
-            cancelText="Volver"
-            tipo="warning"
-          />
+
         </div>
       </div>
     </div>
