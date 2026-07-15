@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { FiEdit2, FiTrash2 } from "react-icons/fi";
 import { PageHeader } from "../components/SharedUi";
 import FormularioActividad from "../components/actividades/FormularioActividad";
+import ConfirmModal from "../components/common/ConfirmModal";
 import {
   getActividades,
   createActividad,
@@ -12,35 +13,36 @@ import { useAuth } from "../context/AuthContext";
 
 const TIPO_LABEL = { quimica: "Química", biologia: "Biología", teorica: "Teórica" };
 const TIPO_COLOR = {
-  quimica:  "bg-blue-50 text-blue-700 border border-blue-200",
+  quimica: "bg-blue-50 text-blue-700 border border-blue-200",
   biologia: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-  teorica:  "bg-violet-50 text-violet-700 border border-violet-200",
+  teorica: "bg-violet-50 text-violet-700 border border-violet-200",
 };
-const ESTADO_LABEL  = { planificada: "Planificada", en_proceso: "En proceso", finalizada: "Finalizada" };
-const ESTADO_COLOR  = {
+const ESTADO_LABEL = { planificada: "Planificada", en_proceso: "En proceso", finalizada: "Finalizada" };
+const ESTADO_COLOR = {
   planificada: "bg-yellow-50 text-yellow-700 border border-yellow-200",
-  en_proceso:  "bg-blue-50 text-blue-700 border border-blue-200",
-  finalizada:  "bg-slate-100 text-slate-500 border border-slate-200",
+  en_proceso: "bg-blue-50 text-blue-700 border border-blue-200",
+  finalizada: "bg-slate-100 text-slate-500 border border-slate-200",
 };
 
 const TABS = [
   { key: "", label: "Todas" },
   { key: "planificada", label: "Planificadas" },
-  { key: "en_proceso",  label: "En proceso" },
-  { key: "finalizada",  label: "Finalizadas" },
+  { key: "en_proceso", label: "En proceso" },
+  { key: "finalizada", label: "Finalizadas" },
 ];
 
 export default function Actividades() {
   const { user } = useAuth();
   const puedeEditar = ["ADMIN", "PERSONAL"].includes(user?.rol);
 
-  const [actividades, setActividades]     = useState([]);
-  const [loading, setLoading]             = useState(true);
-  const [tab, setTab]                     = useState("");
+  const [actividades, setActividades] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState("");
   const [errorOperacion, setErrorOperacion] = useState("");
-  const [modalAbierto, setModalAbierto]   = useState(false);
+  const [modalAbierto, setModalAbierto] = useState(false);
   const [actividadEditando, setActividadEditando] = useState(null);
-
+  const [mostrarConfirmEliminar, setMostrarConfirmEliminar] = useState(false);
+  const [actividadAEliminar, setActividadAEliminar] = useState(null);
   const cargar = async () => {
     setLoading(true);
     try {
@@ -59,11 +61,11 @@ export default function Actividades() {
   const lista = tab ? actividades.filter((a) => a.estado === tab) : actividades;
 
   const planificadas = actividades.filter((a) => a.estado === "planificada");
-  const enProceso    = actividades.filter((a) => a.estado === "en_proceso");
-  const finalizadas  = actividades.filter((a) => a.estado === "finalizada");
+  const enProceso = actividades.filter((a) => a.estado === "en_proceso");
+  const finalizadas = actividades.filter((a) => a.estado === "finalizada");
 
-  const abrirNueva  = () => { setActividadEditando(null); setModalAbierto(true); };
-  const abrirEditar = (a)  => { setActividadEditando(a);  setModalAbierto(true); };
+  const abrirNueva = () => { setActividadEditando(null); setModalAbierto(true); };
+  const abrirEditar = (a) => { setActividadEditando(a); setModalAbierto(true); };
   const cerrarModal = () => { setModalAbierto(false); setActividadEditando(null); };
 
   const handleGuardar = async (datos) => {
@@ -76,15 +78,24 @@ export default function Actividades() {
     cargar();
   };
 
-  const handleEliminar = async (id) => {
-    if (!window.confirm("¿Eliminar esta actividad?")) return;
+  const handleEliminar = async () => {
+    if (!actividadAEliminar) return;
+
     try {
-      await deleteActividad(id);
-      setActividades((prev) => prev.filter((a) => (a._id || a.id) !== id));
+      await deleteActividad(actividadAEliminar);
+
+      setActividades((prev) =>
+        prev.filter((a) => (a._id || a.id) !== actividadAEliminar)
+      );
     } catch (err) {
-      const msg = err.response?.data?.error || "No se pudo eliminar la actividad.";
+      const msg =
+        err.response?.data?.error || "No se pudo eliminar la actividad.";
+
       setErrorOperacion(msg);
       setTimeout(() => setErrorOperacion(""), 4000);
+    } finally {
+      setMostrarConfirmEliminar(false);
+      setActividadAEliminar(null);
     }
   };
 
@@ -142,16 +153,15 @@ export default function Actividades() {
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-              tab === key
-                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                : "text-slate-500 bg-white border border-slate-200 hover:text-emerald-600 hover:border-emerald-200"
-            }`}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === key
+              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+              : "text-slate-500 bg-white border border-slate-200 hover:text-emerald-600 hover:border-emerald-200"
+              }`}
           >
             {key === "planificada" ? `Planificadas (${planificadas.length})`
               : key === "en_proceso" ? `En proceso (${enProceso.length})`
-              : key === "finalizada" ? `Finalizadas (${finalizadas.length})`
-              : label}
+                : key === "finalizada" ? `Finalizadas (${finalizadas.length})`
+                  : label}
           </button>
         ))}
       </div>
@@ -192,7 +202,10 @@ export default function Actividades() {
                           </button>
                           <button
                             title="Eliminar actividad"
-                            onClick={() => handleEliminar(id)}
+                            onClick={() => {
+                              setActividadAEliminar(id);
+                              setMostrarConfirmEliminar(true);
+                            }}
                             className="p-1.5 rounded-lg hover:text-red-500 hover:bg-red-50 transition"
                           >
                             <FiTrash2 size={14} />
@@ -233,6 +246,19 @@ export default function Actividades() {
           onCerrar={cerrarModal}
         />
       )}
+      <ConfirmModal
+        isOpen={mostrarConfirmEliminar}
+        onClose={() => {
+          setMostrarConfirmEliminar(false);
+          setActividadAEliminar(null);
+        }}
+        onConfirm={handleEliminar}
+        title="¿Eliminar actividad?"
+        message="La actividad será eliminada permanentemente. Esta acción no se puede deshacer."
+        confirmText="Sí, eliminar"
+        cancelText="Cancelar"
+        tipo="danger"
+      />
     </div>
   );
 }
