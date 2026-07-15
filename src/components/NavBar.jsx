@@ -181,21 +181,28 @@ function Navbar() {
             )}
             <nav className="flex flex-col gap-2">
 
+              <button
+                onClick={() => {
+                  navigate("/dashboard");
+                  setMenuOpen(false);
+                }}
+                className={navButtonClass("/dashboard")}
+              >
+                Dashboard
+              </button>
 
-              {/* Agregados Dashboard y Edificios para móviles protegidos por rol */}
+              <button
+                onClick={() => {
+                  navigate("/calendario");
+                  setMenuOpen(false);
+                }}
+                className={navButtonClass("/calendario")}
+              >
+                Calendario
+              </button>
+
               {canViewAdminSections && (
                 <>
-                  <button
-                    onClick={() => {
-                      navigate("/dashboard");
-                      setMenuOpen(false);
-                    }}
-                    className={navButtonClass("/dashboard")}
-                  >
-                    Dashboard
-                  </button>
-
-
                   <button
                     onClick={() => {
                       navigate("/edificios");
@@ -215,6 +222,16 @@ function Navbar() {
                   >
                     Equipamiento
                   </button>
+
+                  <button
+                    onClick={() => {
+                      navigate("/actividades");
+                      setMenuOpen(false);
+                    }}
+                    className={navButtonClass("/actividades")}
+                  >
+                    Actividades
+                  </button>
                 </>
               )}
 
@@ -232,16 +249,6 @@ function Navbar() {
 
               <button
                 onClick={() => {
-                  navigate("/calendario");
-                  setMenuOpen(false);
-                }}
-                className={navButtonClass("/calendario")}
-              >
-                Calendario
-              </button>
-
-              <button
-                onClick={() => {
                   navigate("/pedidos");
                   setMenuOpen(false);
                 }}
@@ -249,7 +256,6 @@ function Navbar() {
               >
                 Pedidos
               </button>
-
 
               {user && (
                 <button
@@ -263,11 +269,10 @@ function Navbar() {
                 </button>
               )}
 
-
               {!user && (
                 <button
                   onClick={() => {
-                    navigate("/logIn");
+                    navigate("/login");
                     setMenuOpen(false);
                   }}
                   className="rounded-xl border border-slate-300 px-4 py-3 text-left text-base font-semibold text-slate-700 hover:bg-slate-100 transition"
@@ -275,10 +280,11 @@ function Navbar() {
                   Login
                 </button>
               )}
+
             </nav>
           </div>
         )}
-      </header>
+      </header >
       <ConfirmModal
         isOpen={mostrarConfirmLogout}
         onClose={() => setMostrarConfirmLogout(false)}
