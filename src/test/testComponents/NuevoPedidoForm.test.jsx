@@ -49,7 +49,24 @@ describe('NuevoPedidoForm Component', () => {
     api.get.mockImplementation((url) => {
       if (url === '/laboratorio') return Promise.resolve({ data: [{ _id: 'lab-1', nombre: 'Lab Química', capacidad: 30 }] });
       if (url === '/usuarios') return Promise.resolve({ data: [{ _id: 'u-1', nombre: 'Docente', apellido: 'Test', rol: 'DOCENTE' }] });
-      if (url === '/actividades') return Promise.resolve({ data: [] });
+      if (url === '/actividades') {
+        return Promise.resolve({ data: [
+          { _id: 'act-1', nombre: 'Titulación', tipo: 'quimica' },
+          { _id: 'act-2', nombre: 'Clase teórica', tipo: 'teorica' },
+        ]});
+      }
+      if (url === '/actividades/act-1/sugerencias') {
+        return Promise.resolve({ data: {
+          items: [{ item: { _id: 'it-1', nombre: 'Vaso de precipitado', tipo: 'material' }, cantidadSugerida: 3 }],
+          equipos: [
+            { equipo: { _id: 'eq-1', nombre: 'Microscopio' }, cantidadSugerida: 1, disponible: true },
+            { equipo: { _id: 'eq-9', nombre: 'Roto' }, cantidadSugerida: 1, disponible: false },
+          ],
+        }});
+      }
+      if (url === '/actividades/act-2/sugerencias') {
+        return Promise.resolve({ data: { items: [], equipos: [] } });
+      }
       return Promise.reject(new Error('Not found'));
     });
 
@@ -244,6 +261,82 @@ describe('NuevoPedidoForm Component', () => {
     fireEvent.click(screen.getByRole('button', { name: /Anterior/i }));
 
     expect(screen.getByText('Materia')).toBeInTheDocument();
+  });
+
+  // El select de plantillas solo aparece si hay actividades cargadas.
+  const selectPlantilla = () =>
+    screen.getAllByRole('combobox').find((s) => s.querySelector('option[value="act-1"]'));
+
+  test('aplicar una plantilla trae los recursos sugeridos disponibles', async () => {
+    const { container } = render(<NuevoPedidoForm onClose={mockOnClose} onCrear={mockOnCrear} />);
+    await esperarCarga();
+
+    completarPaso0(container);
+    fireEvent.click(screen.getByRole('button', { name: /Siguiente/i }));
+
+    fireEvent.change(selectPlantilla(), { target: { value: 'act-1' } });
+
+    // Los labs se filtran por el tipo de la actividad elegida.
+    expect(await screen.findByText(/mostrando compatibles con actividad de tipo "quimica"/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Siguiente/i }));
+
+    // El equipo no disponible se descarta; quedan el item y el equipo disponible.
+    expect(screen.getByText('Resumen del pedido')).toBeInTheDocument();
+    expect(screen.getByText(/Vaso de precipitado/)).toBeInTheDocument();
+    expect(screen.getByText(/Microscopio/)).toBeInTheDocument();
+    expect(screen.queryByText(/Roto/)).not.toBeInTheDocument();
+  });
+
+  test('una actividad teórica no filtra los laboratorios', async () => {
+    const { container } = render(<NuevoPedidoForm onClose={mockOnClose} onCrear={mockOnCrear} />);
+    await esperarCarga();
+
+    completarPaso0(container);
+    fireEvent.click(screen.getByRole('button', { name: /Siguiente/i }));
+
+    fireEvent.change(selectPlantilla(), { target: { value: 'act-2' } });
+
+    expect(await screen.findByText(/clase teórica — todos los laboratorios disponibles/)).toBeInTheDocument();
+  });
+
+  test('volver a "Sin plantilla" quita los recursos sugeridos', async () => {
+    const { container } = render(<NuevoPedidoForm onClose={mockOnClose} onCrear={mockOnCrear} />);
+    await esperarCarga();
+
+    completarPaso0(container);
+    fireEvent.click(screen.getByRole('button', { name: /Siguiente/i }));
+
+    fireEvent.change(selectPlantilla(), { target: { value: 'act-1' } });
+    await screen.findByText(/mostrando compatibles/);
+
+    fireEvent.change(selectPlantilla(), { target: { value: '' } });
+
+    await waitFor(() => expect(screen.queryByText(/mostrando compatibles/)).not.toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: /Siguiente/i }));
+    expect(screen.queryByText(/Vaso de precipitado/)).not.toBeInTheDocument();
+  });
+
+  test('no rompe si fallan las sugerencias de la actividad', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    api.get.mockImplementation((url) => {
+      if (url === '/laboratorio') return Promise.resolve({ data: [{ _id: 'lab-1', nombre: 'Lab Química', capacidad: 30, tipo: 'quimica' }] });
+      if (url === '/usuarios') return Promise.resolve({ data: [] });
+      if (url === '/actividades') return Promise.resolve({ data: [{ _id: 'act-1', nombre: 'Titulación', tipo: 'quimica' }] });
+      return Promise.reject(new Error('Not found'));
+    });
+
+    const { container } = render(<NuevoPedidoForm onClose={mockOnClose} onCrear={mockOnCrear} />);
+    await esperarCarga();
+
+    completarPaso0(container);
+    fireEvent.click(screen.getByRole('button', { name: /Siguiente/i }));
+
+    fireEvent.change(selectPlantilla(), { target: { value: 'act-1' } });
+
+    // El formulario sigue usable aunque no lleguen las sugerencias.
+    expect(await screen.findByText(/Seleccionar recursos requeridos/i)).toBeInTheDocument();
   });
 
   test('muestra el error del backend si falla el envío', async () => {

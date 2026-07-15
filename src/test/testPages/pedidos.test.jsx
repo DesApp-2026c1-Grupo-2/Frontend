@@ -25,7 +25,13 @@ vi.mock('react-icons/fi', () => ({
   FiCalendar: () => <span data-testid="FiCalendar" />,
   FiEdit2: () => <span data-testid="FiEdit2" />,
   FiTrash2: () => <span data-testid="FiTrash2" />,
-  FiMessageCircle: () => <span data-testid="FiMessageCircle" />
+  FiMessageCircle: () => <span data-testid="FiMessageCircle" />,
+  // Los usa el ConfirmModal que abre "Eliminar pedido".
+  FiX: () => <span data-testid="FiX" />,
+  FiAlertTriangle: () => <span data-testid="FiAlertTriangle" />,
+  FiLogOut: () => <span data-testid="FiLogOut" />,
+  FiCheckCircle: () => <span data-testid="FiCheckCircle" />,
+  FiInfo: () => <span data-testid="FiInfo" />
 }));
 
 vi.mock('../../api/axios', () => ({
@@ -195,5 +201,88 @@ describe('Pedidos — filtros y estados', () => {
     );
 
     expect(await screen.findByText('No hay pedidos para mostrar en esta vista.')).toBeInTheDocument();
+  });
+
+  test('eliminar pide confirmación y saca el pedido de la lista', async () => {
+    api.delete.mockResolvedValue({});
+
+    await renderPedidos();
+
+    fireEvent.click(screen.getAllByTitle('Eliminar pedido')[0]);
+
+    expect(screen.getByText('¿Eliminar pedido?')).toBeInTheDocument();
+    expect(api.delete).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }));
+
+    await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/pedido/p-pend'));
+    await waitFor(() => expect(screen.queryByText('Biología')).not.toBeInTheDocument());
+  });
+
+  test('cancelar la confirmación no elimina', async () => {
+    await renderPedidos();
+
+    fireEvent.click(screen.getAllByTitle('Eliminar pedido')[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    expect(api.delete).not.toHaveBeenCalled();
+    expect(screen.getByText('Biología')).toBeInTheDocument();
+  });
+
+  test('avisa si no hay permisos para eliminar', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    api.delete.mockRejectedValue({ response: { status: 403 } });
+
+    await renderPedidos();
+
+    fireEvent.click(screen.getAllByTitle('Eliminar pedido')[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }));
+
+    expect(await screen.findByText('No tenés permisos para eliminar este pedido.')).toBeInTheDocument();
+    // El pedido sigue en la lista.
+    expect(screen.getByText('Biología')).toBeInTheDocument();
+  });
+
+  test('usa el mensaje del backend si el borrado falla', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    api.delete.mockRejectedValue({ response: { status: 500, data: { error: 'Tiene reservas activas' } } });
+
+    await renderPedidos();
+
+    fireEvent.click(screen.getAllByTitle('Eliminar pedido')[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }));
+
+    expect(await screen.findByText('Tiene reservas activas')).toBeInTheDocument();
+  });
+
+  test('pagina de a 9 pedidos', async () => {
+    // POR_PAGINA es 9: con 10 aparece el paginador.
+    const muchos = Array.from({ length: 10 }, (_, i) => ({
+      _id: `p-${i}`,
+      materia: `Materia ${i}`,
+      docente: { _id: 'user-1', nombre: 'Ana' },
+      estado: 'Pendiente',
+      laboratorio: 'Lab 1',
+    }));
+    api.get.mockImplementation((url) => {
+      if (url === '/pedido') return Promise.resolve({ data: muchos });
+      return Promise.resolve({ data: [] });
+    });
+
+    render(
+      <MemoryRouter>
+        <Pedidos />
+      </MemoryRouter>
+    );
+    await screen.findByText('Materia 0');
+
+    expect(screen.getByText(/Página 1 de 2/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Anterior/ })).toBeDisabled();
+    expect(screen.queryByText('Materia 9')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Siguiente/ }));
+
+    expect(screen.getByText('Materia 9')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Siguiente/ })).toBeDisabled();
   });
 });

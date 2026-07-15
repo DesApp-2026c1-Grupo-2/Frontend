@@ -345,3 +345,198 @@ describe('PedidoDetalle — historial de actividad', () => {
     expect(screen.getByText('No hay actividad registrada.')).toBeInTheDocument();
   });
 });
+
+describe('PedidoDetalle — aprobar, rechazar y cancelar', () => {
+  const pedidoPendiente = { ...pedidoAceptado, estado: 'Pendiente' };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    api.get.mockResolvedValue({ data: pedidoPendiente });
+    api.patch.mockResolvedValue({ data: { pedido: { ...pedidoPendiente, estado: 'Aceptado' } } });
+  });
+
+  const renderDetalle = async (data = pedidoPendiente) => {
+    api.get.mockResolvedValue({ data });
+    render(
+      <MemoryRouter>
+        <PedidoDetalle />
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(screen.queryByText('Cargando...')).not.toBeInTheDocument());
+  };
+
+  test('muestra el estado de carga', () => {
+    api.get.mockReturnValue(new Promise(() => {}));
+
+    render(
+      <MemoryRouter>
+        <PedidoDetalle />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('Cargando...')).toBeInTheDocument();
+  });
+
+  test('avisa si el pedido no existe', async () => {
+    await renderDetalle(null);
+
+    expect(screen.getByText('Pedido no encontrado')).toBeInTheDocument();
+  });
+
+  // Al montar, el componente ya hace un PATCH para marcar los comentarios como
+  // vistos, así que los asserts miran el endpoint puntual y no api.patch entero.
+  const seLlamo = (url) => api.patch.mock.calls.some(([u]) => u === url);
+
+  test('aprobar pide confirmación antes de mandar', async () => {
+    await renderDetalle();
+
+    fireEvent.click(screen.getByRole('button', { name: /Aprobar/i }));
+
+    expect(await screen.findByText('¿Aprobar pedido?')).toBeInTheDocument();
+    expect(seLlamo('/pedido/pedido-1/aprobar')).toBe(false);
+
+    fireEvent.click(screen.getByRole('button', { name: /Sí, aprobar/i }));
+
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith('/pedido/pedido-1/aprobar'));
+  });
+
+  test('muestra el error si no se puede aprobar', async () => {
+    api.patch.mockRejectedValue({ response: { data: { error: 'El laboratorio está ocupado' } } });
+
+    await renderDetalle();
+
+    fireEvent.click(screen.getByRole('button', { name: /Aprobar/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Sí, aprobar/i }));
+
+    expect(await screen.findByText('El laboratorio está ocupado')).toBeInTheDocument();
+  });
+
+  test('rechazar exige un motivo', async () => {
+    await renderDetalle();
+
+    fireEvent.click(screen.getByRole('button', { name: /Rechazar/i }));
+    // El form inline aparece; sin motivo no se manda nada.
+    fireEvent.click(await screen.findByRole('button', { name: /Confirmar Rechazo/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Sí, rechazar/i }));
+
+    expect(await screen.findByText('Debe proporcionar un motivo de rechazo.')).toBeInTheDocument();
+    expect(seLlamo('/pedido/pedido-1/estado')).toBe(false);
+  });
+
+  test('rechazar manda el motivo junto al estado', async () => {
+    api.patch.mockResolvedValue({ data: { ...pedidoPendiente, estado: 'Rechazado' } });
+
+    await renderDetalle();
+
+    fireEvent.click(screen.getByRole('button', { name: /Rechazar/i }));
+    fireEvent.change(await screen.findByPlaceholderText('Escribí el motivo...'), {
+      target: { value: 'No hay stock' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Confirmar Rechazo/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Sí, rechazar/i }));
+
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith('/pedido/pedido-1/estado', {
+      estado: 'Rechazado',
+      motivoRechazo: 'No hay stock',
+    }));
+  });
+
+  test('cancelar el rechazo cierra el formulario', async () => {
+    await renderDetalle();
+
+    fireEvent.click(screen.getByRole('button', { name: /Rechazar/i }));
+    expect(await screen.findByPlaceholderText('Escribí el motivo...')).toBeInTheDocument();
+
+    // El "Cancelar" del form inline, no el de cancelar el pedido.
+    fireEvent.click(screen.getAllByRole('button', { name: 'Cancelar' })[0]);
+
+    expect(screen.queryByPlaceholderText('Escribí el motivo...')).not.toBeInTheDocument();
+  });
+
+  test('cancelar el pedido pide confirmación', async () => {
+    api.patch.mockResolvedValue({ data: { ...pedidoPendiente, estado: 'Cancelado' } });
+
+    await renderDetalle();
+
+    fireEvent.click(screen.getByRole('button', { name: /Cancelar/i }));
+
+    expect(await screen.findByText('¿Cancelar pedido?')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Sí, cancelar/i }));
+
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith('/pedido/pedido-1/estado', {
+      estado: 'Cancelado',
+    }));
+  });
+
+  test('muestra el error si no se puede cancelar', async () => {
+    api.patch.mockRejectedValue(new Error('Network Error'));
+
+    await renderDetalle();
+
+    fireEvent.click(screen.getByRole('button', { name: /Cancelar/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Sí, cancelar/i }));
+
+    expect(await screen.findByText('Error al cancelar el pedido.')).toBeInTheDocument();
+  });
+
+  test('un pedido rechazado no ofrece acciones', async () => {
+    await renderDetalle({ ...pedidoAceptado, estado: 'Rechazado', motivoRechazo: 'Sin stock' });
+
+    expect(screen.queryByRole('button', { name: /Aprobar/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Cancelar$/i })).not.toBeInTheDocument();
+  });
+});
+
+describe('PedidoDetalle — comentarios', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    api.get.mockResolvedValue({ data: pedidoAceptado });
+    api.post.mockResolvedValue({ data: { pedido: pedidoAceptado } });
+    api.patch.mockResolvedValue({ data: { pedido: pedidoAceptado } });
+  });
+
+  const renderDetalle = async () => {
+    render(
+      <MemoryRouter>
+        <PedidoDetalle />
+      </MemoryRouter>
+    );
+    await screen.findByPlaceholderText('Escribí un comentario...');
+  };
+
+  test('envía un comentario', async () => {
+    await renderDetalle();
+
+    fireEvent.change(screen.getByPlaceholderText('Escribí un comentario...'), {
+      target: { value: 'Falta material' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Comentar' }));
+
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/pedido/pedido-1/comentarios', {
+      mensaje: 'Falta material',
+    }));
+  });
+
+  test('no envía un comentario vacío', async () => {
+    await renderDetalle();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Comentar' }));
+
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  test('muestra el error si falla el comentario', async () => {
+    api.post.mockRejectedValue(new Error('Network Error'));
+
+    await renderDetalle();
+
+    fireEvent.change(screen.getByPlaceholderText('Escribí un comentario...'), {
+      target: { value: 'Hola' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Comentar' }));
+
+    expect(await screen.findByText('No se pudo agregar el comentario.')).toBeInTheDocument();
+  });
+});
