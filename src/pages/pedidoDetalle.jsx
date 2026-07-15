@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { ResumenValorHistorial } from "../utils/historialFormat";
+import { FiTool, FiCheckCircle, FiAlertTriangle, FiCheck, FiClipboard, FiUser, FiMessageSquare, FiXCircle, FiX, FiFlag, FiSlash, FiRepeat } from "react-icons/fi";
 
 const PENDING_STATES = ["Pendiente"];
 
@@ -654,7 +655,7 @@ export default function PedidoDetalle() {
 
             {/* RECURSOS */}
             <div className="mb-8">
-              <h2 className="font-semibold text-lg text-emerald-700 mb-4">🛠️ Materiales solicitado</h2>
+              <h2 className="font-semibold text-lg text-emerald-700 mb-4 flex items-center gap-2"><FiTool /> Materiales solicitado</h2>
               <div className="space-y-2">
                 {pedido.recursos?.map((r, i) => {
                   const recId = typeof r.recursoId === "object" ? r.recursoId?._id : r.recursoId;
@@ -694,12 +695,12 @@ export default function PedidoDetalle() {
             {/* ALERTAS DE CONFLICTOS */}
             {!tieneConflictos ? (
               <div className="mb-8 border border-emerald-300 bg-emerald-50 rounded-xl p-4 shadow-sm">
-                <p className="font-semibold text-emerald-700">✅ Pedido satisfacible</p>
+                <p className="font-semibold text-emerald-700 flex items-center gap-2"><FiCheckCircle /> Pedido satisfacible</p>
                 <p className="text-sm text-emerald-600 mt-1">El laboratorio, materiales y equipos se encuentran disponibles.</p>
               </div>
             ) : (
               <div className="mb-8 border border-red-300 bg-red-50 rounded-xl p-4 shadow-sm">
-                <p className="font-semibold text-red-700">⚠️ Pedido con conflictos</p>
+                <p className="font-semibold text-red-700 flex items-center gap-2"><FiAlertTriangle /> Pedido con conflictos</p>
                 <p className="text-sm text-red-600 mt-1">Existen problemas que impiden satisfacer este pedido.</p>
               </div>
             )}
@@ -720,7 +721,7 @@ export default function PedidoDetalle() {
 
             {/* CHECKLIST */}
             <div className="mb-8">
-              <h2 className="font-semibold text-lg text-emerald-700 mb-4">✓ Checklist de seguimiento</h2>
+              <h2 className="font-semibold text-lg text-emerald-700 mb-4 flex items-center gap-2"><FiCheck /> Checklist de seguimiento</h2>
               {pedido.checklist?.length > 0 ? (
                 <div className="space-y-3">
                   {pedido.checklist.map((tarea, index) => (
@@ -766,7 +767,7 @@ export default function PedidoDetalle() {
                 onClick={() => setHistorialExpandido(!historialExpandido)}
                 className="flex items-center gap-2 w-full text-left mb-4 p-3 hover:bg-emerald-50 rounded-lg transition"
               >
-                <span className="font-semibold text-lg text-emerald-700">📋 Historial de actividad</span>
+                <span className="font-semibold text-lg text-emerald-700 flex items-center gap-2"><FiClipboard /> Historial de actividad</span>
                 <span className={`text-emerald-600 transition-transform ml-auto text-xl ${historialExpandido ? "rotate-180" : ""}`}>▼</span>
               </button>
 
@@ -802,8 +803,8 @@ export default function PedidoDetalle() {
                                 </span>
                               </div>
 
-                              <p className="text-xs text-slate-500 mb-3 font-medium">
-                                👤 {evento.usuario?.nombre} {evento.usuario?.apellido}
+                              <p className="text-xs text-slate-500 mb-3 font-medium flex items-center gap-1">
+                                <FiUser /> {evento.usuario?.nombre} {evento.usuario?.apellido}
                                 {evento.usuario?.rol && <span className="text-emerald-600 ml-1">· {evento.usuario.rol}</span>}
                               </p>
 
@@ -827,7 +828,7 @@ export default function PedidoDetalle() {
 
             {/* COMENTARIOS */}
             <div className="mb-8">
-              <h2 className="font-semibold text-lg text-emerald-700 mb-4">💬 Comentarios</h2>
+              <h2 className="font-semibold text-lg text-emerald-700 mb-4 flex items-center gap-2"><FiMessageSquare /> Comentarios</h2>
               <div className="space-y-3 mb-6">
                 {pedido.comentarios?.map((comentario) => {
                   const esMotivRechazo = comentario.mensaje?.includes("Motivo de rechazo");
@@ -841,7 +842,7 @@ export default function PedidoDetalle() {
                     >
                       <div className="flex justify-between items-start mb-2 gap-2 flex-wrap">
                         <div className="flex items-center gap-2">
-                          <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${esMotivRechazo
+                          <span className={`text-xs px-2.5 py-1 rounded-full font-semibold flex items-center gap-1 ${esMotivRechazo
                               ? "bg-red-200 text-red-700"
                               : comentario.usuario?.rol === "ADMIN"
                                 ? "bg-purple-100 text-purple-700"
@@ -849,7 +850,7 @@ export default function PedidoDetalle() {
                                   ? "bg-blue-100 text-blue-700"
                                   : "bg-emerald-100 text-emerald-700"
                             }`}>
-                            {esMotivRechazo ? "⚠️ RECHAZO" : comentario.usuario?.rol}
+                            {esMotivRechazo ? <><FiAlertTriangle /> RECHAZO</> : comentario.usuario?.rol}
                           </span>
                           <span className={`font-semibold ${esMotivRechazo ? "text-red-700" : "text-slate-800"}`}>
                             {comentario.usuario?.nombre} {comentario.usuario?.apellido}
@@ -886,7 +887,7 @@ export default function PedidoDetalle() {
             {/* MOTIVO DE RECHAZO */}
             {pedido.estado === "Rechazado" && pedido.motivoRechazo && (
               <div className="mb-8 border border-red-300 bg-red-50 rounded-xl p-4 shadow-sm">
-                <p className="font-semibold text-red-700">❌ Pedido Rechazado</p>
+                <p className="font-semibold text-red-700 flex items-center gap-2"><FiXCircle /> Pedido Rechazado</p>
                 <p className="text-sm text-red-600 mt-1"><strong>Motivo:</strong> {pedido.motivoRechazo}</p>
               </div>
             )}
@@ -896,8 +897,8 @@ export default function PedidoDetalle() {
               <div className="border-t border-slate-200 pt-6 flex flex-col gap-3">
                 {errorAccion && (
                   <div className="p-4 bg-red-50 border border-red-300 text-red-600 text-sm rounded-xl flex justify-between items-start">
-                    <span><strong>⚠️ Error:</strong> {errorAccion}</span>
-                    <button onClick={() => setErrorAccion("")} className="ml-4 text-red-400 hover:text-red-600 font-bold text-lg">✕</button>
+                    <span className="flex items-center gap-2"><strong className="flex items-center gap-1"><FiAlertTriangle /> Error:</strong> {errorAccion}</span>
+                    <button onClick={() => setErrorAccion("")} className="ml-4 text-red-400 hover:text-red-600 font-bold text-lg"><FiX /></button>
                   </div>
                 )}
 
@@ -1031,7 +1032,7 @@ export default function PedidoDetalle() {
                               ) : null}
 
                               {!esEquipo && !esConsumible && (
-                                <p className="text-xs text-slate-500 italic">🔁 Reutilizable — vuelve al stock al finalizar.</p>
+                                <p className="text-xs text-slate-500 italic flex items-center gap-1"><FiRepeat /> Reutilizable — vuelve al stock al finalizar.</p>
                               )}
                             </div>
                           );
@@ -1055,26 +1056,26 @@ export default function PedidoDetalle() {
                         <button
                           onClick={aprobar}
                           disabled={tieneConflictos}
-                          className={`flex-1 px-4 py-2.5 text-white rounded-lg font-semibold shadow-md ${tieneConflictos ? "bg-gray-400 cursor-not-allowed opacity-60" : "bg-emerald-600 hover:bg-emerald-700"
+                          className={`flex-1 px-4 py-2.5 flex items-center justify-center gap-2 text-white rounded-lg font-semibold shadow-md ${tieneConflictos ? "bg-gray-400 cursor-not-allowed opacity-60" : "bg-emerald-600 hover:bg-emerald-700"
                             }`}
                         >
-                          ✅ Aprobar
+                          <FiCheckCircle /> Aprobar
                         </button>
-                        <button onClick={() => setMostrarMotivRechazo(true)} className="flex-1 px-4 py-2.5 border-2 border-red-400 text-red-600 hover:bg-red-50 rounded-lg font-semibold">
-                          ❌ Rechazar
+                        <button onClick={() => setMostrarMotivRechazo(true)} className="flex-1 px-4 py-2.5 flex items-center justify-center gap-2 border-2 border-red-400 text-red-600 hover:bg-red-50 rounded-lg font-semibold">
+                          <FiXCircle /> Rechazar
                         </button>
                       </>
                     )}
 
                     {pedido.estado === "Aceptado" && (
-                      <button onClick={() => setMostrarFinalizar(true)} className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-md">
-                        🏁 Finalizar Pedido
+                      <button onClick={() => setMostrarFinalizar(true)} className="flex-1 px-4 py-2.5 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-md">
+                        <FiFlag /> Finalizar Pedido
                       </button>
                     )}
 
                     {/* El botón Cancelar siempre aparece si está Pendiente o Aceptado */}
-                    <button onClick={cancelarPedido} className="w-full sm:w-auto px-4 py-2.5 border border-slate-300 text-slate-600 hover:bg-slate-100 hover:text-slate-800 rounded-lg font-semibold transition-colors">
-                      🚫 Cancelar
+                    <button onClick={cancelarPedido} className="w-full sm:w-auto px-4 py-2.5 flex items-center justify-center gap-2 border border-slate-300 text-slate-600 hover:bg-slate-100 hover:text-slate-800 rounded-lg font-semibold transition-colors">
+                      <FiSlash /> Cancelar
                     </button>
 
                   </div>
