@@ -68,9 +68,9 @@ export default function PedidosLaboratorio() {
   const [pedidoEditando, setPedidoEditando] = useState(null);
   const [errorOperacion, setErrorOperacion] = useState("");
 
-  // Ordenar por más reciente primero
+  // Ordenar por más reciente (creación o modificación) primero
   const pedidosOrdenados = [...pedidos].sort(
-    (a, b) => new Date(b.fechaHora || b.createdAt) - new Date(a.fechaHora || a.createdAt)
+    (a, b) => new Date(b.updatedAt || b.createdAt || b.fechaHora || 0) - new Date(a.updatedAt || a.createdAt || a.fechaHora || 0)
   );
 
   const pendientes  = pedidos.filter((p) => PENDING_STATES.includes(p.estado));
