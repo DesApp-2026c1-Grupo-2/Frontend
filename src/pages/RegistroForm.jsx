@@ -16,8 +16,18 @@ function RegistroForm() {
     });
 
     const [error, setError] = useState("");
-    const [success, setSuccess] = useState("");
+    const [success, setSuccess] = useState(false);
     const [errores, setErrores] = useState({});
+
+    useEffect(() => {
+        if (!success) return;
+
+        const timer = setTimeout(() => {
+            navigate("/logIn");
+        }, 5000);
+
+        return () => clearTimeout(timer);
+    }, [success, navigate]);
 
     const validarFormulario = () => {
         const nuevosErrores = {};
@@ -67,7 +77,7 @@ function RegistroForm() {
         }
 
         setError("");
-        setSuccess("");
+        setSuccess(false);
 
         try {
         const payload = { ...form };
@@ -77,7 +87,7 @@ function RegistroForm() {
 
         await api.post("/usuarios", payload);
 
-        setSuccess("Ok");
+        setSuccess(true);
 
             setForm({
             nombre: "",
@@ -138,7 +148,7 @@ function RegistroForm() {
                     </p>
 
                     <button
-                        onClick={() => navigate("/login")}
+                        onClick={() => navigate("/logIn")}
                         className="mt-8 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6 py-3 rounded-xl transition"
                     >
                         Ir al inicio de sesión
@@ -149,16 +159,6 @@ function RegistroForm() {
         );
     }
 
-    useEffect(() => {
-        if (!success) return;
-
-        const timer = setTimeout(() => {
-            navigate("/login");
-        }, 5000);
-
-        return () => clearTimeout(timer);
-    }, [success, navigate]);
-    
     return (
         <div className="min-h-screen bg-slate-100">
 
@@ -227,12 +227,6 @@ function RegistroForm() {
             {error && (
                 <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-2 rounded-xl text-sm">
                 {error}
-                </div>
-            )}
-
-            {success && (
-                <div className="bg-emerald-100 border border-emerald-300 text-emerald-700 px-4 py-2 rounded-xl text-sm">
-                {success}
                 </div>
             )}
 
@@ -340,7 +334,7 @@ function RegistroForm() {
 
             <button
                 type="button"
-                onClick={() => navigate("/login")}
+                onClick={() => navigate("/logIn")}
                 className="
                 text-sm
                 text-emerald-600
