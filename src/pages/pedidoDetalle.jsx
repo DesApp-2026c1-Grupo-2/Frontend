@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { ResumenValorHistorial } from "../utils/historialFormat";
+import ConfirmModal from "../components/common/ConfirmModal";
 import { FiTool, FiCheckCircle, FiAlertTriangle, FiCheck, FiClipboard, FiUser, FiMessageSquare, FiXCircle, FiX, FiFlag, FiSlash, FiRepeat } from "react-icons/fi";
 
 const PENDING_STATES = ["Pendiente"];
@@ -265,7 +266,10 @@ export default function PedidoDetalle() {
   const [historialExpandido, setHistorialExpandido] = useState(true);
   const [mostrarMotivRechazo, setMostrarMotivRechazo] = useState(false);
   const [motivRechazo, setMotivRechazo] = useState("");
-
+  const [mostrarConfirmCancelar, setMostrarConfirmCancelar] = useState(false);
+  const [mostrarConfirmRechazo, setMostrarConfirmRechazo] = useState(false);
+  const [mostrarConfirmFinalizar, setMostrarConfirmFinalizar] = useState(false);
+  const [mostrarConfirmAprobacion, setMostrarConfirmAprobacion] = useState(false);
   const [mostrarFinalizar, setMostrarFinalizar] = useState(false);
   const [formFinalizacion, setFormFinalizacion] = useState({ recursos: [] });
   const [recursosFinalizacion, setRecursosFinalizacion] = useState([]);
@@ -442,13 +446,18 @@ export default function PedidoDetalle() {
   };
 
   const cancelarPedido = async () => {
-    if (!window.confirm("¿Seguro que querés cancelar este pedido? Se liberarán las reservas.")) return;
     setErrorAccion("");
+
     try {
-      const res = await api.patch(`/pedido/${id}/estado`, { estado: "Cancelado" });
+      const res = await api.patch(`/pedido/${id}/estado`, {
+        estado: "Cancelado",
+      });
+
       setPedido(res.data);
     } catch (err) {
-      setErrorAccion(err.response?.data?.error || "Error al cancelar el pedido.");
+      setErrorAccion(
+        err.response?.data?.error || "Error al cancelar el pedido."
+      );
     }
   };
 
@@ -641,12 +650,12 @@ export default function PedidoDetalle() {
               <div>
                 <p className="text-slate-400 mb-1">Estado</p>
                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${pedido.estado === "Aprobado" || pedido.estado === "Aceptado"
-                    ? "bg-emerald-100 text-emerald-700"
-                    : pedido.estado === "Rechazado"
-                      ? "bg-red-100 text-red-700"
-                      : pedido.estado === "Finalizado"
-                        ? "bg-slate-200 text-slate-700"
-                        : "bg-yellow-100 text-yellow-700"
+                  ? "bg-emerald-100 text-emerald-700"
+                  : pedido.estado === "Rechazado"
+                    ? "bg-red-100 text-red-700"
+                    : pedido.estado === "Finalizado"
+                      ? "bg-slate-200 text-slate-700"
+                      : "bg-yellow-100 text-yellow-700"
                   }`}>
                   {pedido.estado === "Aceptado" ? "Aprobado" : pedido.estado}
                 </span>
@@ -744,10 +753,10 @@ export default function PedidoDetalle() {
                         </div>
                       </div>
                       <span className={`text-xs font-semibold px-2 py-1 rounded-md ${tarea.estado === "Completada"
-                          ? "bg-green-100 text-green-700"
-                          : tarea.estado === "En Proceso"
-                            ? "bg-yellow-100 text-yellow-700"
-                            : "bg-slate-200 text-slate-700"
+                        ? "bg-green-100 text-green-700"
+                        : tarea.estado === "En Proceso"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-slate-200 text-slate-700"
                         }`}>
                         {tarea.estado}
                       </span>
@@ -836,19 +845,19 @@ export default function PedidoDetalle() {
                     <div
                       key={comentario._id}
                       className={`border rounded-xl p-4 hover:shadow-md transition-all ${esMotivRechazo
-                          ? "border-red-300 bg-gradient-to-br from-red-50 to-orange-50"
-                          : "border-slate-200 bg-gradient-to-br from-white to-slate-50"
+                        ? "border-red-300 bg-gradient-to-br from-red-50 to-orange-50"
+                        : "border-slate-200 bg-gradient-to-br from-white to-slate-50"
                         }`}
                     >
                       <div className="flex justify-between items-start mb-2 gap-2 flex-wrap">
                         <div className="flex items-center gap-2">
                           <span className={`text-xs px-2.5 py-1 rounded-full font-semibold flex items-center gap-1 ${esMotivRechazo
-                              ? "bg-red-200 text-red-700"
-                              : comentario.usuario?.rol === "ADMIN"
-                                ? "bg-purple-100 text-purple-700"
-                                : comentario.usuario?.rol === "PERSONAL"
-                                  ? "bg-blue-100 text-blue-700"
-                                  : "bg-emerald-100 text-emerald-700"
+                            ? "bg-red-200 text-red-700"
+                            : comentario.usuario?.rol === "ADMIN"
+                              ? "bg-purple-100 text-purple-700"
+                              : comentario.usuario?.rol === "PERSONAL"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-emerald-100 text-emerald-700"
                             }`}>
                             {esMotivRechazo ? <><FiAlertTriangle /> RECHAZO</> : comentario.usuario?.rol}
                           </span>
@@ -914,7 +923,7 @@ export default function PedidoDetalle() {
                       className="w-full border border-red-300 rounded-lg p-3 text-sm resize-none"
                     />
                     <div className="flex gap-2">
-                      <button onClick={ejecutarRechazo} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold">Confirmar Rechazo</button>
+                      <button onClick={() => setMostrarConfirmRechazo(true)} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold">Confirmar Rechazo</button>
                       <button onClick={() => setMostrarMotivRechazo(false)} className="flex-1 px-4 py-2 border border-slate-300 hover:bg-slate-100 rounded-lg text-sm font-semibold">Cancelar</button>
                     </div>
                   </div>
@@ -1041,7 +1050,7 @@ export default function PedidoDetalle() {
                     </div>
 
                     <div className="flex gap-2">
-                      <button onClick={ejecutarFinalizacion} className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold">Confirmar Finalización</button>
+                      <button onClick={() => setMostrarConfirmFinalizar(true)} className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold">Confirmar Finalización</button>
                       <button onClick={() => setMostrarFinalizar(false)} className="flex-1 px-4 py-2 border border-slate-300 hover:bg-slate-100 rounded-lg text-sm font-semibold">Volver</button>
                     </div>
                   </div>
@@ -1054,9 +1063,11 @@ export default function PedidoDetalle() {
                     {pedido.estado === "Pendiente" && (
                       <>
                         <button
-                          onClick={aprobar}
+                          onClick={() => setMostrarConfirmAprobacion(true)}
                           disabled={tieneConflictos}
-                          className={`flex-1 px-4 py-2.5 flex items-center justify-center gap-2 text-white rounded-lg font-semibold shadow-md ${tieneConflictos ? "bg-gray-400 cursor-not-allowed opacity-60" : "bg-emerald-600 hover:bg-emerald-700"
+                          className={`flex-1 px-4 py-2.5 flex items-center justify-center gap-2 text-white rounded-lg font-semibold shadow-md ${tieneConflictos
+                            ? "bg-gray-400 cursor-not-allowed opacity-60"
+                            : "bg-emerald-600 hover:bg-emerald-700"
                             }`}
                         >
                           <FiCheckCircle /> Aprobar
@@ -1074,7 +1085,9 @@ export default function PedidoDetalle() {
                     )}
 
                     {/* El botón Cancelar siempre aparece si está Pendiente o Aceptado */}
-                    <button onClick={cancelarPedido} className="w-full sm:w-auto px-4 py-2.5 flex items-center justify-center gap-2 border border-slate-300 text-slate-600 hover:bg-slate-100 hover:text-slate-800 rounded-lg font-semibold transition-colors">
+                    <button onClick={() => setMostrarConfirmCancelar(true)}
+                      className="w-full sm:w-auto px-4 py-2.5 flex items-center justify-center gap-2 border border-slate-300 text-slate-600 hover:bg-slate-100 hover:text-slate-800 rounded-lg font-semibold transition-colors"
+                    >
                       <FiSlash /> Cancelar
                     </button>
 
@@ -1082,8 +1095,60 @@ export default function PedidoDetalle() {
                 )}
               </div>
             )}
-
+            <ConfirmModal
+              isOpen={mostrarConfirmFinalizar}
+              onClose={() => setMostrarConfirmFinalizar(false)}
+              onConfirm={async () => {
+                await ejecutarFinalizacion();
+                setMostrarConfirmFinalizar(false);
+              }}
+              title="¿Finalizar pedido?"
+              message="El pedido será marcado como finalizado. Los recursos serán devueltos al stock según corresponda. Esta acción no se puede deshacer."
+              confirmText="Sí, finalizar"
+              cancelText="Volver"
+              tipo="success"
+            />
+            <ConfirmModal
+              isOpen={mostrarConfirmRechazo}
+              onClose={() => setMostrarConfirmRechazo(false)}
+              onConfirm={async () => {
+                await ejecutarRechazo();
+                setMostrarConfirmRechazo(false);
+              }}
+              title="¿Rechazar pedido?"
+              message="El pedido será rechazado y el docente será notificado. Esta acción no se puede deshacer."
+              confirmText="Sí, rechazar"
+              cancelText="Volver"
+              tipo="warning"
+            />
+            <ConfirmModal
+              isOpen={mostrarConfirmCancelar}
+              onClose={() => setMostrarConfirmCancelar(false)}
+              onConfirm={async () => {
+                await cancelarPedido();
+                setMostrarConfirmCancelar(false);
+              }}
+              title="¿Cancelar pedido?"
+              message="El pedido será cancelado y se liberarán todas las reservas asociadas. Esta acción no se puede deshacer."
+              confirmText="Sí, cancelar"
+              cancelText="Volver"
+              tipo="warning"
+            />
+            <ConfirmModal
+              isOpen={mostrarConfirmAprobacion}
+              onClose={() => setMostrarConfirmAprobacion(false)}
+              onConfirm={async () => {
+                await aprobar();
+                setMostrarConfirmAprobacion(false);
+              }}
+              title="¿Aprobar pedido?"
+              message="El pedido cambiará al estado 'Aceptado' y se reservarán los recursos necesarios."
+              confirmText="Sí, aprobar"
+              cancelText="Volver"
+              tipo="success"
+            />
           </div>
+
         </div>
       </div>
     </div>

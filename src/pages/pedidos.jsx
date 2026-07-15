@@ -4,6 +4,7 @@ import api from "../api/axios";
 import NuevoPedidoForm from "../components/pedidos/NuevoPedidoForm";
 import EditarPedidoForm from "../components/pedidos/EditarPedidoForm";
 import { PageHeader } from "../components/SharedUi";
+import ConfirmModal from "../components/common/ConfirmModal";
 import { useAuth } from "../context/AuthContext";
 
 import {
@@ -67,10 +68,19 @@ export default function PedidosLaboratorio() {
   const [showNuevo, setShowNuevo] = useState(false);
   const [pedidoEditando, setPedidoEditando] = useState(null);
   const [errorOperacion, setErrorOperacion] = useState("");
+  const [confirmConfig, setConfirmConfig] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    confirmText: "Confirmar",
+    cancelText: "Cancelar",
+    tipo: "danger",
+    onConfirm: () => {},
+  });
 
-  // Ordenar por más reciente primero
+  // Ordenar por más reciente (creación o modificación) primero
   const pedidosOrdenados = [...pedidos].sort(
-    (a, b) => new Date(b.fechaHora || b.createdAt) - new Date(a.fechaHora || a.createdAt)
+    (a, b) => new Date(b.updatedAt || b.createdAt || b.fechaHora || 0) - new Date(a.updatedAt || a.createdAt || a.fechaHora || 0)
   );
 
   const pendientes  = pedidos.filter((p) => PENDING_STATES.includes(p.estado));
@@ -137,20 +147,28 @@ export default function PedidosLaboratorio() {
     }
   };
 
-  const handleEliminar = async (id) => {
-    const confirmar = window.confirm("¿Eliminar este pedido?");
-    if (!confirmar) return;
-    try {
-      await api.delete(`/pedido/${id}`);
-      setPedidos((prev) => prev.filter((p) => (p._id || p.id) !== id));
-    } catch (error) {
-      console.error("Error al eliminar pedido:", error.response?.data || error);
-      const msg = error.response?.status === 403
-        ? "No tenés permisos para eliminar este pedido."
-        : error.response?.data?.error || "No se pudo eliminar el pedido.";
-      setErrorOperacion(msg);
-      setTimeout(() => setErrorOperacion(""), 4000);
-    }
+  const handleEliminar = (id) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: "¿Eliminar pedido?",
+      message: "Esta acción no se puede deshacer y eliminará el registro de este pedido.",
+      confirmText: "Eliminar",
+      cancelText: "Cancelar",
+      tipo: "danger",
+      onConfirm: async () => {
+        try {
+          await api.delete(`/pedido/${id}`);
+          setPedidos((prev) => prev.filter((p) => (p._id || p.id) !== id));
+        } catch (error) {
+          console.error("Error al eliminar pedido:", error.response?.data || error);
+          const msg = error.response?.status === 403
+            ? "No tenés permisos para eliminar este pedido."
+            : error.response?.data?.error || "No se pudo eliminar el pedido.";
+          setErrorOperacion(msg);
+          setTimeout(() => setErrorOperacion(""), 4000);
+        }
+      }
+    });
   };
 
   // ─── handleGuardar CORREGIDO ────────────────────────────────────────────────
@@ -425,6 +443,17 @@ export default function PedidosLaboratorio() {
           onGuardar={handleGuardar}
         />
       )}
+
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        onClose={() => setConfirmConfig((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmConfig.onConfirm}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        confirmText={confirmConfig.confirmText}
+        cancelText={confirmConfig.cancelText}
+        tipo={confirmConfig.tipo}
+      />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import api from "../../api/axios";
 import { getAllItems, getAllEquipos } from "../../services/equipamiento";
-import { FiX } from "react-icons/fi";
+import { FiX, FiChevronDown } from "react-icons/fi";
 
 /**
  * Modal dedicado a EDITAR un pedido existente.
@@ -20,6 +20,12 @@ export default function EditarPedidoForm({ pedido, onClose, onGuardar }) {
   const [recursosDB, setRecursosDB] = useState([]);
   const [errores, setErrores] = useState({});
   const [errorGuardar, setErrorGuardar] = useState("");
+  const [seccionesExpandidas, setSeccionesExpandidas] = useState({
+    Equipo: false,
+    Material: false,
+    Reactivo: false,
+    Sustancia: false,
+  });
 
   // ─── Extraer valores iniciales del pedido poblado ────────────────────────────
   const extraerHora = (fechaHoraStr) => {
@@ -58,6 +64,24 @@ export default function EditarPedidoForm({ pedido, onClose, onGuardar }) {
     laboratorio: labId,
     recursos: [], // se hidrata después de cargar recursosDB
   });
+
+  // Auto-expandir secciones cuando hay recursos seleccionados en ellas
+  useEffect(() => {
+    if (form.recursos.length > 0) {
+      setSeccionesExpandidas((prev) => {
+        const next = { ...prev };
+        let cambio = false;
+        form.recursos.forEach((r) => {
+          const key = r.tipoRecurso === "Equipo" ? "Equipo" : r.tipoDetalle;
+          if (key && !next[key]) {
+            next[key] = true;
+            cambio = true;
+          }
+        });
+        return cambio ? next : prev;
+      });
+    }
+  }, [form.recursos]);
 
   // ─── Cargar laboratorios y recursos ──────────────────────────────────────────
   useEffect(() => {
@@ -375,41 +399,91 @@ export default function EditarPedidoForm({ pedido, onClose, onGuardar }) {
               Recursos
             </p>
             <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-              {recursosDB.map((r) => {
-                const rid = r._id || r.id;
-                const seleccionado = form.recursos.find(
-                  (rec) => (rec._id || rec.recursoId || rec.id) === rid
+              {[
+                { key: "Equipo",    label: "Equipos",           icono: "🔬" },
+                { key: "Material",  label: "Materiales",         icono: "🧪" },
+                { key: "Reactivo",  label: "Reactivos",          icono: "⚗️"  },
+                { key: "Sustancia", label: "Sustancias básicas", icono: "🧫" },
+              ].map(({ key, label, icono }) => {
+                const grupo = recursosDB.filter((r) =>
+                  key === "Equipo" ? r.tipoRecurso === "Equipo" : r.tipoDetalle === key
                 );
+                if (grupo.length === 0) return null;
+
+                const expandido = seccionesExpandidas[key];
+
                 return (
-                  <div
-                    key={rid}
-                    className="flex items-center justify-between bg-white hover:bg-emerald-50 rounded-xl px-4 py-3 border border-zinc-200 hover:border-emerald-200 transition-colors group"
-                  >
-                    <label className="flex items-center gap-3 cursor-pointer flex-1">
-                      <input
-                        type="checkbox"
-                        className="accent-emerald-500 w-4 h-4"
-                        checked={!!seleccionado}
-                        onChange={() => toggleRecurso(r)}
-                      />
-                      <div>
-                        <span className="text-zinc-700 text-sm font-medium group-hover:text-emerald-800">
-                          {r.nombre}
-                          {r.tipoRecurso === "Equipo" ? " (Disponible)" : ""}
+                  <div key={key} className="mb-3 border border-zinc-150 rounded-xl overflow-hidden shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => setSeccionesExpandidas(prev => ({ ...prev, [key]: !prev[key] }))}
+                      className="w-full flex items-center justify-between px-4 py-3 bg-zinc-50 hover:bg-zinc-100 transition-colors text-left focus:outline-none select-none"
+                    >
+                      <span className="text-sm font-semibold text-zinc-700 flex items-center gap-2">
+                        <span>{icono}</span> {label}
+                        <span className="text-xs font-normal text-zinc-400 bg-zinc-200/60 px-2 py-0.5 rounded-full">
+                          {grupo.length}
                         </span>
-                        <span className="block text-zinc-400 text-xs">{r.tipoDetalle}</span>
-                      </div>
-                    </label>
-                    {seleccionado && (
-                      <div className="flex items-center gap-2 ml-4">
-                        <span className="text-xs text-zinc-500 font-medium">Cant:</span>
-                        <input
-                          type="number"
-                          min="1"
-                          value={seleccionado.cantidad}
-                          onChange={(e) => actualizarCantidad(rid, e.target.value)}
-                          className="w-16 bg-zinc-50 border border-zinc-300 rounded-lg px-2 py-1 text-zinc-800 text-sm text-center focus:outline-none focus:border-emerald-500"
-                        />
+                      </span>
+                      <FiChevronDown className={`h-4 w-4 text-slate-450 transition-transform duration-200 ${expandido ? "rotate-180" : ""}`} />
+                    </button>
+
+                    {expandido && (
+                      <div className="p-3 bg-white space-y-2 border-t border-zinc-100">
+                        {grupo.map((r, i) => {
+                          const rid = r._id || r.id;
+                          const seleccionado = form.recursos.find(
+                            (rec) => (rec._id || rec.recursoId || rec.id) === rid
+                          );
+                          const sinStock = r.tipoRecurso === "Item" && (r.cantidadDisponible ?? 0) === 0;
+
+                          return (
+                            <div
+                              key={rid}
+                              className="flex items-center justify-between bg-white hover:bg-emerald-50 rounded-xl px-4 py-3 border border-zinc-200 hover:border-emerald-200 transition-colors group mb-1"
+                            >
+                              <label className="flex items-center gap-3 cursor-pointer flex-1">
+                                <input
+                                  type="checkbox"
+                                  className="accent-emerald-500 w-4 h-4"
+                                  checked={!!seleccionado}
+                                  onChange={() => toggleRecurso(r)}
+                                />
+                                <div className="flex flex-col">
+                                  <span className="text-zinc-700 text-sm font-medium group-hover:text-emerald-800">
+                                    {r.nombre}
+                                    {r.tipoRecurso === "Equipo" ? " (Disponible)" : ""}
+                                  </span>
+                                  <span className="text-zinc-500 text-sm flex items-center gap-1.5 flex-wrap mt-0.5">
+                                    <span>{r.tipoDetalle}</span>
+                                    {r.unidad && (
+                                      <span className="text-zinc-800 text-sm font-bold bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-lg shadow-sm">
+                                        {r.unidad}
+                                      </span>
+                                    )}
+                                    {r.tipoRecurso === "Item" && (
+                                      <span className={sinStock ? "text-red-500 font-semibold" : "text-slate-600 font-medium"}>
+                                        · Stock: {r.cantidadDisponible ?? 0}
+                                      </span>
+                                    )}
+                                  </span>
+                                </div>
+                              </label>
+                              {seleccionado && (
+                                <div className="flex items-center gap-2 ml-4">
+                                  <span className="text-xs text-zinc-500 font-medium">Cant:</span>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={seleccionado.cantidad}
+                                    onChange={(e) => actualizarCantidad(rid, e.target.value)}
+                                    className="w-16 bg-zinc-50 border border-zinc-300 rounded-lg px-2 py-1 text-zinc-800 text-sm text-center focus:outline-none focus:border-emerald-500"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
