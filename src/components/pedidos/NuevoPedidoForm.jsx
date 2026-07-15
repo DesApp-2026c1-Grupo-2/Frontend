@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import api from "../../api/axios";
 import { getAllItems, getAllEquipos } from "../../services/equipamiento";
 import { useAuth } from "../../context/AuthContext";
-import { FiX, FiLoader, FiCheckCircle } from "react-icons/fi";
+import { FiX, FiLoader, FiCheckCircle, FiChevronDown } from "react-icons/fi";
 
 const STEPS = ["Datos Básicos", "Recursos", "Resumen", "Enviado"];
 
@@ -22,6 +22,12 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
   const [errorSubmit, setErrorSubmit] = useState("");
   const [estadoEnvio, setEstadoEnvio] = useState(null);
   const [errores, setErrores] = useState({});
+  const [seccionesExpandidas, setSeccionesExpandidas] = useState({
+    Equipo: false,
+    Material: false,
+    Reactivo: false,
+    Sustancia: false,
+  });
 
   const [form, setForm] = useState({
     materia: "", 
@@ -35,6 +41,24 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
   });
 
   const alumnos = Number(form.alumnos || 0);
+
+  // Auto-expandir secciones cuando hay recursos seleccionados en ellas
+  useEffect(() => {
+    if (form.recursos.length > 0) {
+      setSeccionesExpandidas((prev) => {
+        const next = { ...prev };
+        let cambio = false;
+        form.recursos.forEach((r) => {
+          const key = r.tipoRecurso === "Equipo" ? "Equipo" : r.tipoDetalle;
+          if (key && !next[key]) {
+            next[key] = true;
+            cambio = true;
+          }
+        });
+        return cambio ? next : prev;
+      });
+    }
+  }, [form.recursos]);
 
   // Calcula la duración de la clase (en minutos) a partir de la hora de inicio y fin
   const calcularDuracionClase = (hora, horaFin) => {
@@ -754,96 +778,116 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
                   );
                   if (grupo.length === 0) return null;
 
+                  const expandido = seccionesExpandidas[key];
+
                   return (
-                    <div key={key} className="mb-3">
-                      <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5 mb-1.5 px-1">
-                        <span>{icono}</span> {label}
-                      </p>
+                    <div key={key} className="mb-3 border border-zinc-150 rounded-xl overflow-hidden shadow-sm">
+                      <button
+                        type="button"
+                        onClick={() => setSeccionesExpandidas(prev => ({ ...prev, [key]: !prev[key] }))}
+                        className="w-full flex items-center justify-between px-4 py-3 bg-zinc-50 hover:bg-zinc-100 transition-colors text-left focus:outline-none select-none"
+                      >
+                        <span className="text-sm font-semibold text-zinc-700 flex items-center gap-2">
+                          <span>{icono}</span> {label}
+                          <span className="text-xs font-normal text-zinc-400 bg-zinc-200/60 px-2 py-0.5 rounded-full">
+                            {grupo.length}
+                          </span>
+                        </span>
+                        <FiChevronDown className={`h-4 w-4 text-slate-450 transition-transform duration-200 ${expandido ? "rotate-180" : ""}`} />
+                      </button>
 
-                      {grupo.map((r, i) => {
-                        const recursoId = r._id || r.id;
-                        const seleccionado = form.recursos.find(rec => (rec._id || rec.id) === recursoId);
-                        const labDelEquipo = r?.esFijo ? (r.laboratorioId?.nombre || null) : null;
-                        const labIdDelEquipo = r?.esFijo
-                          ? (r.laboratorioId?._id || r.laboratorioId?.id || r.laboratorioId)?.toString()
-                          : null;
-                        const bloqueadoPorLabDistinto =
-                          r?.esFijo && form.laboratorio && labIdDelEquipo &&
-                          labIdDelEquipo !== form.laboratorio.toString();
-                        const labNoDisponibleEnFecha =
-                          r?.esFijo && labIdDelEquipo && labsNoDisponibles.has(labIdDelEquipo);
-                        const sinStock = r.tipoRecurso === "Item" && (r.cantidadDisponible ?? 0) === 0;
-                        const bloqueado = bloqueadoPorLabDistinto || sinStock;
-                        const errorEsteRecurso = errores[`recurso_${recursoId}`];
+                      {expandido && (
+                        <div className="p-3 bg-white space-y-2 border-t border-zinc-100">
+                          {grupo.map((r, i) => {
+                            const recursoId = r._id || r.id;
+                            const seleccionado = form.recursos.find(rec => (rec._id || rec.id) === recursoId);
+                            const labDelEquipo = r?.esFijo ? (r.laboratorioId?.nombre || null) : null;
+                            const labIdDelEquipo = r?.esFijo
+                              ? (r.laboratorioId?._id || r.laboratorioId?.id || r.laboratorioId)?.toString()
+                              : null;
+                            const bloqueadoPorLabDistinto =
+                              r?.esFijo && form.laboratorio && labIdDelEquipo &&
+                              labIdDelEquipo !== form.laboratorio.toString();
+                            const labNoDisponibleEnFecha =
+                              r?.esFijo && labIdDelEquipo && labsNoDisponibles.has(labIdDelEquipo);
+                            const sinStock = r.tipoRecurso === "Item" && (r.cantidadDisponible ?? 0) === 0;
+                            const bloqueado = bloqueadoPorLabDistinto || sinStock;
+                            const errorEsteRecurso = errores[`recurso_${recursoId}`];
 
-                        return (
-                          <div key={i} className={`flex flex-col rounded-xl px-4 py-3 border transition-colors group mb-1 ${
-                            bloqueado
-                              ? "bg-zinc-50 border-zinc-200 opacity-50"
-                              : "bg-white hover:bg-emerald-50 border-zinc-200 hover:border-emerald-200"
-                          }`}>
-                            <div className="flex items-center justify-between">
-                              <label className={`flex items-center gap-3 flex-1 ${bloqueado ? "cursor-not-allowed" : "cursor-pointer"}`}>
-                                <input
-                                  type="checkbox"
-                                  className="accent-emerald-500 w-4 h-4"
-                                  checked={!!seleccionado}
-                                  disabled={bloqueado}
-                                  onChange={() => toggleRecurso(r)}
-                                />
-                                <div className="flex flex-col">
-                                  <span className={`text-sm font-medium ${bloqueado ? "text-zinc-400" : "text-zinc-700 group-hover:text-emerald-800"}`}>
-                                    {r.nombre}
-                                    {r?.esFijo ? " • Fijo" : ""}
-                                  </span>
-                                  <span className="text-zinc-400 text-xs">
-                                    {r.tipoDetalle}
-                                    {r.unidad ? ` · ${r.unidad}` : ""}
-                                    {r.tipoRecurso === "Item" && (
-                                      <span className={sinStock ? "text-red-400" : ""}>
-                                        {` · Stock: ${r.cantidadDisponible ?? 0}`}
+                            return (
+                              <div key={i} className={`flex flex-col rounded-xl px-4 py-3 border transition-colors group mb-1 ${
+                                bloqueado
+                                  ? "bg-zinc-50 border-zinc-200 opacity-50"
+                                  : "bg-white hover:bg-emerald-50 border-zinc-200 hover:border-emerald-200"
+                              }`}>
+                                <div className="flex items-center justify-between">
+                                  <label className={`flex items-center gap-3 flex-1 ${bloqueado ? "cursor-not-allowed" : "cursor-pointer"}`}>
+                                    <input
+                                      type="checkbox"
+                                      className="accent-emerald-500 w-4 h-4"
+                                      checked={!!seleccionado}
+                                      disabled={bloqueado}
+                                      onChange={() => toggleRecurso(r)}
+                                    />
+                                    <div className="flex flex-col">
+                                      <span className={`text-sm font-medium ${bloqueado ? "text-zinc-400" : "text-zinc-700 group-hover:text-emerald-800"}`}>
+                                        {r.nombre}
+                                        {r?.esFijo ? " • Fijo" : ""}
                                       </span>
-                                    )}
-                                  </span>
-                                  {r?.esFijo && labDelEquipo && (
-                                    <span className="text-xs mt-0.5 text-zinc-400">
-                                      {bloqueadoPorLabDistinto
-                                        ? `Pertenece a: ${labDelEquipo} (incompatible con lab seleccionado)`
-                                        : `Laboratorio: ${labDelEquipo}${!form.laboratorio && !labNoDisponibleEnFecha ? " · se asignará automáticamente" : ""}`
-                                      }
-                                    </span>
-                                  )}
-                                  {sinStock && (
-                                    <span className="text-red-400 text-xs mt-0.5">Sin stock disponible</span>
+                                      <span className="text-zinc-500 text-sm flex items-center gap-1.5 flex-wrap mt-0.5">
+                                        <span>{r.tipoDetalle}</span>
+                                        {r.unidad && (
+                                          <span className="text-zinc-800 text-sm font-bold bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-lg shadow-sm">
+                                            {r.unidad}
+                                          </span>
+                                        )}
+                                        {r.tipoRecurso === "Item" && (
+                                          <span className={sinStock ? "text-red-500 font-semibold" : "text-slate-600 font-medium"}>
+                                            · Stock: {r.cantidadDisponible ?? 0}
+                                          </span>
+                                        )}
+                                      </span>
+                                      {r?.esFijo && labDelEquipo && (
+                                        <span className="text-xs mt-0.5 text-zinc-400">
+                                          {bloqueadoPorLabDistinto
+                                            ? `Pertenece a: ${labDelEquipo} (incompatible con lab seleccionado)`
+                                            : `Laboratorio: ${labDelEquipo}${!form.laboratorio && !labNoDisponibleEnFecha ? " · se asignará automáticamente" : ""}`
+                                          }
+                                        </span>
+                                      )}
+                                      {sinStock && (
+                                        <span className="text-red-400 text-xs mt-0.5">Sin stock disponible</span>
+                                      )}
+                                    </div>
+                                  </label>
+
+                                  {seleccionado && (
+                                    <div className="flex items-center gap-2 ml-4">
+                                      <span className="text-xs text-zinc-500 font-medium">Cant:</span>
+                                      <input
+                                        type="number"
+                                        min="1"
+                                        value={seleccionado.cantidad}
+                                        onChange={(e) => actualizarCantidad(recursoId, e.target.value)}
+                                        className="w-16 bg-zinc-50 border border-zinc-300 rounded-lg px-2 py-1 text-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all text-center shadow-sm"
+                                      />
+                                    </div>
                                   )}
                                 </div>
-                              </label>
 
-                              {seleccionado && (
-                                <div className="flex items-center gap-2 ml-4">
-                                  <span className="text-xs text-zinc-500 font-medium">Cant:</span>
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    value={seleccionado.cantidad}
-                                    onChange={(e) => actualizarCantidad(recursoId, e.target.value)}
-                                    className="w-16 bg-zinc-50 border border-zinc-300 rounded-lg px-2 py-1 text-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all text-center shadow-sm"
-                                  />
-                                </div>
-                              )}
-                            </div>
-
-                            {errorEsteRecurso && (
-                              <p className="text-red-500 text-xs mt-1.5 ml-7">{errorEsteRecurso}</p>
-                            )}
-                            {labNoDisponibleEnFecha && !errorEsteRecurso && form.fecha && (
-                              <p className="text-amber-500 text-xs mt-1.5 ml-7">
-                                El laboratorio de este equipo no está disponible en la fecha y hora seleccionadas.
-                              </p>
-                            )}
-                          </div>
-                        );
-                      })}
+                                {errorEsteRecurso && (
+                                  <p className="text-red-500 text-xs mt-1.5 ml-7">{errorEsteRecurso}</p>
+                                )}
+                                {labNoDisponibleEnFecha && !errorEsteRecurso && form.fecha && (
+                                  <p className="text-amber-500 text-xs mt-1.5 ml-7">
+                                    El laboratorio de este equipo no está disponible en la fecha y hora seleccionadas.
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
