@@ -32,9 +32,9 @@ const obtenerNombreLegible = (valor, nombresPorId = {}) => {
 const formatearRecursoHistorial = (valor, nombresPorId = {}) => {
   if (!valor || typeof valor !== "object") return null;
 
-  const nombre = obtenerNombreLegible(valor, nombresPorId);
   const tipo = valor.tipo || valor.tipoRecurso || valor.modeloRef || (valor.itemId ? "Item" : valor.equipoId ? "Equipo" : "Recurso");
   const id = obtenerIdString(valor.itemId || valor.equipoId || valor.recursoId || valor);
+  const nombre = obtenerNombreLegible(valor, nombresPorId) || (id ? nombresPorId[id] : null);
 
   if (nombre) {
     return tipo ? `${tipo} — ${nombre}` : nombre;

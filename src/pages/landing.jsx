@@ -1,6 +1,6 @@
 // pages/Landing.jsx
 import { useNavigate } from "react-router-dom";
-import logo from "../assets/logo.png";
+import logo from "../assets/Logo.png";
 
 export default function Landing() {
   const navigate = useNavigate();

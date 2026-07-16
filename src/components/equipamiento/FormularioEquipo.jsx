@@ -178,7 +178,7 @@ export default function FormularioEquipo({
               disabled={loadingEdificios}
               placeholder={loadingEdificios ? "Cargando edificios..." : "Seleccionar edificio"}
               options={edificios.map((edificio) => ({
-                value: edificio.id,
+                value: edificio.id || edificio._id,
                 label: edificio.nombre,
               }))}
             />
@@ -201,7 +201,7 @@ export default function FormularioEquipo({
                   : "Seleccionar laboratorio"
               }
               options={laboratorios.map((lab) => ({
-                value: lab.id,
+                value: lab.id || lab._id,
                 label: `${lab.nombre} · ${lab.tipo} (cap. ${lab.capacidad})`,
               }))}
             />

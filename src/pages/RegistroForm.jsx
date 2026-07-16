@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import { FiMonitor, FiSmile } from "react-icons/fi";
-import logo from "../assets/logo.png";
+import logo from "../assets/Logo.png";
 
 function RegistroForm() {
     const navigate = useNavigate();

@@ -4,7 +4,7 @@ import PrivateRoute from "../components/PrivateRoute";
 import RoleProtectedRoute from "../components/RoleProtectedRoute";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 
-import Landing from "../pages/Landing"; // ← NUEVA pantalla de inicio
+import Landing from "../pages/landing"; // ← NUEVA pantalla de inicio
 import Dashboard from "../pages/Dashboard"; /*PRUEBA */
 import Pedidos from "../pages/pedidos";
 import Equipamiento from "../pages/equipamiento";

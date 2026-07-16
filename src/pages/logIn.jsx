@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import api from "../api/axios";
 
 import { FiMonitor, FiMail, FiLock } from "react-icons/fi";
-import logo from "../assets/logo.png";
+import logo from "../assets/Logo.png";
 
 function Login() {
   const [email, setEmail] = useState("");

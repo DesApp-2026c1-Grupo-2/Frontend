@@ -4,7 +4,7 @@ import interactionPlugin from "@fullcalendar/interaction";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import esLocale from "@fullcalendar/core/locales/es";
 import { useRef, useState, useEffect } from "react";
-import BarraFiltros from "./BarraFiltros";
+import BarraFiltros from "./barraFiltros";
 import CalendarioDia from "./calendarioDia";
 import CalendarioMini from "./calendarioMini";
 import { obtenerEdificios } from "../../services/edificioService";

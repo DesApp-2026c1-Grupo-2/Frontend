@@ -1,6 +1,6 @@
 export default function NuevoLaboratorioForm({
-  formData,
-  errores,
+  formData = {},
+  errores = {},
   handleChange,
   handleSubmit,
   cerrarModal,

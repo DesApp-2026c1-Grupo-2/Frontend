@@ -1,5 +1,5 @@
 import { PageHeader } from "../components/SharedUi";
-import CalendarioGrande from "../components/calendario/CalendarioGrande";
+import CalendarioGrande from "../components/calendario/calendarioGrande";
 import { useState, useEffect } from "react";
 import CalendarioMini from "../components/calendario/calendarioMini";
 import { getReservasActivas, getReservasFinalizadas } from "../services/reservas";

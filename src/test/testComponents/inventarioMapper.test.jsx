@@ -2,6 +2,9 @@ import { describe, test, expect } from 'vitest';
 import {
   mapearItemsBackend,
   mapearLoteBackend,
+  mapearEquiposBackend,
+  mapearEstado,
+  formatDate,
   tipoToCategoria,
   categoriaATipoItem,
 } from '../../utils/inventarioMapper';
@@ -92,5 +95,92 @@ describe('mapas de tipo', () => {
     expect(categoriaATipoItem['Reactivos']).toBe('reactivo');
     expect(categoriaATipoItem['Sustancias basicas']).toBe('sustancia');
     expect(categoriaATipoItem['Equipos']).toBeUndefined();
+  });
+});
+
+describe('mapearEquiposBackend', () => {
+  test('resuelve la ubicación desde el laboratorio poblado', () => {
+    const [equipo] = mapearEquiposBackend([
+      { _id: 'eq-1', nombre: 'Microscopio', codigo: 'EQ-001', estado: 'disponible', esFijo: true,
+        laboratorioId: { _id: 'lab-1', nombre: 'Lab Química' } },
+    ]);
+
+    expect(equipo).toMatchObject({
+      id: 'eq-1',
+      categoria: 'Equipos',
+      tipo: 'Microscopio',
+      ubicacion: 'Lab Química',
+      movilidad: 'Fija',
+      cantidad: 1,
+      esConsumible: false,
+    });
+  });
+
+  test('sin poblar el laboratorio solo sabe que está asignado', () => {
+    const [equipo] = mapearEquiposBackend([
+      { id: 'eq-2', nombre: 'Centrífuga', estado: 'disponible', esFijo: false, laboratorioId: 'lab-1' },
+    ]);
+
+    expect(equipo.ubicacion).toBe('Laboratorio asignado');
+    expect(equipo.movilidad).toBe('Movible');
+  });
+
+  test('cae al edificio cuando no hay laboratorio', () => {
+    const [poblado] = mapearEquiposBackend([
+      { _id: 'eq-3', nombre: 'Balanza', edificioId: { _id: 'ed-1', nombre: 'Edificio A' } },
+    ]);
+    const [sinPoblar] = mapearEquiposBackend([
+      { _id: 'eq-4', nombre: 'Balanza', edificioId: 'ed-1' },
+    ]);
+
+    expect(poblado.ubicacion).toBe('Edificio A');
+    expect(sinPoblar.ubicacion).toBe('Edificio asignado');
+  });
+
+  test('sin ubicación queda sin asignar', () => {
+    const [equipo] = mapearEquiposBackend([{ _id: 'eq-5', nombre: 'Suelto' }]);
+
+    expect(equipo.ubicacion).toBe('Sin asignar');
+    expect(equipo.motivoDescarte).toBe('');
+    expect(equipo.responsableDescarte).toBe('');
+  });
+
+  test('la fecha de descarte usa el primer campo disponible', () => {
+    const [conDescarte] = mapearEquiposBackend([
+      { _id: 'eq-6', nombre: 'X', fechaDescarte: '2026-01-01', updatedAt: '2025-01-01' },
+    ]);
+    const [soloUpdated] = mapearEquiposBackend([
+      { _id: 'eq-7', nombre: 'X', updatedAt: '2025-01-01' },
+    ]);
+
+    expect(conDescarte.fechaDescarte).toBe('2026-01-01');
+    expect(soloUpdated.fechaDescarte).toBe('2025-01-01');
+  });
+});
+
+describe('mapearEstado', () => {
+  test.each([
+    ['disponible', 'Disponible'],
+    ['en_uso', 'En uso'],
+    ['descartado', 'Descartado'],
+  ])('traduce %s', (backend, esperado) => {
+    expect(mapearEstado(backend)).toBe(esperado);
+  });
+
+  test('un estado desconocido cae a Disponible', () => {
+    expect(mapearEstado('inventado')).toBe('Disponible');
+    expect(mapearEstado(undefined)).toBe('Disponible');
+  });
+});
+
+describe('formatDate', () => {
+  test('formatea a dd/mm/aaaa', () => {
+    // Mediodía para que el huso horario no corra el día.
+    expect(formatDate('2026-03-05T12:00:00.000Z')).toMatch(/05\/03\/2026/);
+  });
+
+  test('avisa cuando no hay fecha o es inválida', () => {
+    expect(formatDate(null)).toBe('Sin fecha registrada');
+    expect(formatDate('no-es-fecha')).toBe('Sin fecha registrada');
   });
 });

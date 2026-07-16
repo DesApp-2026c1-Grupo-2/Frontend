@@ -4,7 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useEffect, useState } from "react";
 
 import CalendarioDia from "../calendario/calendarioDia";
-import BarraFiltros from "../calendario/BarraFiltros";
+import BarraFiltros from "../calendario/barraFiltros";
 
 import {
   getReservasActivas,
