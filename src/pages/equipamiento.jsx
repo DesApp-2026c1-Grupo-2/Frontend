@@ -55,7 +55,27 @@ const tabs = [
 // Tamaño de página del listado principal y del panel de descartados.
 const LIMIT = 20;
 const DESCARTES_LIMIT = 10;
-const UMBRAL_STOCK_BAJO = 5;
+const UMBRALES_STOCK_BAJO = {
+  unidad: 5,
+  unidades: 5,
+  u: 5,
+  caja: 2,
+  cajas: 2,
+  ml: 100,
+  l: 1,
+  litro: 1,
+  litros: 1,
+  g: 200,
+  gr: 200,
+  kg: 1,
+  "mol/l": 1,
+};
+const UMBRAL_STOCK_BAJO_DEFAULT = 5;
+
+function obtenerUmbralStockBajo(unidad) {
+  const key = (unidad || "").trim().toLowerCase();
+  return UMBRALES_STOCK_BAJO[key] ?? UMBRAL_STOCK_BAJO_DEFAULT;
+}
 
 // Estados válidos de un lote (consumibles). El backend solo admite estos dos
 // valores; no existe "reservado" ni "en uso" (ver
@@ -215,6 +235,8 @@ function MobilityPill({ mobility }) {
 }
 
 function BajoStockCard({ material }) {
+  const tipoLabel = { material: "Material", reactivo: "Reactivo", sustancia: "Sustancia" }[material.tipo] || material.tipo;
+  const umbral = obtenerUmbralStockBajo(material.unidad);
   return (
     <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
       <div className="flex items-center gap-3">
@@ -227,7 +249,10 @@ function BajoStockCard({ material }) {
             </span>
           </div>
           <div className="mt-0.5 text-xs text-slate-500">
-            Código {material.codigo} · {material.stockDisponible} {material.unidad}
+            {tipoLabel} · Código {material.codigo} · {material.stockDisponible} {material.unidad}
+          </div>
+          <div className="mt-0.5 text-[11px] text-amber-600">
+            Umbral: {umbral} {material.unidad}
           </div>
         </div>
       </div>
@@ -537,10 +562,10 @@ useEffect(() => {
     try {
       setBajoStockLoading(true);
       setBajoStockError("");
-      const materiales = await equipamientoService.getAllItems({ tipo: "material" });
+      const items = await equipamientoService.getAllItems({});
       if (cancelado) return;
-      const bajoStock = (materiales || [])
-        .filter((m) => (m.stockDisponible ?? 0) <= UMBRAL_STOCK_BAJO)
+      const bajoStock = (items || [])
+        .filter((it) => (it.stockDisponible ?? 0) <= obtenerUmbralStockBajo(it.unidad))
         .sort((a, b) => (a.stockDisponible ?? 0) - (b.stockDisponible ?? 0));
       setMaterialesBajoStock(bajoStock);
       setBajoStockPage(1);
@@ -1579,7 +1604,7 @@ useEffect(() => {
                   </span>
                 </div>
                 <p className="mb-0 text-sm text-slate-500">
-                  Materiales con stock disponible igual o menor a {UMBRAL_STOCK_BAJO} unidades.
+                  Materiales, reactivos y sustancias con poco stock disponible según el umbral definido para su unidad de medida.
                 </p>
               </div>
               <div className="max-h-[36rem] overflow-y-auto p-5 pr-3">
