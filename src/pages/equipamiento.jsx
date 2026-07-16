@@ -8,6 +8,7 @@ import { useAuth } from "../context/AuthContext";
 import * as equipamientoService from "../services/equipamiento";
 import { obtenerEdificios } from "../services/edificioService";
 import { obtenerLaboratoriosPorEdificio } from "../services/laboratorioService";
+import ConfirmModal from "../components/common/ConfirmModal";
 import {
   categoriaATipoItem,
   mapearItemsBackend,
@@ -391,7 +392,16 @@ function Equipamiento() {
   // "full" = alta / edición de equipo (formularios por pestaña);
   // "item" = edición a nivel de ítem consumible (FormularioItem).
   const [formMode, setFormMode] = useState("full");
+  
+  // ─── MODAL DE CONFIRMACION DE ACCIONES CRITICAS ───
+  
+  const [mostrarConfirmEliminar, setMostrarConfirmEliminar] = useState(false);
 
+  const [accionPendiente, setAccionPendiente] = useState(null);
+
+  const [tituloConfirm, setTituloConfirm] = useState("");
+
+  const [mensajeConfirm, setMensajeConfirm] = useState("");
   // ─── MODAL DE EDICIÓN DE LOTE (cantidad / estado) ───
   const [isLoteEditOpen, setIsLoteEditOpen] = useState(false);
   const [loteEditItem, setLoteEditItem] = useState(null);
@@ -631,9 +641,7 @@ useEffect(() => {
   };
 
   const handleDeleteItem = async (item) => {
-    const confirmDelete = window.confirm(`¿Seguro que quieres borrar ${item.tipo}?`);
-    if (!confirmDelete) return;
-
+    
     try {
       if (item.categoria === "Equipos") {
         await equipamientoService.deleteEquipo(item.id);
@@ -654,8 +662,7 @@ useEffect(() => {
   // abierto vía invalidarLotes + recargarTodo.
   const handleDeleteLote = async (lote, group) => {
     const nombre = group?.tipo || lote.tipo || "este ítem";
-    const confirmDelete = window.confirm(`¿Seguro que querés eliminar este lote de ${nombre}?`);
-    if (!confirmDelete) return;
+    
 
     try {
       await equipamientoService.deleteLote(lote.loteId);
@@ -668,7 +675,16 @@ useEffect(() => {
       setTimeout(() => setErrorOperacion(""), 5000);
     }
   };
-
+  const abrirConfirmacion = ({
+  title,
+  message,
+  action,
+}) => {
+  setTituloConfirm(title);
+  setMensajeConfirm(message);
+  setAccionPendiente(() => action);
+  setMostrarConfirmEliminar(true);
+};
   const resetForm = () => setFormData({ nombre: "", cantidad: "1", estado: "Disponible", unidad: "unidad", movilidad: "Fija" });
   
   const openForm = () => {
@@ -746,10 +762,6 @@ useEffect(() => {
   // Elimina el ítem completo: da de baja todos sus lotes (incluidos los
   // descartados, que no viven en el grupo) y luego el ítem.
   const handleDeleteGroup = async (group) => {
-    const confirmDelete = window.confirm(
-      `¿Seguro que quieres eliminar ${group.tipo} y todos sus lotes?`
-    );
-    if (!confirmDelete) return;
 
     try {
       // getLotesByItemId trae TODOS los lotes del ítem (incluidos descartados).
@@ -1333,7 +1345,15 @@ useEffect(() => {
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handleDeleteGroup(g)}
+                                onClick={() => {
+                                  const nombre = group?.tipo || "este ítem";
+
+                                  abrirConfirmacion({
+                                      title: "¿Eliminar ítem completo?",
+                                      message: `¿Seguro que querés eliminar "${nombre}" y todos sus lotes? Esta acción no se puede deshacer.`,
+                                      action: () => handleDeleteGroup(group),
+                                      });
+                                }}
                                 className="rounded-lg p-1.5 text-rose-500 bg-rose-50 hover:bg-rose-100 transition"
                                 aria-label={`Eliminar ${g.tipo}`}
                               >
@@ -1449,7 +1469,15 @@ useEffect(() => {
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handleDeleteItem(item)}
+                                onClick={() => {
+                                  const nombre = item?.tipo || "este registro";
+
+                                  abrirConfirmacion({
+                                    title: "¿Eliminar registro?",
+                                    message: `¿Seguro que querés borrar "${nombre}"? Esta acción no se puede deshacer.`,
+                                    action: () => handleDeleteItem(item),
+                                    });
+                                  }}
                                 className="rounded-lg p-2 text-rose-500 bg-rose-50 hover:bg-rose-100 transition"
                                 aria-label={`Eliminar ${item.tipo}`}
                               >
@@ -1552,7 +1580,15 @@ useEffect(() => {
                                           </button>
                                           <button
                                             type="button"
-                                            onClick={() => handleDeleteLote(item, g)}
+                                            onClick={() => {
+                                              const nombre = group?.tipo || "este ítem";
+
+                                              abrirConfirmacion({
+                                                title: "¿Eliminar ítem completo?",
+                                                message: `Se eliminará "${nombre}" y todos sus lotes asociados. Esta acción no se puede deshacer.`,
+                                                action: () => handleDeleteGroup(group),
+                                                });
+                                              }}
                                             className="rounded-lg p-2 text-rose-500 bg-rose-50 hover:bg-rose-100 transition"
                                             aria-label={`Eliminar lote en ${item.ubicacionLote}`}
                                           >
@@ -1885,7 +1921,23 @@ useEffect(() => {
           </div>
         </div>
       )}
-
+      <ConfirmModal
+        isOpen={mostrarConfirmEliminar}
+        onClose={() => {
+          setMostrarConfirmEliminar(false);
+          setAccionPendiente(null);
+      }}
+        onConfirm={() => {
+          accionPendiente?.();
+          setMostrarConfirmEliminar(false);
+          setAccionPendiente(null);
+      }}
+      title={tituloConfirm}
+      message={mensajeConfirm}
+      confirmText="Eliminar"
+      cancelText="Cancelar"
+      tipo="danger"
+      />
       {/* ─── MODAL 6: MOVER LOTE (TRANSFERIR / DEVOLVER) ─── */}
       {isTransferOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 backdrop-blur-sm p-4" onClick={closeTransferModal}>

@@ -20,7 +20,6 @@ export function useCalendarReservas(initialStartDate, initialEndDate) {
       setError(null);
       try {
         const data = await getReservasActivas(dateRange.startDate, dateRange.endDate);
-        console.log("Data recibida del service:", data);
         setReservas(data);
       } catch (err) {
         setError(err.response?.data?.message || err.message || "Error al cargar las reservas");
@@ -110,8 +109,6 @@ export function useCalendarReservas(initialStartDate, initialEndDate) {
 
   //para calendarioGrande
   const reservasCalendario = reservas.map((reserva) => {
-    console.log(reserva.laboratorioId);
-
     const inicioClase = new Date(reserva.fechaHora);
 
     const finClase = new Date(

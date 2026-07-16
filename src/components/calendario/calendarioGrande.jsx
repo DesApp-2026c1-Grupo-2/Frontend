@@ -122,8 +122,6 @@ export default function CalendarioGrande({
   const [edificios, setEdificios] = useState([]);
   const [laboratorios, setLaboratorios] = useState([]);
   const [todosLosLaboratorios, setTodosLosLaboratorios] = useState([]);
-  console.log(laboratorios);
-
   useEffect(() => {
     const cargarEdificios = async () => {
       try {
@@ -243,9 +241,6 @@ export default function CalendarioGrande({
     );
   };
 
-  console.log("Reserva ejemplo:");
-  console.log(reservas[0]);
-
   // Las reservas ya llegan filtradas por rol desde la página (el DOCENTE solo
   // recibe las suyas), por eso acá usamos el prop `reservas` directamente.
   // `esAdminOPersonal` se conserva solo para decidir qué edificios/labs se
@@ -312,14 +307,6 @@ export default function CalendarioGrande({
 
   }, [vistaActual, fechaSeleccionada]);
 
-  console.table(
-    reservasFiltradas.map((r) => ({
-      materia: r.materia,
-      estado: r.estado,
-      laboratorio: r.laboratorio,
-    }))
-  );
-
   const eventosSemana = reservasFiltradas.flatMap((reserva) => {
     const bloqueClase = {
       id: `${reserva.id}-clase`,
@@ -368,10 +355,6 @@ export default function CalendarioGrande({
     ];
   });
 
-
-  console.log("==========");
-  console.log("Vista:", vistaActual);
-  console.log("Fecha seleccionada:", fechaSeleccionada);
 
   // --- Rango horario dinámico de la vista semana ---
   // Si la semana visible tiene pocas reservas (<= UMBRAL), recortamos la grilla
@@ -445,8 +428,6 @@ export default function CalendarioGrande({
     return fechaReserva === fechaActual;
   });
 
-  console.log("Reservas encontradas:", reservasDelDia.length);
-
   const bloquesDia = agruparReservasPorHorario(reservasDelDia);
 
   const reservasPorDia = reservasFiltradas.reduce((acc, reserva) => {
@@ -486,9 +467,6 @@ export default function CalendarioGrande({
     },
   }));
 
-  console.log("Reservas:", reservas);
-  console.log("Reservas filtradas:", reservasFiltradas);
-  
   return (
     <div className="bg-white px-2">
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
@@ -694,12 +672,6 @@ export default function CalendarioGrande({
             const esEventoCorto = duracion <= 30;
 
             const estado = info.event.extendedProps.reserva?.estado;
-            console.log({
-              titulo: info.event.title,
-              tipo,
-              estado,
-              reserva: info.event.extendedProps.reserva,
-            })
             const estilo = obtenerEstiloEvento(tipo, estado);
 
             return (
