@@ -1572,15 +1572,7 @@ onClick={() => handleDeleteGroup(g)}
                                           </button>
                                           <button
                                             type="button"
-                                            onClick={() => {
-                                              const nombre = group?.tipo || "este ítem";
-
-                                              abrirConfirmacion({
-                                                title: "¿Eliminar ítem completo?",
-                                                message: `Se eliminará "${nombre}" y todos sus lotes asociados. Esta acción no se puede deshacer.`,
-                                                action: () => handleDeleteGroup(group),
-                                                });
-                                              }}
+onClick={() => handleDeleteLote(item, g)}
                                             className="rounded-lg p-2 text-rose-500 bg-rose-50 hover:bg-rose-100 transition"
                                             aria-label={`Eliminar lote en ${item.ubicacionLote}`}
                                           >
