@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
-import { FiMonitor } from "react-icons/fi";
-import logo from "../assets/logo.png";
+import { FiMonitor, FiSmile } from "react-icons/fi";
+import logo from "../assets/Logo.png";
 
 function RegistroForm() {
     const navigate = useNavigate();
@@ -16,8 +16,18 @@ function RegistroForm() {
     });
 
     const [error, setError] = useState("");
-    const [success, setSuccess] = useState("");
+    const [success, setSuccess] = useState(false);
     const [errores, setErrores] = useState({});
+
+    useEffect(() => {
+        if (!success) return;
+
+        const timer = setTimeout(() => {
+            navigate("/logIn");
+        }, 5000);
+
+        return () => clearTimeout(timer);
+    }, [success, navigate]);
 
     const validarFormulario = () => {
         const nuevosErrores = {};
@@ -67,7 +77,7 @@ function RegistroForm() {
         }
 
         setError("");
-        setSuccess("");
+        setSuccess(false);
 
         try {
         const payload = { ...form };
@@ -77,7 +87,7 @@ function RegistroForm() {
 
         await api.post("/usuarios", payload);
 
-        setSuccess("Usuario creado correctamente");
+        setSuccess(true);
 
             setForm({
             nombre: "",
@@ -91,18 +101,64 @@ function RegistroForm() {
             setErrores({});
 
         } catch (err) {
-            // Capturamos el primer detalle de Joi, o el mensaje del controlador
-            const errorValidacion = err.response?.data?.detalles?.[0];
-            const errorMensaje = err.response?.data?.message;
+            // Capturamos el primer detalle de Joi (que es un objeto { message, path }),
+            // o el mensaje del controlador. Extraemos siempre un string para no
+            // intentar renderizar un objeto como hijo de React.
+            const detalle = err.response?.data?.detalles?.[0];
+            const errorValidacion =
+                typeof detalle === "string" ? detalle : detalle?.message;
+            const errorMensaje =
+                err.response?.data?.message || err.response?.data?.error;
 
             setError(
-                errorValidacion || 
-                errorMensaje || 
+                errorValidacion ||
+                errorMensaje ||
                 "Error al crear usuario"
             );
         }
-    }; 
-    
+    };
+
+    if (success) {
+        return (
+            <div className="min-h-screen bg-slate-100 flex items-center justify-center px-4 sm:px-6">
+                <div className="bg-white rounded-3xl shadow-lg border border-emerald-200 p-6 sm:p-10 max-w-xl w-full text-center">
+
+                    <div className="flex items-center justify-center gap-3 mb-6">
+                        <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center">
+                            <FiSmile
+                                size={28}
+                                className="text-emerald-600"
+                            />
+                        </div>
+
+                        <h2 className="text-2xl sm:text-3xl font-bold text-slate-800">
+                            ¡Perfecto!
+                        </h2>
+                    </div>
+                    <p className="text-slate-600 leading-7">
+                        Tu usuario será enviado a revisión.
+                        <br /><br />
+                        Te vamos a notificar por mail cuando sea aprobado o rechazado.
+                        <br /><br />
+                        Gracias por registrarte en nuestra página.
+                    </p>
+
+                    <p className="text-sm text-slate-400 mt-6">
+                        Serás redirigido automáticamente al inicio de sesión en 5 segundos.
+                    </p>
+
+                    <button
+                        onClick={() => navigate("/logIn")}
+                        className="mt-8 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6 py-3 rounded-xl transition"
+                    >
+                        Ir al inicio de sesión
+                    </button>
+
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-slate-100">
 
@@ -171,12 +227,6 @@ function RegistroForm() {
             {error && (
                 <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-2 rounded-xl text-sm">
                 {error}
-                </div>
-            )}
-
-            {success && (
-                <div className="bg-emerald-100 border border-emerald-300 text-emerald-700 px-4 py-2 rounded-xl text-sm">
-                {success}
                 </div>
             )}
 
@@ -284,7 +334,7 @@ function RegistroForm() {
 
             <button
                 type="button"
-                onClick={() => navigate("/login")}
+                onClick={() => navigate("/logIn")}
                 className="
                 text-sm
                 text-emerald-600

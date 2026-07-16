@@ -13,7 +13,6 @@ vi.mock('../../api/axios', () => ({
 describe('FormularioEquipo Component', () => {
   const mockHandleChange = vi.fn();
   const mockHandleSubmit = vi.fn((e) => e.preventDefault());
-  const mockCerrarModal = vi.fn();
 
   const defaultFormData = {
     nombre: 'Microscopio',
@@ -31,10 +30,12 @@ describe('FormularioEquipo Component', () => {
     // Simulamos las respuestas GET por defecto
     api.get.mockImplementation((url) => {
       if (url === '/edificio') {
-        return Promise.resolve({ data: [{ _id: 'edif-1', nombre: 'Edificio A' }] });
+        return Promise.resolve({ data: [{ id: 'edif-1', nombre: 'Edificio A' }] });
       }
       if (url === '/laboratorio/edificio/edif-1') {
-        return Promise.resolve({ data: [{ _id: 'lab-1', nombre: 'Lab Física' }] });
+        return Promise.resolve({
+          data: [{ id: 'lab-1', nombre: 'Lab Física', tipo: 'fisica', capacidad: 20 }],
+        });
       }
       return Promise.resolve({ data: [] });
     });
@@ -42,56 +43,49 @@ describe('FormularioEquipo Component', () => {
 
   test('renderiza correctamente el formulario y realiza fetch de edificios y laboratorios', async () => {
     render(
-      <FormularioEquipo 
-        formData={defaultFormData} 
-        handleChange={mockHandleChange} 
-        handleSubmit={mockHandleSubmit} 
-        cerrarModal={mockCerrarModal} 
+      <FormularioEquipo
+        formData={defaultFormData}
+        handleChange={mockHandleChange}
+        handleSubmit={mockHandleSubmit}
       />
     );
 
     expect(screen.getByDisplayValue('Microscopio')).toBeInTheDocument();
-    
+
     // Esperar a que los useEffect carguen los edificios y los laboratorios (por ser fijo y tener edificio)
     await waitFor(() => {
       expect(api.get).toHaveBeenCalledWith('/edificio');
       expect(api.get).toHaveBeenCalledWith('/laboratorio/edificio/edif-1');
-      
-      // Chequeamos que las opciones de los selects hayan cargado
-      expect(screen.getByText('Edificio A')).toBeInTheDocument();
-      expect(screen.getByText('Lab Física')).toBeInTheDocument();
     });
+
+    // Los CustomSelect muestran en el trigger el label de la opción seleccionada.
+    expect(await screen.findByText('Edificio A')).toBeInTheDocument();
+    expect(await screen.findByText(/Lab Física/)).toBeInTheDocument();
   });
 
-  test('deshabilita edificio y laboratorio si es un equipo móvil (esFijo = false)', async () => {
+  test('no renderiza la ubicación ni consulta edificios si es un equipo móvil (esFijo = false)', async () => {
     const mobileData = { ...defaultFormData, esFijo: false, edificioId: '', laboratorioId: '' };
-    
-    const { container } = render(
-      <FormularioEquipo 
-        formData={mobileData} 
-        handleChange={mockHandleChange} 
-        handleSubmit={mockHandleSubmit} 
-        cerrarModal={mockCerrarModal} 
+
+    render(
+      <FormularioEquipo
+        formData={mobileData}
+        handleChange={mockHandleChange}
+        handleSubmit={mockHandleSubmit}
       />
     );
 
-    await waitFor(() => expect(api.get).toHaveBeenCalledWith('/edificio'));
-
-    const selectsDisabled = screen.getAllByText('No aplica a equipos móviles');
-    expect(selectsDisabled.length).toBe(2); // Uno para Edificio, otro para Laboratorio
-
-    // El select de edificio debe estar deshabilitado
-    const edificioSelect = container.querySelector('select[name="edificioId"]');
-    expect(edificioSelect).toBeDisabled();
+    // El bloque de ubicación entero se omite para equipos móviles.
+    expect(screen.queryByText('Edificio')).not.toBeInTheDocument();
+    expect(screen.queryByText('Laboratorio')).not.toBeInTheDocument();
+    expect(api.get).not.toHaveBeenCalled();
   });
 
-  test('llama a handleChange y a los botones submit / cancelar', async () => {
+  test('llama a handleChange al escribir y a handleSubmit al enviar', async () => {
     const { container } = render(
-      <FormularioEquipo 
-        formData={defaultFormData} 
-        handleChange={mockHandleChange} 
-        handleSubmit={mockHandleSubmit} 
-        cerrarModal={mockCerrarModal} 
+      <FormularioEquipo
+        formData={defaultFormData}
+        handleChange={mockHandleChange}
+        handleSubmit={mockHandleSubmit}
       />
     );
 
@@ -99,10 +93,6 @@ describe('FormularioEquipo Component', () => {
     const inputCodigo = screen.getByDisplayValue('EQ-001');
     fireEvent.change(inputCodigo, { target: { name: 'codigo', value: 'EQ-002' } });
     expect(mockHandleChange).toHaveBeenCalled();
-
-    // Cancelar
-    fireEvent.click(screen.getByRole('button', { name: /Cancelar/i }));
-    expect(mockCerrarModal).toHaveBeenCalledTimes(1);
 
     // Guardar
     fireEvent.submit(container.querySelector('form'));

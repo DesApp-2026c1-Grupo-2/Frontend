@@ -52,7 +52,7 @@ describe('Login Component', () => {
     );
     
     fireEvent.click(screen.getByRole('button', { name: 'Ingresar' }));
-    expect(await screen.findByText('Completá todos los campos')).toBeInTheDocument();
+    expect(await screen.findByText('Completá el correo electrónico y la contraseña')).toBeInTheDocument();
   });
 
   test('inicia sesión exitosamente y redirige al dashboard', async () => {

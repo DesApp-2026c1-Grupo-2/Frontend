@@ -1,9 +1,27 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
-import EstadoBadge from "../components/EstadoBadge";
+import { getReservaPorPedido } from "../services/reservas";
+import { ResumenValorHistorial } from "../utils/historialFormat";
+import ConfirmModal from "../components/common/ConfirmModal";
+import FinalizarPedidoForm from "../components/pedidos/FinalizarPedidoForm";
+import { FiTool, FiCheckCircle, FiAlertTriangle, FiCheck, FiClipboard, FiUser, FiMessageSquare, FiXCircle, FiX, FiFlag, FiSlash, FiRepeat } from "react-icons/fi";
 
-const PENDING_STATES = ["Pendiente", "En Revisión"];
+const getDisplayTipo = (r) => {
+  const tipoItem = r.recursoId?.tipo || r.tipo;
+  if (r.tipoRecurso === 'Equipo' || tipoItem?.toLowerCase() === 'equipo') return 'Equipo';
+  
+  if (tipoItem) {
+    const t = String(tipoItem).toLowerCase();
+    if (t === 'sustancia') return 'Sustancia Básica';
+    if (t === 'reactivo') return 'Reactivo';
+    if (t === 'material') return 'Material';
+  }
+  
+  return r.tipoRecurso === 'Item' ? 'Item' : (r.tipoRecurso || r.tipo || '—');
+};
+
+const PENDING_STATES = ["Pendiente"];
 
 const formatDocente = (doc) => {
   if (!doc) return "—";
@@ -44,11 +62,11 @@ const ETIQUETAS_CAMPO = {
   horario: "Horario",
   recursos: "Materiales/equipos",
   estado: "Estado",
+  reporteFinal: "Reporte final",
 };
 
-const formatValorSimple = (valor) => {
+const formatValorSimple = (valor, nombresPorId = {}) => {
   if (valor === null || valor === undefined) return "—";
-  // Si parece una fecha ISO la formateamos
   if (typeof valor === "string" && /^\d{4}-\d{2}-\d{2}T/.test(valor)) {
     const d = new Date(valor);
     if (!isNaN(d.getTime())) {
@@ -58,23 +76,57 @@ const formatValorSimple = (valor) => {
       })}`;
     }
   }
+
+  if (typeof valor === "string" && nombresPorId[valor]) {
+    return nombresPorId[valor];
+  }
+
   if (typeof valor === "object" && valor !== null) {
-    // ObjectId u objeto poblado → intentar extraer un nombre legible
     return valor.nombre || valor.email || valor._id?.toString() || JSON.stringify(valor);
   }
   return String(valor);
 };
 
-const CambioCampoSimple = ({ campo, antes, despues }) => (
-  <div className="flex flex-wrap items-center gap-1 text-sm py-0.5">
-    <span className="font-medium text-slate-700">
-      {ETIQUETAS_CAMPO[campo] || campo}:
-    </span>
-    <span className="text-slate-500 line-through">{formatValorSimple(antes)}</span>
-    <span className="text-slate-400 mx-1">→</span>
-    <span className="text-slate-800">{formatValorSimple(despues)}</span>
-  </div>
-);
+const CambioCampoSimple = ({ campo, antes, despues, nombresPorId = {} }) => {
+  const renderValor = (valor) => {
+    if (valor === null || valor === undefined) {
+      return <span className="text-slate-400">—</span>;
+    }
+    if (typeof valor === "object") {
+      return <ResumenValorHistorial valor={valor} nombresPorId={nombresPorId} />;
+    }
+    return <span>{formatValorSimple(valor, nombresPorId)}</span>;
+  };
+
+  return (
+    <div className="space-y-2 text-sm py-0.5">
+      <div className="flex flex-wrap items-center gap-1">
+        <span className="font-medium text-slate-700">
+          {ETIQUETAS_CAMPO[campo] || campo}:
+        </span>
+        {typeof antes !== "object" && (
+          <span className="text-slate-500 line-through">{formatValorSimple(antes, nombresPorId)}</span>
+        )}
+        <span className="text-slate-400 mx-1">→</span>
+        {typeof despues !== "object" && (
+          <span className="text-slate-800">{formatValorSimple(despues, nombresPorId)}</span>
+        )}
+      </div>
+      {typeof antes === "object" && (
+        <div className="mt-2">
+          <div className="text-xs text-slate-400 uppercase tracking-wide mb-1">Antes</div>
+          {renderValor(antes)}
+        </div>
+      )}
+      {typeof despues === "object" && (
+        <div className="mt-2">
+          <div className="text-xs text-slate-400 uppercase tracking-wide mb-1">Después</div>
+          {renderValor(despues)}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const CambioHorario = ({ antes, despues }) => {
   const fmtRango = (obj) => {
@@ -98,20 +150,32 @@ const CambioHorario = ({ antes, despues }) => {
   );
 };
 
-const CambioRecursos = ({ antes, despues }) => {
+const CambioRecursos = ({ antes, despues, nombresPorId = {} }) => {
   const renderLista = (lista, color) => {
     if (!Array.isArray(lista) || lista.length === 0)
       return <span className="text-slate-400 italic">sin recursos</span>;
     return (
-      <ul className={`list-disc list-inside space-y-0.5 ${color}`}>
+      <ul className={`space-y-1 ${color}`}>
         {lista.map((r, i) => {
           const id =
             typeof r.recursoId === "object"
-              ? r.recursoId?.nombre || r.recursoId?._id
+              ? r.recursoId?._id?.toString?.() || r.recursoId?.id?.toString?.() || r.recursoId?.nombre
               : r.recursoId;
+          const nombre =
+            r.recursoId?.nombre ||
+            r.nombre ||
+            nombresPorId[id] ||
+            (typeof r.recursoId === "object" ? r.recursoId?.descripcion : null);
+
           return (
-            <li key={i} className="text-xs">
-              {r.tipoRecurso} — {id || "recurso"} ×{r.cantidad}
+            <li key={id || i} className="text-xs flex items-start gap-1 break-words">
+              <span className="font-bold shrink-0">•</span>
+              <span className="flex-1">
+                <span className="font-medium">{getDisplayTipo(r)}</span>
+                {nombre ? <span> — <span className="break-all">{nombre}</span></span> : null}
+                {!nombre && id ? <span> — <span className="break-all">{id}</span></span> : null}
+                {!nombre && !id ? <span> — recurso</span> : null} ×{r.cantidad}
+              </span>
             </li>
           );
         })}
@@ -122,13 +186,13 @@ const CambioRecursos = ({ antes, despues }) => {
   return (
     <div className="text-sm py-0.5">
       <span className="font-medium text-slate-700">Materiales/equipos:</span>
-      <div className="grid grid-cols-2 gap-2 mt-1 border border-slate-200 rounded-lg p-2 bg-slate-50">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1 border border-slate-200 rounded-lg p-3 bg-slate-50">
         <div>
-          <p className="text-xs text-slate-400 mb-1">Antes</p>
+          <p className="text-xs text-slate-400 mb-2 font-semibold">Antes</p>
           {renderLista(antes, "text-slate-500")}
         </div>
         <div>
-          <p className="text-xs text-slate-400 mb-1">Después</p>
+          <p className="text-xs text-slate-400 mb-2 font-semibold">Después</p>
           {renderLista(despues, "text-slate-700")}
         </div>
       </div>
@@ -136,17 +200,12 @@ const CambioRecursos = ({ antes, despues }) => {
   );
 };
 
-/**
- * Renderiza todos los cambios de un evento del historial.
- * Soporta: campos simples, horario (objeto anidado) y recursos (array).
- */
-const RenderCambios = ({ cambios }) => {
+const RenderCambios = ({ cambios, nombresPorId = {} }) => {
   if (!cambios || Object.keys(cambios).length === 0) return null;
 
   return (
     <div className="mt-2 border-t border-slate-200 pt-2 space-y-1">
       {Object.entries(cambios).map(([campo, valor]) => {
-        // Horario — objeto con {inicio, fin}
         if (campo === "horario") {
           return (
             <CambioHorario
@@ -157,18 +216,17 @@ const RenderCambios = ({ cambios }) => {
           );
         }
 
-        // Recursos — arrays
         if (campo === "recursos" && (Array.isArray(valor?.antes) || Array.isArray(valor?.despues))) {
           return (
             <CambioRecursos
               key={campo}
               antes={valor?.antes}
               despues={valor?.despues}
+              nombresPorId={nombresPorId}
             />
           );
         }
 
-        // Campos simples con estructura {antes, despues}
         if (valor !== null && typeof valor === "object" && "antes" in valor && "despues" in valor) {
           return (
             <CambioCampoSimple
@@ -176,17 +234,19 @@ const RenderCambios = ({ cambios }) => {
               campo={campo}
               antes={valor.antes}
               despues={valor.despues}
+              nombresPorId={nombresPorId}
             />
           );
         }
 
-        // Fallback — valor plano
         return (
           <div key={campo} className="text-sm py-0.5">
             <span className="font-medium text-slate-700">
               {ETIQUETAS_CAMPO[campo] || campo}:
             </span>{" "}
-            <span className="text-slate-700">{formatValorSimple(valor)}</span>
+            <div className="mt-1 text-slate-700">
+              <ResumenValorHistorial valor={valor} nombresPorId={nombresPorId} />
+            </div>
           </div>
         );
       })}
@@ -194,7 +254,6 @@ const RenderCambios = ({ cambios }) => {
   );
 };
 
-// Etiqueta de color por acción
 const ACCION_ESTILO = {
   CREACION: "bg-emerald-100 text-emerald-700",
   MODIFICACION: "bg-blue-100 text-blue-700",
@@ -220,47 +279,170 @@ export default function PedidoDetalle() {
   const [nuevoComentario, setNuevoComentario] = useState("");
   const [nombresRecursos, setNombresRecursos] = useState({});
   const [errorAccion, setErrorAccion] = useState("");
+  const [historialExpandido, setHistorialExpandido] = useState(true);
+  const [mostrarMotivRechazo, setMostrarMotivRechazo] = useState(false);
+  const [motivRechazo, setMotivRechazo] = useState("");
+  const [mostrarConfirmCancelar, setMostrarConfirmCancelar] = useState(false);
+  const [mostrarConfirmRechazo, setMostrarConfirmRechazo] = useState(false);
+  const [mostrarConfirmFinalizar, setMostrarConfirmFinalizar] = useState(false);
+  const [mostrarConfirmAprobacion, setMostrarConfirmAprobacion] = useState(false);
+  const [mostrarFinalizar, setMostrarFinalizar] = useState(false);
+  const [formFinalizacion, setFormFinalizacion] = useState({ recursos: [] });
+  const [recursosFinalizacion, setRecursosFinalizacion] = useState([]);
+
+  // Detalle de la reserva: es la fuente de verdad de qué consumos hay que reportar.
+  // Los itemId de consumos[] salen de acá y no de pedido.recursos, que puede haber
+  // cambiado después de aprobar el pedido.
+  const [reserva, setReserva] = useState(null);
+  const [cargandoReserva, setCargandoReserva] = useState(false);
+  const [errorReserva, setErrorReserva] = useState("");
+  // Las cantidades se guardan como string: Number("") es 0, así que un estado
+  // numérico no distinguiría "sin completar" de "consumí 0", y esa diferencia es
+  // justamente lo que el backend exige reportar.
+  const [consumosForm, setConsumosForm] = useState({});
+  const [erroresConsumo, setErroresConsumo] = useState({});
+  const [errorFinalizacion, setErrorFinalizacion] = useState("");
 
   const tieneConflictos = conflictos.length > 0;
+
+  const consumosRequeridos = (reserva?.materialesReservados || []).filter(
+    (material) => material.requiereConsumo
+  );
+
+  // Sin el detalle de la reserva no sabemos qué consumibles exige el backend, así que
+  // finalizar sería un 400 seguro: mejor bloquear y ofrecer reintentar.
+  const finalizacionBloqueada =
+    cargandoReserva ||
+    !!errorReserva ||
+    consumosRequeridos.some((material) => {
+      const valor = consumosForm[material.itemId];
+      return valor === "" || valor == null;
+    });
+
+  // Reservas del pedido (para reflejar el consumo real tras finalizar, ver §3.4).
+  const materialesReservados =
+    pedido?.materialesReservados || pedido?.reserva?.materialesReservados || [];
+
+  const consumoRealPorRecurso = (recId) => {
+    if (!recId || pedido?.estado !== "Finalizado") return null;
+    const entrada = materialesReservados.find((m) => {
+      const mId = typeof m.itemId === "object" ? m.itemId?._id : m.itemId;
+      return (mId || "").toString() === recId.toString();
+    });
+    if (!entrada || entrada.cantidadConsumidaReal == null) return null;
+    const reservado = Number(entrada.cantidad ?? entrada.cantidadReservada ?? 0);
+    const consumido = Number(entrada.cantidadConsumidaReal);
+    return { reservado, consumido, devuelto: Math.max(0, reservado - consumido) };
+  };
+
+  const nombresPorId = (() => {
+    const map = {};
+
+    if (pedido?.laboratorio) {
+      const idLaboratorio =
+        typeof pedido.laboratorio === "object"
+          ? pedido.laboratorio?._id?.toString?.() || pedido.laboratorio?.id?.toString?.()
+          : pedido.laboratorio;
+      if (idLaboratorio && typeof pedido.laboratorio === "object" && pedido.laboratorio.nombre) {
+        map[idLaboratorio] = pedido.laboratorio.nombre;
+      }
+    }
+
+    (pedido?.recursos || []).forEach((recurso) => {
+      const recursoId =
+        typeof recurso.recursoId === "object"
+          ? recurso.recursoId?._id?.toString?.() || recurso.recursoId?.id?.toString?.()
+          : recurso.recursoId;
+      const nombreRecurso = recurso.recursoId?.nombre || recurso.nombre || nombresRecursos[recursoId];
+      if (recursoId && nombreRecurso) {
+        map[recursoId] = nombreRecurso;
+      }
+    });
+
+    return map;
+  })();
 
   useEffect(() => {
     const fetchPedido = async () => {
       try {
         const res = await api.get(`/pedido/${id}`);
-        setPedido(res.data);
-        setConflictos(res.data.conflictos || []);
+        const dataPedido = res.data;
+        setPedido(dataPedido);
+        setConflictos(dataPedido.conflictos || []);
 
-        if (res.data.recursos && res.data.recursos.length > 0) {
+        // 1. Set para coleccionar IDs únicos (actuales e históricos)
+        const idsPendientes = new Set();
+        const tiposPorId = {}; // Para saber a qué endpoint pegarle
+
+        // Agregar recursos actuales
+        (dataPedido.recursos || []).forEach((r) => {
+          const recId = typeof r.recursoId === "object" ? r.recursoId?._id : r.recursoId;
+          if (recId) {
+            idsPendientes.add(recId);
+            tiposPorId[recId] = r.tipoRecurso?.toLowerCase() || r.tipo?.toLowerCase();
+          }
+        });
+
+        // 2. Función recursiva para buscar IDs huérfanos en el historial
+        const extraerIdsHistorial = (obj) => {
+          if (!obj || typeof obj !== "object") return;
+
+          // Buscar llaves comunes de IDs en tu estructura
+          const posiblesLlaves = ["recursoId", "itemId", "equipoId"];
+          posiblesLlaves.forEach(llave => {
+            if (obj[llave]) {
+              const strId = typeof obj[llave] === "object" ? obj[llave]._id : obj[llave];
+              if (typeof strId === "string" && /^[a-f\d]{24}$/i.test(strId)) {
+                idsPendientes.add(strId);
+                // Si encontramos tipo en el objeto, lo guardamos para la consulta
+                if (obj.tipo || obj.tipoRecurso) {
+                  tiposPorId[strId] = (obj.tipo || obj.tipoRecurso).toLowerCase();
+                }
+              }
+            }
+          });
+
+          // Seguir escaneando hijos
+          Object.values(obj).forEach((val) => {
+            if (typeof val === "object") extraerIdsHistorial(val);
+          });
+        };
+
+        extraerIdsHistorial(dataPedido.historial);
+
+        // 3. Obtener nombres faltantes
+        if (idsPendientes.size > 0) {
           const nombresMap = {};
-          await Promise.all(
-            res.data.recursos.map(async (r) => {
-              const recId =
-                typeof r.recursoId === "object"
-                  ? r.recursoId?._id
-                  : r.recursoId;
 
-              if (r.recursoId && typeof r.recursoId === "object" && r.recursoId.nombre) {
-                nombresMap[recId] = r.recursoId.nombre;
+          await Promise.all(
+            Array.from(idsPendientes).map(async (recId) => {
+              // Si el pedido ya lo trajo populado desde el backend, lo usamos
+              const recursoPopulado = dataPedido.recursos?.find(
+                r => (r.recursoId?._id || r.recursoId) === recId
+              );
+
+              if (recursoPopulado?.recursoId?.nombre) {
+                nombresMap[recId] = recursoPopulado.recursoId.nombre;
                 return;
               }
 
-              const tipo = r.tipoRecurso?.toLowerCase() || r.tipo?.toLowerCase();
-              if (recId && tipo) {
-                try {
-                  const endpoint =
-                    tipo === "equipo" ? `/equipo/${recId}` : `/items/${recId}`;
-                  const resRecurso = await api.get(endpoint);
+              // Si no, lo buscamos en la API (Fallback para el historial)
+              // Asumimos "item" por defecto si no encontramos el tipo en el escaneo
+              const tipo = tiposPorId[recId] === "equipo" ? "equipo" : "items";
+              try {
+                const resRecurso = await api.get(`/${tipo}/${recId}`);
+                if (resRecurso.data?.nombre) {
                   nombresMap[recId] = resRecurso.data.nombre;
-                } catch (error) {
-                  console.error(`Error al obtener recurso ${recId}:`, error);
                 }
+              } catch (error) {
+                console.warn(`No se pudo obtener el nombre histórico para ID ${recId}:`, error.message);
               }
             })
           );
-          setNombresRecursos(nombresMap);
+          setNombresRecursos(prev => ({ ...prev, ...nombresMap }));
         }
       } catch (err) {
-        console.error(err);
+        console.error("Error al obtener el pedido:", err);
       } finally {
         setLoading(false);
       }
@@ -283,15 +465,193 @@ export default function PedidoDetalle() {
     }
   };
 
-  const rechazar = async () => {
+  const ejecutarRechazo = async () => {
+    if (!motivRechazo.trim()) {
+      setErrorAccion("Debe proporcionar un motivo de rechazo.");
+      return;
+    }
+
     setErrorAccion("");
     try {
-      const res = await api.patch(`/pedido/${id}/estado`, { estado: "Rechazado" });
+      // Magia pura: mandamos el motivo directamente en el estado
+      const res = await api.patch(`/pedido/${id}/estado`, {
+        estado: "Rechazado",
+        motivoRechazo: motivRechazo
+      });
+
       setPedido(res.data);
+      setMostrarMotivRechazo(false);
+      setMotivRechazo("");
     } catch (err) {
       console.error(err);
       setErrorAccion(err.response?.data?.error || "No se pudo rechazar el pedido.");
     }
+  };
+
+  const cancelarPedido = async () => {
+    setErrorAccion("");
+
+    try {
+      const res = await api.patch(`/pedido/${id}/estado`, {
+        estado: "Cancelado",
+      });
+
+      setPedido(res.data);
+    } catch (err) {
+      setErrorAccion(
+        err.response?.data?.error || "Error al cancelar el pedido."
+      );
+    }
+  };
+
+  const cargarReserva = async () => {
+    setErrorReserva("");
+    setCargandoReserva(true);
+    try {
+      const data = await getReservaPorPedido(id);
+      setReserva(data);
+      setConsumosForm((prev) =>
+        Object.fromEntries(
+          (data?.materialesReservados || [])
+            .filter((material) => material.requiereConsumo)
+            // Arranca vacío a propósito: precargar el total permitiría confirmar sin
+            // mirar y perder el sobrante, que es el bug que este flujo vino a evitar.
+            .map((material) => [material.itemId, prev[material.itemId] ?? ""])
+        )
+      );
+      return data;
+    } catch {
+      setReserva(null);
+      setErrorReserva("No se pudo cargar el detalle de la reserva.");
+      return null;
+    } finally {
+      setCargandoReserva(false);
+    }
+  };
+
+  const abrirFinalizacion = () => {
+    setMostrarFinalizar(true);
+    setErrorFinalizacion("");
+    setErroresConsumo({});
+    setConsumosForm({});
+    cargarReserva();
+  };
+
+  const cerrarFinalizacion = () => {
+    setMostrarFinalizar(false);
+    // La reserva se relee al reabrir: el cron la mueve cada minuto.
+    setReserva(null);
+    setConsumosForm({});
+    setErroresConsumo({});
+    setErrorFinalizacion("");
+    setErrorReserva("");
+  };
+
+  const actualizarConsumo = (itemId, valor) => {
+    setConsumosForm((prev) => ({ ...prev, [itemId]: valor }));
+    setErroresConsumo((prev) => ({ ...prev, [itemId]: "" }));
+  };
+
+  const validarConsumos = () => {
+    const errores = {};
+    consumosRequeridos.forEach((material) => {
+      const valor = consumosForm[material.itemId];
+      const numero = Number(valor);
+      if (valor === "" || valor == null) {
+        errores[material.itemId] = "Indicá la cantidad consumida (0 si no se usó).";
+      } else if (!Number.isFinite(numero) || numero < 0) {
+        errores[material.itemId] = "Debe ser un número mayor o igual a 0.";
+      } else if (numero > material.cantidadPendiente) {
+        errores[material.itemId] = `El máximo es ${material.cantidadPendiente}.`;
+      }
+    });
+    setErroresConsumo(errores);
+    return Object.keys(errores).length === 0;
+  };
+
+  const manejarErrorFinalizacion = (err) => {
+    const status = err.response?.status;
+    const data = err.response?.data;
+    const detalles = data?.detalles || data?.errors;
+
+    // Body mal formado: el path indexa el array consumos[] que mandamos, que se arma
+    // 1:1 con consumosRequeridos, así que el índice sirve para volver al itemId.
+    if (status === 400 && Array.isArray(detalles) && detalles.length) {
+      const porItem = {};
+      detalles.forEach((detalle) => {
+        const [raiz, indice] = detalle.path || [];
+        const itemId = raiz === "consumos" ? consumosRequeridos[indice]?.itemId : null;
+        if (itemId) porItem[itemId] = detalle.message;
+      });
+      setErroresConsumo(porItem);
+      setErrorFinalizacion(
+        Object.keys(porItem).length
+          ? "Revisá las cantidades marcadas."
+          : detalles.map((detalle) => detalle.message).join(" ")
+      );
+      return;
+    }
+
+    // Falta reportar un consumo: es recuperable y sin efectos colaterales (el pedido
+    // sigue Aceptado). El mensaje ya nombra los faltantes. Releemos la reserva porque
+    // el cron pudo haber marcado items nuevos como requeridos desde que abrimos el form.
+    if (status === 400) {
+      setErrorFinalizacion(data?.error || "No se pudo finalizar el pedido.");
+      cargarReserva();
+      return;
+    }
+
+    const mensajePorStatus = {
+      403: "No tenés permisos para finalizar pedidos.",
+      404: "El pedido ya no existe.",
+    };
+    setErrorFinalizacion(data?.error || mensajePorStatus[status] || "Error al finalizar el pedido.");
+  };
+
+  const ejecutarFinalizacion = async () => {
+    setErrorFinalizacion("");
+    setErroresConsumo({});
+    try {
+      const descartes = formFinalizacion.recursos
+        .filter((recurso) => recurso.registrarDescarte && recurso.tipo !== "Equipo" && !recurso.esConsumible)
+        .map((recurso) => ({
+          tipo: recurso.tipoDetalle?.toLowerCase() === "reactivo" ? "reactivo" : "material",
+          itemId: recurso.recursoId,
+          cantidad: Number(recurso.cantidadDescartada || 0),
+          motivo: recurso.motivo || "Finalización de pedido",
+        }));
+
+      const desperfectos = formFinalizacion.recursos
+        .filter((recurso) => recurso.registrarDefecto && recurso.tipo === "Equipo")
+        .map((recurso) => ({
+          equipoId: recurso.recursoId,
+          motivo: recurso.motivoDefecto || "Desperfecto informado al finalizar el pedido",
+        }));
+
+      // Se mandan todos los requeridos, incluidos los que valen 0: omitir uno da 400.
+      // El orden debe seguir a consumosRequeridos para poder mapear los errores de Joi.
+      const consumos = consumosRequeridos.map((material) => ({
+        itemId: material.itemId,
+        cantidadConsumida: Math.max(0, Number(consumosForm[material.itemId] || 0)),
+      }));
+
+      const payload = { consumos, descartes, desperfectos };
+      const res = await api.patch(`/pedido/${id}/finalizar`, payload);
+      setPedido(res.data.pedido || res.data);
+      setFormFinalizacion({ recursos: [] });
+      cerrarFinalizacion();
+    } catch (err) {
+      manejarErrorFinalizacion(err);
+    }
+  };
+
+  const actualizarRecursoFinalizacion = (recursoId, cambios) => {
+    setFormFinalizacion((prev) => ({
+      ...prev,
+      recursos: prev.recursos.map((recurso) =>
+        recurso.recursoId === recursoId ? { ...recurso, ...cambios } : recurso
+      ),
+    }));
   };
 
   const enviarComentario = async () => {
@@ -312,6 +672,64 @@ export default function PedidoDetalle() {
     }
   };
 
+  const toggleEstadoTarea = async (index) => {
+    if (!pedido || !pedido.checklist) return;
+
+    setErrorAccion("");
+    const nuevaChecklist = [...pedido.checklist];
+    const estadoActual = nuevaChecklist[index].estado;
+    const nuevoEstado = estadoActual === "Completada" ? "Pendiente" : "Completada";
+
+    nuevaChecklist[index] = { ...nuevaChecklist[index], estado: nuevoEstado };
+
+    try {
+      // Intentamos actualizarlo en el backend (ajustá el endpoint según tu backend)
+      const res = await api.patch(`/pedido/${id}/checklist`, { checklist: nuevaChecklist });
+      setPedido(res.data);
+    } catch (err) {
+      console.error(err);
+      setErrorAccion("No se pudo actualizar el estado de la tarea.");
+    }
+  };
+
+  useEffect(() => {
+    if (!pedido?.recursos?.length) return;
+    const recursos = pedido.recursos
+      .filter((r) => r?.recursoId)
+      .map((r) => {
+        const recursoId = typeof r.recursoId === "object" ? r.recursoId?._id : r.recursoId;
+        const tipoBase = r.tipoRecurso || r.tipo || "Item";
+        const esEquipo = tipoBase === "Equipo";
+        const item = typeof r.recursoId === "object" ? r.recursoId : null;
+        return {
+          id: recursoId,
+          recursoId,
+          nombre: r.recursoId?.nombre || r.nombre || nombresRecursos[recursoId] || "Recurso",
+          tipo: esEquipo ? "Equipo" : "Item",
+          tipoDetalle: r.recursoId?.tipo || r.tipoDetalle || (esEquipo ? "Equipo" : "Material"),
+          cantidadSolicitada: Number(r.cantidad || 1),
+          esConsumible: esEquipo ? false : (item?.esConsumible ?? true),
+        };
+      });
+
+    setRecursosFinalizacion(recursos);
+    setFormFinalizacion((prev) => ({
+      ...prev,
+      recursos: recursos.map((recurso) => {
+        const existente = prev.recursos?.find((entry) => entry.recursoId === recurso.recursoId);
+        return {
+          ...existente,
+          ...recurso,
+          registrarDescarte: existente?.registrarDescarte || false,
+          cantidadDescartada: existente?.cantidadDescartada ?? recurso.cantidadSolicitada,
+          motivo: existente?.motivo || "",
+          registrarDefecto: existente?.registrarDefecto || false,
+          motivoDefecto: existente?.motivoDefecto || "",
+        };
+      }),
+    }));
+  }, [pedido, nombresRecursos]);
+
   useEffect(() => {
     const marcarVisto = async () => {
       try {
@@ -327,338 +745,446 @@ export default function PedidoDetalle() {
   if (!pedido) return <div className="p-6">Pedido no encontrado</div>;
 
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-6">
-      <div className="max-w-3xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
-
-        {/* HEADER */}
-        <div className="flex justify-between items-start border-b border-slate-200 pb-4 mb-6">
-          <div>
-            <h1 className="text-xl font-semibold text-slate-800">
-              Pedido #{(pedido._id || pedido.id || "").slice(-6)}
-            </h1>
-            <p className="text-slate-500 mt-1">{pedido.materia}</p>
-          </div>
-          <button
-            onClick={() => navigate(-1)}
-            className="text-sm text-slate-500 hover:text-slate-800"
-          >
-            ← Volver
-          </button>
-        </div>
-
-        {/* INFO */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mb-8">
-          <div>
-            <p className="text-slate-400 mb-1">Docente</p>
-            <p className="text-slate-700">{formatDocente(pedido.docente)}</p>
-          </div>
-          <div>
-            <p className="text-slate-400 mb-1">Fecha</p>
-            <p className="text-slate-700">
-              {formatFechaHora(pedido.fechaHora || pedido.fecha)}
-            </p>
-          </div>
-          <div>
-            <p className="text-slate-400 mb-1">Laboratorio</p>
-            <p className="text-slate-700">{formatLaboratorio(pedido.laboratorio)}</p>
-          </div>
-          <div>
-            <p className="text-slate-400 mb-1">Alumnos</p>
-            <p className="text-slate-700">{pedido.alumnos}</p>
-          </div>
-          <div>
-            <p className="text-slate-400 mb-1">Estado</p>
-            <EstadoBadge estado={pedido.estado} />
-          </div>
-        </div>
-
-        {/* RECURSOS */}
-        <div className="mb-8">
-          <h2 className="font-semibold text-sm text-slate-700 mb-3">
-            Materiales solicitados
-          </h2>
-          <div className="space-y-2">
-            {pedido.recursos?.map((r, i) => {
-              const recId =
-                typeof r.recursoId === "object" ? r.recursoId?._id : r.recursoId;
-              const nombreRecurso =
-                r.recursoId?.nombre ||
-                r.recurso?.nombre ||
-                nombresRecursos[recId] ||
-                r.nombre ||
-                "Recurso";
-              return (
-                <div
-                  key={i}
-                  className="flex items-center justify-between border border-slate-200 rounded-lg p-3 bg-slate-50"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-slate-700">{nombreRecurso}</p>
-                    <p className="text-xs text-slate-400 mt-1">
-                      {r.tipo || r.tipoRecurso || "—"}
-                    </p>
-                  </div>
-                  <span className="text-xs font-bold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-md">
-                    x{r.cantidad}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* CONFLICTOS — alerta general */}
-        {!tieneConflictos ? (
-          <div className="mb-8 border border-green-200 bg-green-50 rounded-lg p-4">
-            <p className="font-semibold text-green-700">✓ Pedido satisfacible</p>
-            <p className="text-sm text-green-600 mt-1">
-              El laboratorio, materiales y equipos se encuentran disponibles.
-            </p>
-          </div>
-        ) : (
-          <div className="mb-8 border border-red-200 bg-red-50 rounded-lg p-4">
-            <p className="font-semibold text-red-700">⚠ Pedido con conflictos</p>
-            <p className="text-sm text-red-600 mt-1">
-              Existen problemas que impiden satisfacer este pedido.
-            </p>
-          </div>
-        )}
-
-        {/* CONFLICTOS — detalle */}
-        {tieneConflictos && (
-          <div className="mb-8">
-            <h2 className="font-semibold text-sm text-red-600 mb-3">
-              Conflictos detectados
-            </h2>
-            <div className="space-y-2">
-              {conflictos.map((c, i) => (
-                <div
-                  key={i}
-                  className="border border-red-200 bg-red-50 rounded-lg p-3"
-                >
-                  <p className="text-sm text-red-700">{c.mensaje}</p>
-                </div>
-              ))}
+    <div className="min-h-screen text-slate-800 px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-4xl mx-auto">
+        <div className="relative">
+          <div className="absolute bottom-0 left-0 w-full h-40 bg-emerald-100 opacity-20 rounded-[2rem]" />
+          <div className="relative z-10 bg-white border border-slate-100 rounded-[2rem] shadow-lg p-6 sm:p-8">
+            <div className="absolute -top-5 left-10 right-10 h-6 rounded-t-[2rem] bg-stone-700 rounded-sm" />
+            {/* HEADER */}
+            <div className="flex justify-between items-start mb-6 pb-4 border-b border-slate-200">
+              <div className="flex-1">
+                <p className="text-emerald-600 font-semibold text-xs tracking-widest uppercase mb-2">Detalles del Pedido</p>
+                <h1 className="text-3xl font-bold text-slate-800">{`Pedido #${(pedido._id || pedido.id || "").slice(-6)}`}</h1>
+                <p className="text-slate-500 mt-2">{pedido.materia}</p>
+              </div>
+              <button
+                onClick={() => navigate(-1)}
+                className="px-3 py-2 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition font-medium text-sm whitespace-nowrap"
+              >
+                ← Volver
+              </button>
             </div>
-          </div>
-        )}
 
-        {/* CHECKLIST */}
-        <div className="mb-8">
-          <h2 className="font-semibold text-sm text-slate-700 mb-3">
-            Checklist de seguimiento
-          </h2>
-          {pedido.checklist?.length > 0 ? (
-            <div className="space-y-3">
-              {pedido.checklist.map((tarea, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between border border-slate-200 rounded-lg p-3 bg-slate-50"
-                >
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={tarea.estado === "Completada"}
-                      readOnly
-                      className="h-4 w-4 accent-emerald-600"
-                    />
-                    <div>
-                      <p
-                        className={`text-sm font-medium ${
-                          tarea.estado === "Completada"
-                            ? "text-slate-500 line-through"
-                            : "text-slate-700"
-                        }`}
-                      >
-                        {tarea.descripcion}
-                      </p>
-                      <p className="text-xs text-slate-400 mt-1">
-                        Tipo: {tarea.tipo}
-                      </p>
-                    </div>
-                  </div>
-                  <span
-                    className={`text-xs font-semibold px-2 py-1 rounded-md ${
-                      tarea.estado === "Completada"
-                        ? "bg-green-100 text-green-700"
-                        : tarea.estado === "En Proceso"
-                        ? "bg-yellow-100 text-yellow-700"
-                        : "bg-slate-200 text-slate-700"
-                    }`}
-                  >
-                    {tarea.estado}
-                  </span>
-                </div>
-              ))}
+            {/* INFO */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mb-8">
+              <div>
+                <p className="text-slate-400 mb-1">Docente</p>
+                <p className="text-slate-700">{formatDocente(pedido.docente)}</p>
+              </div>
+              <div>
+                <p className="text-slate-400 mb-1">Fecha</p>
+                <p className="text-slate-700">{formatFechaHora(pedido.fechaHora || pedido.fecha)}</p>
+              </div>
+              <div>
+                <p className="text-slate-400 mb-1">Laboratorio</p>
+                <p className="text-slate-700">{formatLaboratorio(pedido.laboratorio)}</p>
+              </div>
+              <div>
+                <p className="text-slate-400 mb-1">Alumnos</p>
+                <p className="text-slate-700">{pedido.alumnos}</p>
+              </div>
+              <div>
+                <p className="text-slate-400 mb-1">Estado</p>
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${pedido.estado === "Aprobado" || pedido.estado === "Aceptado"
+                  ? "bg-emerald-100 text-emerald-700"
+                  : pedido.estado === "Rechazado"
+                    ? "bg-red-100 text-red-700"
+                    : pedido.estado === "Finalizado"
+                      ? "bg-slate-200 text-slate-700"
+                      : "bg-yellow-100 text-yellow-700"
+                  }`}>
+                  {pedido.estado === "Aceptado" ? "Aprobado" : pedido.estado}
+                </span>
+              </div>
             </div>
-          ) : (
-            <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
-              <p className="text-sm text-slate-500">
-                No hay tareas generadas para este pedido.
-              </p>
-            </div>
-          )}
-        </div>
 
-        {/* ─────────────────────────────────────────────────────
-            HISTORIAL DE ACTIVIDAD — versión corregida
-        ───────────────────────────────────────────────────── */}
-        <div className="mb-8">
-          <h2 className="font-semibold text-sm text-slate-700 mb-3">
-            Historial de actividad
-          </h2>
-
-          {Array.isArray(pedido.historial) && pedido.historial.length > 0 ? (
-            <div className="space-y-3">
-              {[...pedido.historial]
-                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                .map((evento, index) => (
-                  <div
-                    key={index}
-                    className="border border-slate-200 rounded-lg p-3 bg-slate-50"
-                  >
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="flex-1 min-w-0">
-                        {/* Acción + descripción */}
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {evento.accion && (
-                            <span
-                              className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                                ACCION_ESTILO[evento.accion] ||
-                                "bg-slate-100 text-slate-600"
-                              }`}
-                            >
-                              {evento.accion}
-                            </span>
-                          )}
-                          <p className="font-medium text-slate-700 text-sm">
-                            {evento.descripcion}
-                          </p>
-                        </div>
-
-                        {/* Usuario */}
-                        <p className="text-xs text-slate-500 mt-1">
-                          {evento.usuario?.nombre} {evento.usuario?.apellido}
-                          {evento.usuario?.rol && (
-                            <> · {evento.usuario.rol}</>
-                          )}
+            {/* RECURSOS */}
+            <div className="mb-8">
+              <h2 className="font-semibold text-lg text-emerald-700 mb-4 flex items-center gap-2"><FiTool /> Materiales solicitado</h2>
+              <div className="space-y-2">
+                {pedido.recursos?.map((r, i) => {
+                  const recId = typeof r.recursoId === "object" ? r.recursoId?._id : r.recursoId;
+                  const nombreRecurso =
+                    r.recursoId?.nombre ||
+                    r.recurso?.nombre ||
+                    nombresRecursos[recId] ||
+                    r.nombre ||
+                    "Recurso";
+                  const consumo = consumoRealPorRecurso(recId);
+                  return (
+                    <div
+                      key={recId || i}
+                      className="flex items-center justify-between border border-slate-200 rounded-lg p-3 bg-slate-50"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-slate-700">{nombreRecurso}</p>
+                        <p className="text-xs text-slate-400 mt-1">
+                          {getDisplayTipo(r)}
                         </p>
-
-                        {/* Cambios */}
-                        {evento.cambios &&
-                          Object.keys(evento.cambios).length > 0 && (
-                            <RenderCambios cambios={evento.cambios} />
-                          )}
+                        {consumo && (
+                          <p className="text-xs text-slate-500 mt-1">
+                            Consumido: {consumo.consumido} / Reservado: {consumo.reservado}
+                            {consumo.devuelto > 0 && (
+                              <span className="text-emerald-600 font-medium"> · Devuelto: {consumo.devuelto}</span>
+                            )}
+                          </p>
+                        )}
                       </div>
-
-                      {/* Fecha */}
-                      <span className="text-xs text-slate-400 whitespace-nowrap shrink-0">
-                        {evento.createdAt
-                          ? new Date(evento.createdAt).toLocaleString()
-                          : "—"}
+                      <span className="text-xs font-bold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-md">
+                        x{r.cantidad}
                       </span>
                     </div>
-                  </div>
-                ))}
-            </div>
-          ) : (
-            <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
-              <p className="text-sm text-slate-500">
-                No hay actividad registrada.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* COMENTARIOS */}
-        <div className="mb-8">
-          <h2 className="font-semibold text-sm text-slate-700 mb-3">
-            Comentarios
-          </h2>
-          <div className="space-y-3">
-            {pedido.comentarios?.map((comentario) => (
-              <div
-                key={comentario._id}
-                className="border border-slate-200 rounded-lg p-3"
-              >
-                <div className="flex justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`text-xs px-2 py-1 rounded-full font-semibold ${
-                        comentario.usuario?.rol === "ADMIN"
-                          ? "bg-purple-100 text-purple-700"
-                          : comentario.usuario?.rol === "PERSONAL"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-green-100 text-green-700"
-                      }`}
-                    >
-                      {comentario.usuario?.rol}
-                    </span>
-                    <span className="font-medium text-slate-700">
-                      {comentario.usuario?.nombre} {comentario.usuario?.apellido}
-                    </span>
-                  </div>
-                  <span className="text-xs text-slate-400">
-                    {new Date(comentario.createdAt).toLocaleString()}
-                  </span>
-                </div>
-                <p className="text-sm text-slate-600">{comentario.mensaje}</p>
+                  );
+                })}
               </div>
-            ))}
-          </div>
+            </div>
 
-          <div className="mt-4">
-            <textarea
-              value={nuevoComentario}
-              onChange={(e) => setNuevoComentario(e.target.value)}
-              rows={3}
-              placeholder="Escribí un comentario..."
-              className="w-full border border-slate-300 rounded-lg p-3 text-sm text-slate-800 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button
-              onClick={enviarComentario}
-              className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
-            >
-              Comentar
-            </button>
-          </div>
-        </div>
-
-        {/* ACCIONES */}
-        {PENDING_STATES.includes(pedido.estado) && (
-          <div className="flex flex-col gap-2">
-            {errorAccion && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl flex justify-between items-center">
-                <span><strong>Error:</strong> {errorAccion}</span>
-                <button onClick={() => setErrorAccion("")} className="ml-4 text-red-400 hover:text-red-600 font-bold">✕</button>
+            {/* ALERTAS DE CONFLICTOS */}
+            {!tieneConflictos ? (
+              <div className="mb-8 border border-emerald-300 bg-emerald-50 rounded-xl p-4 shadow-sm">
+                <p className="font-semibold text-emerald-700 flex items-center gap-2"><FiCheckCircle /> Pedido satisfacible</p>
+                <p className="text-sm text-emerald-600 mt-1">El laboratorio, materiales y equipos se encuentran disponibles.</p>
+              </div>
+            ) : (
+              <div className="mb-8 border border-red-300 bg-red-50 rounded-xl p-4 shadow-sm">
+                <p className="font-semibold text-red-700 flex items-center gap-2"><FiAlertTriangle /> Pedido con conflictos</p>
+                <p className="text-sm text-red-600 mt-1">Existen problemas que impiden satisfacer este pedido.</p>
               </div>
             )}
-            <div className="flex gap-3">
-              <button
-                onClick={aprobar}
-                disabled={tieneConflictos}
-                title={
-                  tieneConflictos
-                    ? "No se puede aprobar mientras existan conflictos"
-                    : "Aprobar pedido"
-                }
-                className={`px-4 py-2 text-white rounded-lg transition-colors ${
-                  tieneConflictos
-                    ? "bg-gray-400 cursor-not-allowed opacity-70"
-                    : "bg-emerald-500 hover:bg-emerald-600"
-                }`}
-              >
-                Aprobar
-              </button>
-              <button
-                onClick={rechazar}
-                className="px-4 py-2 border border-red-300 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              >
-                Rechazar
-              </button>
+
+            {/* DETALLE CONFLICTOS */}
+            {tieneConflictos && (
+              <div className="mb-8">
+                <h2 className="font-semibold text-sm text-red-600 mb-3">Conflictos detectados</h2>
+                <div className="space-y-2">
+                  {conflictos.map((c, i) => (
+                    <div key={i} className="border border-red-300 bg-red-50 rounded-lg p-3">
+                      <p className="text-sm text-red-700">{c.mensaje}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* CHECKLIST */}
+            <div className="mb-8">
+              <h2 className="font-semibold text-lg text-emerald-700 mb-4 flex items-center gap-2"><FiCheck /> Checklist de seguimiento</h2>
+              {pedido.checklist?.length > 0 ? (
+                <div className="space-y-3">
+                  {pedido.checklist.map((tarea, index) => (
+                    <div
+                      key={tarea._id || index}
+                      className="flex items-center justify-between border border-slate-200 rounded-lg p-3 bg-slate-50"
+                    >
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={tarea.estado === "Completada"}
+                          onChange={() => toggleEstadoTarea(index)}
+                          className="h-4 w-4 accent-emerald-600 cursor-pointer"
+                        />
+                        <div>
+                          <p className={`text-sm font-medium ${tarea.estado === "Completada" ? "text-slate-500 line-through" : "text-slate-700"}`}>
+                            {tarea.descripcion}
+                          </p>
+                          <p className="text-xs text-slate-400 mt-1">Tipo: {tarea.tipo}</p>
+                        </div>
+                      </div>
+                      <span className={`text-xs font-semibold px-2 py-1 rounded-md ${tarea.estado === "Completada"
+                        ? "bg-green-100 text-green-700"
+                        : tarea.estado === "En Proceso"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-slate-200 text-slate-700"
+                        }`}>
+                        {tarea.estado}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                  <p className="text-sm text-slate-500">No hay tareas generadas para este pedido.</p>
+                </div>
+              )}
             </div>
+
+            {/* HISTORIAL */}
+            <div className="mb-8">
+              <button
+                onClick={() => setHistorialExpandido(!historialExpandido)}
+                className="flex items-center gap-2 w-full text-left mb-4 p-3 hover:bg-emerald-50 rounded-lg transition"
+              >
+                <span className="font-semibold text-lg text-emerald-700 flex items-center gap-2"><FiClipboard /> Historial de actividad</span>
+                <span className={`text-emerald-600 transition-transform ml-auto text-xl ${historialExpandido ? "rotate-180" : ""}`}>▼</span>
+              </button>
+
+              {historialExpandido && (
+                Array.isArray(pedido.historial) && pedido.historial.length > 0 ? (
+                  <div className="relative">
+                    <div className="absolute left-6 top-0 bottom-0 w-1 bg-gradient-to-b from-emerald-400 to-emerald-200" />
+                    <div className="space-y-4">
+                      {[...pedido.historial]
+                        .sort((a, b) => {
+                          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                          return dateB - dateA;
+                        })
+                        .map((evento, index) => (
+                          <div key={evento._id || index} className="pl-16 relative">
+                            <div className="absolute left-1.5 top-2 w-10 h-10 bg-white border-4 border-emerald-400 rounded-full flex items-center justify-center shadow-md">
+                              <div className="w-4 h-4 bg-emerald-400 rounded-full" />
+                            </div>
+
+                            <div className="border border-slate-200 rounded-xl p-4 bg-white hover:shadow-md transition-all">
+                              <div className="flex items-start justify-between mb-2 gap-2">
+                                <div className="flex items-center gap-2 flex-wrap flex-1">
+                                  {evento.accion && (
+                                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${ACCION_ESTILO[evento.accion] || "bg-slate-100 text-slate-600"}`}>
+                                      {evento.accion}
+                                    </span>
+                                  )}
+                                  <p className="font-semibold text-slate-800 break-words">{evento.descripcion}</p>
+                                </div>
+                                <span className="text-xs text-slate-400 whitespace-nowrap ml-2">
+                                  {evento.createdAt ? new Date(evento.createdAt).toLocaleString() : "—"}
+                                </span>
+                              </div>
+
+                              <p className="text-xs text-slate-500 mb-3 font-medium flex items-center gap-1">
+                                <FiUser /> {evento.usuario?.nombre} {evento.usuario?.apellido}
+                                {evento.usuario?.rol && <span className="text-emerald-600 ml-1">· {evento.usuario.rol}</span>}
+                              </p>
+
+                              {evento.cambios && Object.keys(evento.cambios).length > 0 && (
+                                <div className="mt-3 pt-3 border-t border-slate-200">
+                                  <RenderCambios cambios={evento.cambios} nombresPorId={nombresPorId} />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="border border-slate-200 rounded-lg p-6 bg-slate-50 text-center">
+                    <p className="text-sm text-slate-500">No hay actividad registrada.</p>
+                  </div>
+                )
+              )}
+            </div>
+
+            {/* COMENTARIOS */}
+            <div className="mb-8">
+              <h2 className="font-semibold text-lg text-emerald-700 mb-4 flex items-center gap-2"><FiMessageSquare /> Comentarios</h2>
+              <div className="space-y-3 mb-6">
+                {pedido.comentarios?.map((comentario) => {
+                  const esMotivRechazo = comentario.mensaje?.includes("Motivo de rechazo");
+                  return (
+                    <div
+                      key={comentario._id}
+                      className={`border rounded-xl p-4 hover:shadow-md transition-all ${esMotivRechazo
+                        ? "border-red-300 bg-gradient-to-br from-red-50 to-orange-50"
+                        : "border-slate-200 bg-gradient-to-br from-white to-slate-50"
+                        }`}
+                    >
+                      <div className="flex justify-between items-start mb-2 gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs px-2.5 py-1 rounded-full font-semibold flex items-center gap-1 ${esMotivRechazo
+                            ? "bg-red-200 text-red-700"
+                            : comentario.usuario?.rol === "ADMIN"
+                              ? "bg-purple-100 text-purple-700"
+                              : comentario.usuario?.rol === "PERSONAL"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-emerald-100 text-emerald-700"
+                            }`}>
+                            {esMotivRechazo ? <><FiAlertTriangle /> RECHAZO</> : comentario.usuario?.rol}
+                          </span>
+                          <span className={`font-semibold ${esMotivRechazo ? "text-red-700" : "text-slate-800"}`}>
+                            {comentario.usuario?.nombre} {comentario.usuario?.apellido}
+                          </span>
+                        </div>
+                        <span className={`text-xs ${esMotivRechazo ? "text-red-400" : "text-slate-400"}`}>
+                          {new Date(comentario.createdAt).toLocaleString()}
+                        </span>
+                      </div>
+                      <p className={`text-sm leading-relaxed font-medium ${esMotivRechazo ? "text-red-700" : "text-slate-700"}`}>{comentario.mensaje}</p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="border border-emerald-200 rounded-xl p-4 bg-emerald-50">
+                <p className="text-sm font-semibold text-emerald-900 mb-3">Agregar comentario</p>
+                <textarea
+                  value={nuevoComentario}
+                  onChange={(e) => setNuevoComentario(e.target.value)}
+                  rows={3}
+                  placeholder="Escribí un comentario..."
+                  className="w-full border border-emerald-300 rounded-lg p-3 text-sm text-slate-800 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                />
+                <button
+                  onClick={enviarComentario}
+                  className="mt-3 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  Comentar
+                </button>
+              </div>
+            </div>
+
+            {/* MOTIVO DE RECHAZO */}
+            {pedido.estado === "Rechazado" && pedido.motivoRechazo && (
+              <div className="mb-8 border border-red-300 bg-red-50 rounded-xl p-4 shadow-sm">
+                <p className="font-semibold text-red-700 flex items-center gap-2"><FiXCircle /> Pedido Rechazado</p>
+                <p className="text-sm text-red-600 mt-1"><strong>Motivo:</strong> {pedido.motivoRechazo}</p>
+              </div>
+            )}
+
+            {/* Fuera del panel de acciones: una acción puede mover el pedido a un estado
+                que oculta el panel y fallar después, y el error tiene que verse igual. */}
+            {errorAccion && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-300 text-red-600 text-sm rounded-xl flex justify-between items-start">
+                <span className="flex items-center gap-2"><strong className="flex items-center gap-1"><FiAlertTriangle /> Error:</strong> {errorAccion}</span>
+                <button onClick={() => setErrorAccion("")} className="ml-4 text-red-400 hover:text-red-600 font-bold text-lg"><FiX /></button>
+              </div>
+            )}
+
+            {/* PANEL DE ACCIONES (Pendientes y Aceptados) */}
+            {["Pendiente", "Aceptado"].includes(pedido.estado) && (
+              <div className="border-t border-slate-200 pt-6 flex flex-col gap-3">
+                {/* INLINE FORM: RECHAZO */}
+                {mostrarMotivRechazo && (
+                  <div className="border border-red-300 bg-red-50 rounded-xl p-4 space-y-3">
+                    <p className="text-sm font-semibold text-red-700">¿Por qué está rechazando este pedido?</p>
+                    <textarea
+                      value={motivRechazo}
+                      onChange={(e) => setMotivRechazo(e.target.value)}
+                      rows={2}
+                      placeholder="Escribí el motivo..."
+                      className="w-full border border-red-300 rounded-lg p-3 text-sm resize-none"
+                    />
+                    <div className="flex gap-2">
+                      <button onClick={() => setMostrarConfirmRechazo(true)} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold">Confirmar Rechazo</button>
+                      <button onClick={() => setMostrarMotivRechazo(false)} className="flex-1 px-4 py-2 border border-slate-300 hover:bg-slate-100 rounded-lg text-sm font-semibold">Cancelar</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* INLINE FORM: FINALIZACIÓN */}
+                {mostrarFinalizar && (
+                  <FinalizarPedidoForm
+                    consumosRequeridos={consumosRequeridos}
+                    consumosForm={consumosForm}
+                    erroresConsumo={erroresConsumo}
+                    onChangeConsumo={actualizarConsumo}
+                    cargandoReserva={cargandoReserva}
+                    errorReserva={errorReserva}
+                    onReintentarReserva={cargarReserva}
+                    recursosFinalizacion={recursosFinalizacion}
+                    formFinalizacion={formFinalizacion}
+                    onChangeRecurso={actualizarRecursoFinalizacion}
+                    errorFinalizacion={errorFinalizacion}
+                    onCerrarError={() => setErrorFinalizacion("")}
+                    bloqueado={finalizacionBloqueada}
+                    onConfirmar={() => { if (validarConsumos()) setMostrarConfirmFinalizar(true); }}
+                    onVolver={cerrarFinalizacion}
+                  />
+                )}
+
+                {/* BOTONES PRIMARIOS */}
+                {!mostrarMotivRechazo && !mostrarFinalizar && (
+                  <div className="flex flex-wrap gap-3">
+
+                    {pedido.estado === "Pendiente" && (
+                      <>
+                        <button
+                          onClick={() => setMostrarConfirmAprobacion(true)}
+                          disabled={tieneConflictos}
+                          className={`flex-1 px-4 py-2.5 flex items-center justify-center gap-2 text-white rounded-lg font-semibold shadow-md ${tieneConflictos
+                            ? "bg-gray-400 cursor-not-allowed opacity-60"
+                            : "bg-emerald-600 hover:bg-emerald-700"
+                            }`}
+                        >
+                          <FiCheckCircle /> Aprobar
+                        </button>
+                        <button onClick={() => setMostrarMotivRechazo(true)} className="flex-1 px-4 py-2.5 flex items-center justify-center gap-2 border-2 border-red-400 text-red-600 hover:bg-red-50 rounded-lg font-semibold">
+                          <FiXCircle /> Rechazar
+                        </button>
+                      </>
+                    )}
+
+                    {pedido.estado === "Aceptado" && (
+                      <button onClick={abrirFinalizacion} className="flex-1 px-4 py-2.5 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-md">
+                        <FiFlag /> Finalizar Pedido
+                      </button>
+                    )}
+
+                    {/* El botón Cancelar siempre aparece si está Pendiente o Aceptado */}
+                    <button onClick={() => setMostrarConfirmCancelar(true)}
+                      className="w-full sm:w-auto px-4 py-2.5 flex items-center justify-center gap-2 border border-slate-300 text-slate-600 hover:bg-slate-100 hover:text-slate-800 rounded-lg font-semibold transition-colors"
+                    >
+                      <FiSlash /> Cancelar
+                    </button>
+
+                  </div>
+                )}
+              </div>
+            )}
+            <ConfirmModal
+              isOpen={mostrarConfirmFinalizar}
+              onClose={() => setMostrarConfirmFinalizar(false)}
+              onConfirm={async () => {
+                await ejecutarFinalizacion();
+                setMostrarConfirmFinalizar(false);
+              }}
+              title="¿Finalizar pedido?"
+              message="El pedido será marcado como finalizado. Se registrará el consumo reportado y volverá al stock el sobrante. Esta acción no se puede deshacer."
+              confirmText="Sí, finalizar"
+              cancelText="Volver"
+              tipo="success"
+            />
+            <ConfirmModal
+              isOpen={mostrarConfirmRechazo}
+              onClose={() => setMostrarConfirmRechazo(false)}
+              onConfirm={async () => {
+                await ejecutarRechazo();
+                setMostrarConfirmRechazo(false);
+              }}
+              title="¿Rechazar pedido?"
+              message="El pedido será rechazado y el docente será notificado. Esta acción no se puede deshacer."
+              confirmText="Sí, rechazar"
+              cancelText="Volver"
+              tipo="warning"
+            />
+            <ConfirmModal
+              isOpen={mostrarConfirmCancelar}
+              onClose={() => setMostrarConfirmCancelar(false)}
+              onConfirm={async () => {
+                await cancelarPedido();
+                setMostrarConfirmCancelar(false);
+              }}
+              title="¿Cancelar pedido?"
+              message="El pedido será cancelado y se liberarán todas las reservas asociadas. Esta acción no se puede deshacer."
+              confirmText="Sí, cancelar"
+              cancelText="Volver"
+              tipo="warning"
+            />
+            <ConfirmModal
+              isOpen={mostrarConfirmAprobacion}
+              onClose={() => setMostrarConfirmAprobacion(false)}
+              onConfirm={async () => {
+                await aprobar();
+                setMostrarConfirmAprobacion(false);
+              }}
+              title="¿Aprobar pedido?"
+              message="El pedido cambiará al estado 'Aceptado' y se reservarán los recursos necesarios."
+              confirmText="Sí, aprobar"
+              cancelText="Volver"
+              tipo="success"
+            />
           </div>
-        )}
+
+        </div>
       </div>
     </div>
   );

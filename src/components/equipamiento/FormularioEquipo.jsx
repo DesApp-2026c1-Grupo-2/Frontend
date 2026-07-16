@@ -1,11 +1,79 @@
+import { useState, useEffect } from "react";
+import { obtenerEdificios } from "../../services/edificioService";
+import { obtenerLaboratoriosPorEdificio } from "../../services/laboratorioService";
+import CustomSelect from "../common/CustomSelect";
+
+const MOVILIDAD_OPTIONS = [
+  { value: "false", label: "Movible" },
+  { value: "true", label: "Fija (Asignado a un espacio)" },
+];
+
+const ESTADO_OPTIONS = [
+  { value: "disponible", label: "Disponible" },
+  { value: "mantenimiento", label: "Mantenimiento" },
+  { value: "fuera de servicio", label: "Fuera de servicio" },
+];
+
 export default function FormularioEquipo({
-  formData,
+  formData = {},
   handleChange,
   handleSubmit,
-  cerrarModal,
   errores = {},
 }) {
   const isFijo = formData.esFijo === true || String(formData.esFijo) === "true";
+
+  const [edificios, setEdificios] = useState([]);
+  const [laboratorios, setLaboratorios] = useState([]);
+  const [loadingEdificios, setLoadingEdificios] = useState(false);
+  const [loadingLaboratorios, setLoadingLaboratorios] = useState(false);
+  const [errorUbicaciones, setErrorUbicaciones] = useState("");
+
+  // Cargar edificios una sola vez, cuando el equipo pasa a "Fija"
+  useEffect(() => {
+    if (!isFijo || edificios.length > 0) return;
+
+    const cargarEdificios = async () => {
+      try {
+        setLoadingEdificios(true);
+        setErrorUbicaciones("");
+        const data = await obtenerEdificios();
+        setEdificios((data || []).filter((e) => e.estado !== false));
+      } catch (err) {
+        console.error("Error al cargar edificios:", err);
+        setErrorUbicaciones("No se pudieron cargar los edificios.");
+      } finally {
+        setLoadingEdificios(false);
+      }
+    };
+    cargarEdificios();
+  }, [isFijo, edificios.length]);
+
+  // Cargar laboratorios cada vez que cambia el edificio seleccionado
+  useEffect(() => {
+    if (!formData.edificioId) {
+      return;
+    }
+
+    const cargarLaboratorios = async () => {
+      try {
+        setLoadingLaboratorios(true);
+        setErrorUbicaciones("");
+        const data = await obtenerLaboratoriosPorEdificio(formData.edificioId);
+        setLaboratorios((data || []).filter((l) => l.estado !== "eliminado"));
+      } catch (err) {
+        console.error("Error al cargar laboratorios:", err);
+        setErrorUbicaciones("No se pudieron cargar los laboratorios de ese edificio.");
+      } finally {
+        setLoadingLaboratorios(false);
+      }
+    };
+    cargarLaboratorios();
+  }, [formData.edificioId]);
+
+  const handleEdificioChange = (e) => {
+    handleChange(e); // actualiza edificioId en el estado del padre
+    handleChange({ target: { name: "laboratorioId", value: "" } }); // resetea laboratorio
+  };
 
   const inputClass = (campo) =>
     `w-full px-3 py-2 rounded-lg border bg-white text-slate-800 focus:outline-none focus:ring-2 transition ${
@@ -16,7 +84,6 @@ export default function FormularioEquipo({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 px-3 py-3">
-      
       {/* NOMBRE */}
       <div>
         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
@@ -72,65 +139,71 @@ export default function FormularioEquipo({
           <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
             Movilidad
           </label>
-          <select
+          <CustomSelect
             name="esFijo"
             value={String(formData.esFijo)}
             onChange={handleChange}
-            className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
-          >
-            <option value="false">Movible</option>
-            <option value="true">Fija (Asignado a un espacio)</option>
-          </select>
+            options={MOVILIDAD_OPTIONS}
+          />
         </div>
 
         <div>
           <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
             Estado
           </label>
-          <select
+          <CustomSelect
             name="estado"
             value={formData.estado || "disponible"}
             onChange={handleChange}
-            className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
-          >
-            <option value="disponible">Disponible</option>
-            <option value="reservado">Reservado</option>
-            <option value="en_uso">En uso</option>
-            <option value="mantenimiento">Mantenimiento</option>
-            <option value="fuera_de_servicio">Fuera de servicio</option>
-            <option value="descartado">Descartado</option>
-          </select>
+            options={ESTADO_OPTIONS}
+          />
         </div>
       </div>
 
       {/* UBICACIÓN CONDICIONAL (EDIFICIO Y LABORATORIO) */}
       {isFijo && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 p-3 bg-slate-50 rounded-xl border border-slate-100 transition-all duration-300">
+          {errorUbicaciones && (
+            <p className="sm:col-span-2 text-red-500 text-xs">{errorUbicaciones}</p>
+          )}
+
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-              ID Edificio
+              Edificio
             </label>
-            <input
-              type="text"
+            <CustomSelect
               name="edificioId"
               value={formData.edificioId || ""}
-              onChange={handleChange}
-              placeholder="ID o nombre del edificio"
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
+              onChange={handleEdificioChange}
+              disabled={loadingEdificios}
+              placeholder={loadingEdificios ? "Cargando edificios..." : "Seleccionar edificio"}
+              options={edificios.map((edificio) => ({
+                value: edificio.id || edificio._id,
+                label: edificio.nombre,
+              }))}
             />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-              ID Laboratorio
+              Laboratorio
             </label>
-            <input
-              type="text"
+            <CustomSelect
               name="laboratorioId"
               value={formData.laboratorioId || ""}
               onChange={handleChange}
-              placeholder="ID o nombre del laboratorio"
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 transition"
+              disabled={!formData.edificioId || loadingLaboratorios}
+              placeholder={
+                !formData.edificioId
+                  ? "Elegí un edificio primero"
+                  : loadingLaboratorios
+                  ? "Cargando laboratorios..."
+                  : "Seleccionar laboratorio"
+              }
+              options={laboratorios.map((lab) => ({
+                value: lab.id || lab._id,
+                label: `${lab.nombre} · ${lab.tipo} (cap. ${lab.capacidad})`,
+              }))}
             />
           </div>
         </div>
@@ -139,21 +212,12 @@ export default function FormularioEquipo({
       {/* BOTONES */}
       <div className="flex justify-end gap-3 pt-2">
         <button
-          type="button"
-          onClick={cerrarModal}
-          className="px-3 py-2 rounded-lg text-sm border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 hover:border-slate-300 transition"
-        >
-          Cancelar
-        </button>
-
-        <button
           type="submit"
           className="px-3 py-2 rounded-lg text-sm font-medium bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm transition"
         >
           Guardar
         </button>
       </div>
-
     </form>
   );
 }

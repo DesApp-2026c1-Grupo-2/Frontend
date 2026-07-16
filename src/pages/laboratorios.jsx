@@ -94,11 +94,6 @@ export default function Laboratorios() {
     try {
       const data =
         await obtenerLaboratoriosPorEdificio(id);
- 
-        console.log("LABORATORIOS:", data);
-
-        console.log("PRIMER LAB EQUIPOS:", data[0].equiposFijos);
-      
         setLaboratorios(data);
     } catch (error) {
       console.error(error);
@@ -116,23 +111,9 @@ export default function Laboratorios() {
 
       const data = await obtenerEquipos();
 
-      console.log("EQUIPOS RAW:", data);
-
       const equiposFijos = data.filter(
         (eq) => eq.esFijo && eq.laboratorioId
       );
-
-      console.log("EQUIPOS FILTRADOS:", equiposFijos);
-
-      equiposFijos.forEach((eq) => {
-        console.log(
-          "Equipo:",
-          eq.nombre,
-          "-> Laboratorio:",
-          eq.laboratorioId?.nombre
-        );
-      });
-
 
       setEquipos(equiposFijos);
     } catch (error) {
@@ -580,37 +561,17 @@ export default function Laboratorios() {
                           Sin equipos registrados
                         </span>
                       ) : (
-                        <div className="flex-wrap">
-                          <p className="text-xs font-semibold text-slate-500 mb-2">
-                            Equipo fijo instalado: 
-                          </p>
-                          {equiposVisibles.map((eq) => (
-                            <span
-                              key={eq.id}
-                              className="
-                                px-2 py-1
-                                rounded-lg
-                                bg-emerald-100
-                                text-emerald-700
-                                text-xs
-                              "
-                            >
+                        <div className="flex flex-wrap gap-x-2 gap-y-1 text-xs text-emerald-600">
+                          {equiposVisibles.map((eq, index) => (
+                            <span key={eq.id}>
                               {eq.nombre}
+                              {index < equiposVisibles.length - 1 && " •"}
                             </span>
                           ))}
 
                           {equiposRestantes > 0 && (
-                            <span
-                              className="
-                                px-2 py-1
-                                rounded-lg
-                                bg-emerald-100
-                                text-emerald-700
-                                text-xs
-                                font-medium
-                              "
-                            >
-                              +{equiposRestantes} más...
+                            <span className="font-medium text-slate-700">
+                              •+ {equiposRestantes} más
                             </span>
                           )}
                         </div>

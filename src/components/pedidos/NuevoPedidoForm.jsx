@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import api from "../../api/axios";
+import { getAllItems, getAllEquipos } from "../../services/equipamiento";
 import { useAuth } from "../../context/AuthContext";
-import { FiX, FiLoader, FiCheckCircle } from "react-icons/fi";
+import { FiX, FiLoader, FiCheckCircle, FiChevronDown } from "react-icons/fi";
 
 const STEPS = ["Datos Básicos", "Recursos", "Resumen", "Enviado"];
 
@@ -15,9 +16,18 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
   const [actividades, setActividades] = useState([]);
   const [actividadPlantilla, setActividadPlantilla] = useState("");
   const [cargandoSugerencias, setCargandoSugerencias] = useState(false);
+  const [tipoActividadSeleccionada, setTipoActividadSeleccionada] = useState(null);
+  // Set de IDs de laboratorios NO disponibles en el horario seleccionado
+  const [labsNoDisponibles, setLabsNoDisponibles] = useState(new Set());
   const [errorSubmit, setErrorSubmit] = useState("");
   const [estadoEnvio, setEstadoEnvio] = useState(null);
   const [errores, setErrores] = useState({});
+  const [seccionesExpandidas, setSeccionesExpandidas] = useState({
+    Equipo: false,
+    Material: false,
+    Reactivo: false,
+    Sustancia: false,
+  });
 
   const [form, setForm] = useState({
     materia: "", 
@@ -31,6 +41,24 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
   });
 
   const alumnos = Number(form.alumnos || 0);
+
+  // Auto-expandir secciones cuando hay recursos seleccionados en ellas
+  useEffect(() => {
+    if (form.recursos.length > 0) {
+      setSeccionesExpandidas((prev) => {
+        const next = { ...prev };
+        let cambio = false;
+        form.recursos.forEach((r) => {
+          const key = r.tipoRecurso === "Equipo" ? "Equipo" : r.tipoDetalle;
+          if (key && !next[key]) {
+            next[key] = true;
+            cambio = true;
+          }
+        });
+        return cambio ? next : prev;
+      });
+    }
+  }, [form.recursos]);
 
   // Calcula la duración de la clase (en minutos) a partir de la hora de inicio y fin
   const calcularDuracionClase = (hora, horaFin) => {
@@ -51,8 +79,8 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
         const [labsRes, usersRes, equiposRes, itemsRes, actividadesRes] = await Promise.allSettled([
           api.get("/laboratorio"),
           api.get("/usuarios"),
-          api.get("/equipo"),
-          api.get("/items"),
+          getAllEquipos(),
+          getAllItems(),
           api.get("/actividades")
         ]);
 
@@ -83,17 +111,16 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
         let recursosRecopilados = [];
         
         if (equiposRes.status === "fulfilled") {
-          const equipos = equiposRes.value.data
+          const equipos = equiposRes.value
             .filter(e => e.estado === "disponible") // Traemos solo equipos disponibles
-            .map(e => ({ ...e, tipoRecurso: "Equipo", tipoDetalle: "Equipo" }));
+            .map(e => ({ ...e, tipoRecurso: "Equipo", tipoDetalle: "Equipo", cantidadDisponible: 1 }));
           recursosRecopilados = [...recursosRecopilados, ...equipos];
         }
-        
+
         if (itemsRes.status === "fulfilled") {
-          const items = itemsRes.value.data.map(i => ({
+          const items = itemsRes.value.map(i => ({
             ...i,
             tipoRecurso: "Item",
-            // Joi Schema requiere mayúscula inicial en el campo "tipo" -> "Material", "Reactivo", "Sustancia"
             tipoDetalle: i.tipo ? (i.tipo.charAt(0).toUpperCase() + i.tipo.slice(1)) : "Material"
           }));
           recursosRecopilados = [...recursosRecopilados, ...items];
@@ -126,17 +153,22 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
         const fechaFin = `${form.fecha}T${form.horaFin}`;
 
         const { data } = await api.get("/laboratorio/disponibles-horario", {
-          params: {
-            fechaHora,
-            fechaFin,
-            alumnos: form.alumnos,
-          },
+          params: { fechaHora, fechaFin, alumnos: form.alumnos },
         });
 
         setLaboratorios(data);
 
-        // Si el laboratorio seleccionado dejó de estar disponible para el nuevo
-        // horario/cantidad de alumnos, lo deseleccionamos para evitar un ID inconsistente.
+        // Calcular qué labs NO están disponibles comparando contra todos los labs
+        // (los que no aparecen en "disponibles" están ocupados en ese horario)
+        const todosLabs = await api.get("/laboratorio");
+        const idsDisponibles = new Set(data.map((l) => (l._id || l.id).toString()));
+        const idsNoDisponibles = new Set(
+          todosLabs.data
+            .map((l) => (l._id || l.id).toString())
+            .filter((id) => !idsDisponibles.has(id))
+        );
+        setLabsNoDisponibles(idsNoDisponibles);
+
         if (form.laboratorio) {
           const sigueDisponible = data.some(
             (l) => (l._id || l.id) === form.laboratorio
@@ -168,38 +200,56 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
   };
 
   const toggleRecurso = (recurso) => {
-
     if (errores.recursos) {
-      setErrores((prev) => ({
-        ...prev,
-        recursos: undefined,
-      }));
+      setErrores((prev) => ({ ...prev, recursos: undefined }));
     }
 
-    setForm((prev) => {
-      const recursoId = recurso._id || recurso.id;
+    const recursoId = recurso._id || recurso.id;
+    const yaSeleccionado = form.recursos.some((r) => (r._id || r.id) === recursoId);
 
-      const existe = prev.recursos.some(
-        (r) => (r._id || r.id) === recursoId
-      );
+    // Si lo está destildando, simplemente sacarlo
+    if (yaSeleccionado) {
+      setForm((prev) => ({
+        ...prev,
+        recursos: prev.recursos.filter((r) => (r._id || r.id) !== recursoId),
+      }));
+      return;
+    }
 
-      if (existe) {
-        return {
-          ...prev,
-          recursos: prev.recursos.filter(
-            (r) => (r._id || r.id) !== recursoId
-          ),
-        };
-      } else {
-        return {
-          ...prev,
-          recursos: [
-            ...prev.recursos,
-            { ...recurso, cantidad: 1, deLaPlantilla: false },
-          ],
-        };
+    // Equipos fijos: verificar disponibilidad del lab en la fecha elegida
+    if (recurso?.esFijo) {
+      const labId = (recurso.laboratorioId?._id || recurso.laboratorioId?.id || recurso.laboratorioId)?.toString();
+
+      // Si ya hay un lab seleccionado y este equipo fijo pertenece a otro → bloquear
+      if (form.laboratorio && labId && labId !== form.laboratorio.toString()) {
+        return; // el render ya lo muestra deshabilitado, no hacer nada
       }
-    });
+
+      // Si el lab del equipo no está disponible en la fecha seleccionada → mostrar error inline
+      if (labId && labsNoDisponibles.has(labId)) {
+        setErrores((prev) => ({
+          ...prev,
+          [`recurso_${recursoId}`]: `El laboratorio de este equipo no está disponible en la fecha y hora seleccionadas.`,
+        }));
+        return;
+      }
+
+      // Auto-asignar el laboratorio del equipo fijo si no hay ninguno seleccionado
+      if (!form.laboratorio && labId) {
+        setForm((prev) => ({
+          ...prev,
+          laboratorio: labId,
+          recursos: [...prev.recursos, { ...recurso, cantidad: 1, deLaPlantilla: false }],
+        }));
+        return;
+      }
+    }
+
+    // Caso general: agregar el recurso
+    setForm((prev) => ({
+      ...prev,
+      recursos: [...prev.recursos, { ...recurso, cantidad: 1, deLaPlantilla: false }],
+    }));
   };
 
   const actualizarCantidad = (idRecurso, nuevaCantidad) => {
@@ -212,6 +262,21 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
       )
     }));
   };
+
+  // Tipos de laboratorio compatibles con cada tipo de actividad.
+  // "teorica" puede darse en cualquier laboratorio (sin restricción de tipo).
+  const labsCompatibles = (tipoActividad) => {
+    if (!tipoActividad || tipoActividad === "teorica") return laboratorios;
+    return laboratorios.filter(
+      (l) => l.tipo === tipoActividad || l.tipo === "mixto"
+    );
+  };
+
+  // Labs que se muestran en el selector: si hay una actividad elegida, filtrados;
+  // si no, todos los disponibles.
+  const laboratoriosFiltrados = tipoActividadSeleccionada
+    ? labsCompatibles(tipoActividadSeleccionada)
+    : laboratorios;
 
   // Aplica una actividad como plantilla: trae los recursos sugeridos para su
   // tipo y los pre-selecciona (con su cantidad sugerida) en el formulario,
@@ -226,9 +291,21 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
     setForm((prev) => ({
       ...prev,
       recursos: prev.recursos.filter((r) => !r.deLaPlantilla),
+      // Si cambia el tipo de actividad, resetear el laboratorio seleccionado
+      // para evitar inconsistencias (el lab previo puede no ser compatible)
+      laboratorio: "",
     }));
 
-    if (!actividadId) return;
+    if (!actividadId) {
+      setTipoActividadSeleccionada(null);
+      return;
+    }
+
+    // Guardar el tipo de la actividad elegida para filtrar los labs
+    const actividadElegida = actividades.find(
+      (a) => (a._id || a.id) === actividadId
+    );
+    setTipoActividadSeleccionada(actividadElegida?.tipo || null);
 
     setCargandoSugerencias(true);
     try {
@@ -280,6 +357,7 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
 
 
   const handleSiguiente = () => {
+    setErrorSubmit("");
     if (step === 0) {
       const nuevosErrores = {};
 
@@ -307,6 +385,20 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
 
       if (!calcularDuracionClase(form.hora, form.horaFin)) {
         erroresExtra.horaFin = "La hora de finalización debe ser posterior a la hora de inicio.";
+      }
+
+      if (form.hora) {
+        const [h, m] = form.hora.split(':').map(Number);
+        if (h < 8 || h > 21 || (h === 21 && m > 0)) {
+          erroresExtra.hora = "La hora de inicio debe ser entre las 08:00 y las 21:00.";
+        }
+      }
+
+      if (form.horaFin) {
+        const [h, m] = form.horaFin.split(':').map(Number);
+        if (h > 22 || (h === 22 && m > 0)) {
+          erroresExtra.horaFin = "La hora de finalización máxima es a las 22:00.";
+        }
       }
 
       const hoy = new Date();
@@ -393,16 +485,16 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/40 backdrop-blur-sm p-4">
-      <div className="bg-white border border-zinc-200 rounded-2xl w-full max-w-2xl shadow-xl relative">
+      <div className="bg-white border border-zinc-200 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-xl relative">
         {/* CRUZ */}
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 text-zinc-400 hover:text-zinc-700 text-xl"
+          className="sticky top-3 ml-auto mr-3 z-10 text-zinc-400 hover:text-zinc-700"
         >
           <FiX size={20} />
         </button>
 
-        <div className="px-8 pt-6 pb-4">
+        <div className="flex-1 overflow-y-auto px-8 pt-6 pb-4">
            
           {/* Stepper */}
           <div className="flex items-center mb-6">
@@ -549,37 +641,6 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
                 )}
               </div>
               
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-zinc-600 mb-1">Laboratorio</label>
-                <select
-                  value={form.laboratorio}
-                  onChange={set("laboratorio")}
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm"
-                >
-                  <option value="">Seleccionar laboratorio...</option>
-
-                  {laboratorios.map((l) => {
-                    const noDisponible = alumnos > l.capacidad;
-
-                    return (
-                      <option
-                        key={l._id || l.id}
-                        value={l._id || l.id}
-                        disabled={noDisponible}
-                      >
-                        {l.nombre} (Cap: {l.capacidad})
-                        {noDisponible ? " - NO DISPONIBLE" : ""}
-                      </option>
-                    );
-                  })}
-                </select>
-                <p className="text-xs text-zinc-400 mt-1">
-                  Si no seleccionás un laboratorio, el equipo de gestión asignará uno disponible antes de aprobar el pedido.
-                </p>
-                {errores.laboratorio && (
-                  <p className="text-red-500 text-xs mt-1">{errores.laboratorio}</p>
-                )}
-              </div>
             </div>
           )}
 
@@ -590,27 +651,109 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
               </p>
 
               {actividades.length > 0 && (
-                <div className="bg-emerald-50/60 border border-emerald-100 rounded-xl px-4 py-3">
-                  <label className="block text-sm font-medium text-zinc-600 mb-1">
-                    Usar actividad como plantilla (opcional)
-                  </label>
+                <div className="bg-emerald-50/60 border border-emerald-100 rounded-xl px-4 py-3 space-y-3">
+
+                  {/* PLANTILLA */}
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-600 mb-1">
+                      Usar actividad como plantilla (opcional)
+                    </label>
+                    <select
+                      value={actividadPlantilla}
+                      onChange={(e) => aplicarPlantilla(e.target.value)}
+                      className="w-full bg-white border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all"
+                    >
+                      <option value="">Sin plantilla...</option>
+                      {actividades.map((a) => (
+                        <option key={a._id || a.id} value={a._id || a.id}>
+                          {a.nombre} ({a.tipo})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-zinc-400 mt-1">
+                      Precarga los recursos sugeridos para el tipo de actividad elegido. Podés seguir agregando, quitando o ajustando cantidades después.
+                    </p>
+                    {cargandoSugerencias && (
+                      <p className="text-xs text-emerald-600 mt-1">Cargando recursos sugeridos...</p>
+                    )}
+                  </div>
+
+                  {/* LABORATORIO — filtrado según tipo de actividad */}
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-600 mb-1">
+                      Laboratorio
+                      {tipoActividadSeleccionada && tipoActividadSeleccionada !== "teorica" && (
+                        <span className="ml-2 text-xs text-emerald-600 font-normal">
+                          (mostrando compatibles con actividad de tipo "{tipoActividadSeleccionada}")
+                        </span>
+                      )}
+                      {tipoActividadSeleccionada === "teorica" && (
+                        <span className="ml-2 text-xs text-emerald-600 font-normal">
+                          (clase teórica — todos los laboratorios disponibles)
+                        </span>
+                      )}
+                    </label>
+                    <select
+                      value={form.laboratorio}
+                      onChange={set("laboratorio")}
+                      className={`w-full bg-white border rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all ${
+                        errores.laboratorio ? "border-red-400" : "border-zinc-200"
+                      }`}
+                    >
+                      <option value="">Sin laboratorio asignado...</option>
+                      {laboratoriosFiltrados.map((l) => {
+                        const noDisponible = alumnos > l.capacidad;
+                        return (
+                          <option
+                            key={l._id || l.id}
+                            value={l._id || l.id}
+                            disabled={noDisponible}
+                          >
+                            {l.nombre} — Cap: {l.capacidad}
+                            {l.tipo ? ` · ${l.tipo}` : ""}
+                            {noDisponible ? " — SIN CAPACIDAD" : ""}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <p className="text-xs text-zinc-400 mt-1">
+                      {tipoActividadSeleccionada && tipoActividadSeleccionada !== "teorica"
+                        ? `Solo se muestran laboratorios de tipo "${tipoActividadSeleccionada}" o "mixto". Si no elegís uno, el equipo de gestión asignará uno antes de aprobar.`
+                        : "Si no elegís un laboratorio, el equipo de gestión asignará uno antes de aprobar el pedido."}
+                    </p>
+                    {errores.laboratorio && (
+                      <p className="text-red-500 text-xs mt-1">{errores.laboratorio}</p>
+                    )}
+                  </div>
+
+                </div>
+              )}
+
+              {actividades.length === 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-zinc-600 mb-1">Laboratorio</label>
                   <select
-                    value={actividadPlantilla}
-                    onChange={(e) => aplicarPlantilla(e.target.value)}
-                    className="w-full bg-white border border-zinc-200 rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all"
+                    value={form.laboratorio}
+                    onChange={set("laboratorio")}
+                    className={`w-full bg-zinc-50 border rounded-xl px-3 py-2 text-zinc-800 text-sm focus:outline-none focus:border-emerald-500 transition-all ${
+                      errores.laboratorio ? "border-red-400" : "border-zinc-200"
+                    }`}
                   >
-                    <option value="">Sin plantilla...</option>
-                    {actividades.map((a) => (
-                      <option key={a._id || a.id} value={a._id || a.id}>
-                        {a.nombre} ({a.tipo})
-                      </option>
-                    ))}
+                    <option value="">Sin laboratorio asignado...</option>
+                    {laboratorios.map((l) => {
+                      const noDisponible = alumnos > l.capacidad;
+                      return (
+                        <option key={l._id || l.id} value={l._id || l.id} disabled={noDisponible}>
+                          {l.nombre} — Cap: {l.capacidad}{noDisponible ? " — SIN CAPACIDAD" : ""}
+                        </option>
+                      );
+                    })}
                   </select>
                   <p className="text-xs text-zinc-400 mt-1">
-                    Precarga los recursos sugeridos para el tipo de actividad elegido. Podés seguir agregando, quitando o ajustando cantidades después.
+                    Si no elegís un laboratorio, el equipo de gestión asignará uno antes de aprobar el pedido.
                   </p>
-                  {cargandoSugerencias && (
-                    <p className="text-xs text-emerald-600 mt-1">Cargando recursos sugeridos...</p>
+                  {errores.laboratorio && (
+                    <p className="text-red-500 text-xs mt-1">{errores.laboratorio}</p>
                   )}
                 </div>
               )}
@@ -624,39 +767,125 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
               )}
 
               <div className="max-h-[40vh] overflow-y-auto grid grid-cols-1 gap-2 pr-2">
-                {recursosDB.map((r, i) => {
-                  const seleccionado = form.recursos.find(rec => (rec._id || rec.id) === (r._id || r.id));
-                  
-                  return (
-                    <div key={i} className="flex items-center justify-between bg-white hover:bg-emerald-50 rounded-xl px-4 py-3 border border-zinc-200 hover:border-emerald-200 transition-colors group">
-                      
-                      {/* Lado Izquierdo: Checkbox y Texto (clickable) */}
-                      <label className="flex items-center gap-3 cursor-pointer flex-1">
-                        <input 
-                          type="checkbox" 
-                          className="accent-emerald-500 w-4 h-4"
-                          checked={!!seleccionado}
-                          onChange={() => toggleRecurso(r)}
-                        />
-                        <div className="flex flex-col">
-                          <span className="text-zinc-700 text-sm font-medium group-hover:text-emerald-800">
-                            {r.nombre} {r.tipoRecurso === 'Equipo' ? '(Disponible)' : ''}
-                          </span>
-                          <span className="text-zinc-400 text-xs">{r.tipoDetalle}</span>
-                        </div>
-                      </label>
+                {[
+                  { key: "Equipo",    label: "Equipos",           icono: "🔬" },
+                  { key: "Material",  label: "Materiales",         icono: "🧪" },
+                  { key: "Reactivo",  label: "Reactivos",          icono: "⚗️"  },
+                  { key: "Sustancia", label: "Sustancias básicas", icono: "🧫" },
+                ].map(({ key, label, icono }) => {
+                  const grupo = recursosDB.filter((r) =>
+                    key === "Equipo" ? r.tipoRecurso === "Equipo" : r.tipoDetalle === key
+                  );
+                  if (grupo.length === 0) return null;
 
-                      {/* Lado Derecho: Input de cantidad (solo aparece si está tildado) */}
-                      {seleccionado && (
-                        <div className="flex items-center gap-2 ml-4">
-                          <span className="text-xs text-zinc-500 font-medium">Cant:</span>
-                          <input 
-                            type="number" 
-                            min="1" 
-                            value={seleccionado.cantidad} 
-                            onChange={(e) => actualizarCantidad(r._id || r.id, e.target.value)}
-                            className="w-16 bg-zinc-50 border border-zinc-300 rounded-lg px-2 py-1 text-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all text-center shadow-sm"
-                          />
+                  const expandido = seccionesExpandidas[key];
+
+                  return (
+                    <div key={key} className="mb-3 border border-zinc-150 rounded-xl overflow-hidden shadow-sm">
+                      <button
+                        type="button"
+                        onClick={() => setSeccionesExpandidas(prev => ({ ...prev, [key]: !prev[key] }))}
+                        className="w-full flex items-center justify-between px-4 py-3 bg-zinc-50 hover:bg-zinc-100 transition-colors text-left focus:outline-none select-none"
+                      >
+                        <span className="text-sm font-semibold text-zinc-700 flex items-center gap-2">
+                          <span>{icono}</span> {label}
+                          <span className="text-xs font-normal text-zinc-400 bg-zinc-200/60 px-2 py-0.5 rounded-full">
+                            {grupo.length}
+                          </span>
+                        </span>
+                        <FiChevronDown className={`h-4 w-4 text-slate-450 transition-transform duration-200 ${expandido ? "rotate-180" : ""}`} />
+                      </button>
+
+                      {expandido && (
+                        <div className="p-3 bg-white space-y-2 border-t border-zinc-100">
+                          {grupo.map((r, i) => {
+                            const recursoId = r._id || r.id;
+                            const seleccionado = form.recursos.find(rec => (rec._id || rec.id) === recursoId);
+                            const labDelEquipo = r?.esFijo ? (r.laboratorioId?.nombre || null) : null;
+                            const labIdDelEquipo = r?.esFijo
+                              ? (r.laboratorioId?._id || r.laboratorioId?.id || r.laboratorioId)?.toString()
+                              : null;
+                            const bloqueadoPorLabDistinto =
+                              r?.esFijo && form.laboratorio && labIdDelEquipo &&
+                              labIdDelEquipo !== form.laboratorio.toString();
+                            const labNoDisponibleEnFecha =
+                              r?.esFijo && labIdDelEquipo && labsNoDisponibles.has(labIdDelEquipo);
+                            const sinStock = r.tipoRecurso === "Item" && (r.cantidadDisponible ?? 0) === 0;
+                            const bloqueado = bloqueadoPorLabDistinto || sinStock;
+                            const errorEsteRecurso = errores[`recurso_${recursoId}`];
+
+                            return (
+                              <div key={i} className={`flex flex-col rounded-xl px-4 py-3 border transition-colors group mb-1 ${
+                                bloqueado
+                                  ? "bg-zinc-50 border-zinc-200 opacity-50"
+                                  : "bg-white hover:bg-emerald-50 border-zinc-200 hover:border-emerald-200"
+                              }`}>
+                                <div className="flex items-center justify-between">
+                                  <label className={`flex items-center gap-3 flex-1 ${bloqueado ? "cursor-not-allowed" : "cursor-pointer"}`}>
+                                    <input
+                                      type="checkbox"
+                                      className="accent-emerald-500 w-4 h-4"
+                                      checked={!!seleccionado}
+                                      disabled={bloqueado}
+                                      onChange={() => toggleRecurso(r)}
+                                    />
+                                    <div className="flex flex-col">
+                                      <span className={`text-sm font-medium ${bloqueado ? "text-zinc-400" : "text-zinc-700 group-hover:text-emerald-800"}`}>
+                                        {r.nombre}
+                                        {r?.esFijo ? " • Fijo" : ""}
+                                      </span>
+                                      <span className="text-zinc-500 text-sm flex items-center gap-1.5 flex-wrap mt-0.5">
+                                        <span>{r.tipoDetalle}</span>
+                                        {r.unidad && (
+                                          <span className="text-zinc-800 text-sm font-bold bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-lg shadow-sm">
+                                            {r.unidad}
+                                          </span>
+                                        )}
+                                        {r.tipoRecurso === "Item" && (
+                                          <span className={sinStock ? "text-red-500 font-semibold" : "text-slate-600 font-medium"}>
+                                            · Stock: {r.cantidadDisponible ?? 0}
+                                          </span>
+                                        )}
+                                      </span>
+                                      {r?.esFijo && labDelEquipo && (
+                                        <span className="text-xs mt-0.5 text-zinc-400">
+                                          {bloqueadoPorLabDistinto
+                                            ? `Pertenece a: ${labDelEquipo} (incompatible con lab seleccionado)`
+                                            : `Laboratorio: ${labDelEquipo}${!form.laboratorio && !labNoDisponibleEnFecha ? " · se asignará automáticamente" : ""}`
+                                          }
+                                        </span>
+                                      )}
+                                      {sinStock && (
+                                        <span className="text-red-400 text-xs mt-0.5">Sin stock disponible</span>
+                                      )}
+                                    </div>
+                                  </label>
+
+                                  {seleccionado && (
+                                    <div className="flex items-center gap-2 ml-4">
+                                      <span className="text-xs text-zinc-500 font-medium">Cant:</span>
+                                      <input
+                                        type="number"
+                                        min="1"
+                                        value={seleccionado.cantidad}
+                                        onChange={(e) => actualizarCantidad(recursoId, e.target.value)}
+                                        className="w-16 bg-zinc-50 border border-zinc-300 rounded-lg px-2 py-1 text-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all text-center shadow-sm"
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+
+                                {errorEsteRecurso && (
+                                  <p className="text-red-500 text-xs mt-1.5 ml-7">{errorEsteRecurso}</p>
+                                )}
+                                {labNoDisponibleEnFecha && !errorEsteRecurso && form.fecha && (
+                                  <p className="text-amber-500 text-xs mt-1.5 ml-7">
+                                    El laboratorio de este equipo no está disponible en la fecha y hora seleccionadas.
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -667,7 +896,7 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
           )}
 
           {step === 2 && (
-            <div className="space-y-1 bg-zinc-50 p-6 rounded-2xl border border-zinc-100">
+            <div className="space-y-1 bg-zinc-50 p-6 rounded-2xl border border-zinc-100 max-h-[50vh] overflow-y-auto">
               <p className="text-zinc-400 text-xs uppercase tracking-wider font-bold mb-4">Resumen del pedido</p>
               {[
                 ["Materia", form.materia || "—"],
@@ -717,7 +946,7 @@ export default function NuevoPedidoForm({ onClose, onCrear }) {
         </div>
         
         <div className="flex justify-between px-8 py-5 border-t border-zinc-100 bg-zinc-50/50 rounded-b-2xl">
-          <button onClick={step === 0 ? onClose : () => setStep(s => s - 1)}
+          <button onClick={step === 0 ? onClose : () => { setStep(s => s - 1); setErrorSubmit(""); }}
             className="px-5 py-2 rounded-xl text-sm font-medium text-zinc-600 border border-zinc-200 bg-white hover:bg-zinc-50 hover:text-zinc-800 transition-all shadow-sm">
             {step === 0 ? "Cancelar" : "Anterior"}
           </button>

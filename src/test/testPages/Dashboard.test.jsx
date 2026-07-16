@@ -9,12 +9,8 @@ vi.mock('../../context/AuthContext', () => ({
 
 vi.mock('../../services/useDashboardData', () => ({
   usePedidos: vi.fn(),
-  useEquipamiento: vi.fn(),
-  useMateriales: vi.fn()
-}));
-
-vi.mock('../../services/useCalendarReservas', () => ({
-  useCalendarReservas: vi.fn()
+  useMateriales: vi.fn(),
+  useUsoEquipos: vi.fn()
 }));
 
 // Simplificamos AppLayout
@@ -22,14 +18,17 @@ vi.mock('../../components/AppLayout', () => ({
   AppLayout: ({ children }) => <div data-testid="app-layout">{children}</div>
 }));
 
-// Simplificamos LabCalendar
-vi.mock('../../components/LabCalendar', () => ({
-  LabCalendar: () => <div data-testid="lab-calendar">Calendar Mock</div>
+// El calendario y las stats de usuarios pegan a la API por su cuenta.
+vi.mock('../../components/dashboard/DashboardCalendario', () => ({
+  default: () => <div data-testid="dashboard-calendario">Calendar Mock</div>
+}));
+
+vi.mock('../../components/dashboard/UsuariosStatsCard', () => ({
+  default: () => <div data-testid="usuarios-stats">Usuarios Mock</div>
 }));
 
 import { useAuth } from '../../context/AuthContext';
-import { usePedidos, useEquipamiento, useMateriales } from '../../services/useDashboardData';
-import { useCalendarReservas } from '../../services/useCalendarReservas';
+import { usePedidos, useMateriales, useUsoEquipos } from '../../services/useDashboardData';
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -44,38 +43,54 @@ describe('Dashboard Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    useAuth.mockReturnValue({ user: { nombre: 'Test', email: 'test@test.com', rol: 'ADMIN' } });
+    useAuth.mockReturnValue({ user: { nombre: 'Test', email: 'test@test.com', rol: 'PERSONAL' } });
     usePedidos.mockReturnValue({ pedidos: [], loading: false });
-    useEquipamiento.mockReturnValue({ equipamiento: [], loading: false });
     useMateriales.mockReturnValue({ materiales: [], loading: false });
-    useCalendarReservas.mockReturnValue({ eventosLabCalendar: [], loading: false, handleDateRangeChange: vi.fn(), dateRange: { start: '', end: '' } });
+    useUsoEquipos.mockReturnValue({ estadisticas: { equipos: [], desde: null, hasta: null, paginacion: {} }, loading: false });
   });
 
-  test('renderiza correctamente las métricas y componentes si el usuario tiene rol válido', () => {
+  test('renderiza las métricas de pedidos, el calendario y el equipamiento para PERSONAL', () => {
     render(
       <MemoryRouter>
         <Dashboard />
       </MemoryRouter>
     );
 
-    expect(screen.getByText('TOTAL DE PEDIDOS')).toBeInTheDocument();
-    expect(screen.getByText('PEDIDOS APROBADOS')).toBeInTheDocument();
-    expect(screen.getByText('USO DE EQUIPOS')).toBeInTheDocument();
-    expect(screen.getByText('ALERTA DE STOCK')).toBeInTheDocument();
-    expect(screen.getByTestId('lab-calendar')).toBeInTheDocument();
+    expect(screen.getByText('Total de pedidos')).toBeInTheDocument();
+    expect(screen.getByText('Pedidos aprobados')).toBeInTheDocument();
+    expect(screen.getByText('Uso de equipos')).toBeInTheDocument();
+    expect(screen.getByText('Alerta de stock')).toBeInTheDocument();
+    expect(screen.getByTestId('dashboard-calendario')).toBeInTheDocument();
   });
 
-  test('muestra mensaje de bienvenida en lugar del dashboard si el rol no es válido', () => {
+  test('el DOCENTE ve bienvenida y pedidos, pero no la sección de equipamiento', () => {
     useAuth.mockReturnValue({ user: { nombre: 'Test', email: 'test@test.com', rol: 'DOCENTE' } });
-    
+
     render(
       <MemoryRouter>
         <Dashboard />
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/¡Bienvenido, Test!/i)).toBeInTheDocument();
-    expect(screen.getByText('Desde el menú podés acceder a todas tus opciones operativas.')).toBeInTheDocument();
-    expect(screen.queryByText('TOTAL DE PEDIDOS')).not.toBeInTheDocument();
+    expect(screen.getByText(/Hola, Test/i)).toBeInTheDocument();
+    expect(
+      screen.getByText('Consultá tus pedidos y las reservas de cada laboratorio para organizar tus clases.')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Total de pedidos')).toBeInTheDocument();
+    expect(screen.queryByText('Uso de equipos')).not.toBeInTheDocument();
+  });
+
+  test('el ADMIN ve las stats de usuarios en lugar de las métricas de pedidos', () => {
+    useAuth.mockReturnValue({ user: { nombre: 'Test', email: 'test@test.com', rol: 'ADMIN' } });
+
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('Panel de administración')).toBeInTheDocument();
+    expect(screen.getByTestId('usuarios-stats')).toBeInTheDocument();
+    expect(screen.queryByText('Total de pedidos')).not.toBeInTheDocument();
   });
 });

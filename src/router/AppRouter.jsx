@@ -4,15 +4,19 @@ import PrivateRoute from "../components/PrivateRoute";
 import RoleProtectedRoute from "../components/RoleProtectedRoute";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 
-import Landing from "../pages/Landing"; // ← NUEVA pantalla de inicio
+import Landing from "../pages/landing"; // ← NUEVA pantalla de inicio
 import Dashboard from "../pages/Dashboard"; /*PRUEBA */
 import Pedidos from "../pages/pedidos";
 import Equipamiento from "../pages/equipamiento";
+import Historial from "../pages/historial";
 import LogIn from "../pages/logIn";
 import RegistroForm from "../pages/RegistroForm";
 import Edificios from "../pages/edificios";
 import Laboratorios from "../pages/laboratorios";
 import PedidoDetalle from "../pages/pedidoDetalle";
+import Calendario from "../pages/calendario";
+import AprobacionUsuarios from "../pages/aprobacionUsuarios";
+import Actividades from "../pages/actividades";
 
 function AppRouter() {
   return (
@@ -30,6 +34,7 @@ function AppRouter() {
           <Route element={<PrivateRoute />}>
             <Route element={<Layout />}>
               <Route path="/dashboard" element={<Dashboard />} /> {/*PRUEBA: dashboard  */}
+              <Route path="/calendario" element={<Calendario />} />
               <Route path="/pedidos" element={<Pedidos />} />
               <Route path="/pedidos/:id" element={<PedidoDetalle />} />
 
@@ -37,8 +42,16 @@ function AppRouter() {
               <Route element={<RoleProtectedRoute allowedRoles={["ADMIN", "PERSONAL"]} />}>
                 <Route path="/" element={<Edificios />} />
                 <Route path="/edificios/:id/laboratorios" element={<Laboratorios />} />
+                <Route path="/calendario" element={<Calendario />} />
                 <Route path="/edificios" element={<Edificios />} />
                 <Route path="/equipamiento" element={<Equipamiento />} />
+                <Route path="/historial" element={<Historial />} />
+                <Route path="/actividades" element={<Actividades />} />
+              </Route>
+
+              {/* RUTA SOLO ADMIN */}
+              <Route element={<RoleProtectedRoute allowedRoles={["ADMIN"]} />}>
+                <Route path="/aprobacion-usuarios" element={<AprobacionUsuarios />} />
               </Route>
             </Route>
           </Route>

@@ -48,11 +48,23 @@ vi.mock('../../components/laboratorios/LaboratorioModal', () => ({
           value={formData.nombre} 
           onChange={handleChange} 
         />
-        <input 
-          data-testid="input-checkbox" 
-          type="checkbox" 
-          name="esActivo" 
-          onChange={handleChange} 
+        <input
+          data-testid="input-capacidad"
+          name="capacidad"
+          value={formData.capacidad}
+          onChange={handleChange}
+        />
+        <input
+          data-testid="input-tipo"
+          name="tipo"
+          value={formData.tipo}
+          onChange={handleChange}
+        />
+        <input
+          data-testid="input-checkbox"
+          type="checkbox"
+          name="esActivo"
+          onChange={handleChange}
         />
         <button onClick={cerrarModal}>Cerrar Modal</button>
         <button onClick={(e) => { e.preventDefault(); handleSubmit(e); }}>Guardar</button>
@@ -149,8 +161,11 @@ describe('Laboratorios Page Component', () => {
     fireEvent.click(screen.getByText('+ Nuevo laboratorio'));
     expect(screen.getByTestId('mock-modal')).toBeInTheDocument();
 
-    // Simular escritura para cobertura de `handleChange` (input text y checkbox)
+    // Simular escritura para cobertura de `handleChange` (input text y checkbox).
+    // nombre, capacidad y tipo son obligatorios: sin ellos handleSubmit corta antes del service.
     fireEvent.change(screen.getByTestId('input-nombre'), { target: { name: 'nombre', value: 'Lab Física', type: 'text' } });
+    fireEvent.change(screen.getByTestId('input-capacidad'), { target: { name: 'capacidad', value: '20', type: 'text' } });
+    fireEvent.change(screen.getByTestId('input-tipo'), { target: { name: 'tipo', value: 'fisica', type: 'text' } });
     fireEvent.click(screen.getByTestId('input-checkbox'));
 
     // Guardar (crear)
