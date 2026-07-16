@@ -197,17 +197,6 @@ export default function DashboardCalendario() {
         fechaReserva.getDate() === hoy.getDate()
     );
     });
-
-    console.log("Edificio:", edificio);
-    console.log("Laboratorios:", laboratorios.map(l => l.nombre));
-    console.table(
-    reservasHoy.map((r) => ({
-        laboratorio: r.laboratorio,
-        materia: r.materia,
-        inicio: r.reservaInicio,
-        estado: r.estado,
-    }))
-    );
     const bloques = agruparReservasPorHorario(reservasHoy);
 
 

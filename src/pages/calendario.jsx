@@ -27,9 +27,6 @@ export default function Calendario() {
 
         const todasLasReservas = [...activas, ...finalizadas];
 
-        console.log("ACTIVAS:", activas);
-        console.log("FINALIZADAS:", finalizadas);
-
         const reservasAdaptadas = todasLasReservas
           // Una reserva sin laboratorio o sin fecha no se puede ubicar en el
           // calendario. La descartamos en vez de romper todo el .map (que
@@ -78,15 +75,6 @@ export default function Calendario() {
               estado: r.estado,
             };
           });
-
-        console.log("RESERVAS ADAPTADAS:", reservasAdaptadas);
-        console.table(
-          reservasAdaptadas.map((r) => ({
-            materia: r.materia,
-            estado: r.estado,
-            inicio: r.reservaInicio,
-          }))
-        );
 
         setReservas(reservasAdaptadas);
       } catch (error) {

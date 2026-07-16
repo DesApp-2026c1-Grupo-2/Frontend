@@ -79,8 +79,6 @@ export default function CalendarioMini({
                 dayMaxEvents={false}
 
                 dateClick={(info) => {
-                    console.log("CLICK MINI:", info.date);
-
                     setFechaSeleccionada(info.date);
                     setVistaActual("timeGridDay");
 

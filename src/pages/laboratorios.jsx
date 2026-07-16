@@ -94,11 +94,6 @@ export default function Laboratorios() {
     try {
       const data =
         await obtenerLaboratoriosPorEdificio(id);
- 
-        console.log("LABORATORIOS:", data);
-
-        console.log("PRIMER LAB EQUIPOS:", data[0].equiposFijos);
-      
         setLaboratorios(data);
     } catch (error) {
       console.error(error);
@@ -116,23 +111,9 @@ export default function Laboratorios() {
 
       const data = await obtenerEquipos();
 
-      console.log("EQUIPOS RAW:", data);
-
       const equiposFijos = data.filter(
         (eq) => eq.esFijo && eq.laboratorioId
       );
-
-      console.log("EQUIPOS FILTRADOS:", equiposFijos);
-
-      equiposFijos.forEach((eq) => {
-        console.log(
-          "Equipo:",
-          eq.nombre,
-          "-> Laboratorio:",
-          eq.laboratorioId?.nombre
-        );
-      });
-
 
       setEquipos(equiposFijos);
     } catch (error) {
