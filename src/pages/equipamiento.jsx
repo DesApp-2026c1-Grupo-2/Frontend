@@ -1345,15 +1345,7 @@ useEffect(() => {
                               </button>
                               <button
                                 type="button"
-                                onClick={() => {
-                                  const nombre = group?.tipo || "este ítem";
-
-                                  abrirConfirmacion({
-                                      title: "¿Eliminar ítem completo?",
-                                      message: `¿Seguro que querés eliminar "${nombre}" y todos sus lotes? Esta acción no se puede deshacer.`,
-                                      action: () => handleDeleteGroup(group),
-                                      });
-                                }}
+onClick={() => handleDeleteGroup(g)}
                                 className="rounded-lg p-1.5 text-rose-500 bg-rose-50 hover:bg-rose-100 transition"
                                 aria-label={`Eliminar ${g.tipo}`}
                               >
