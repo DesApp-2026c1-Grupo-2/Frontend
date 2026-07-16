@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
+import { getReservaPorPedido } from "../services/reservas";
 import { ResumenValorHistorial } from "../utils/historialFormat";
 import ConfirmModal from "../components/common/ConfirmModal";
+import FinalizarPedidoForm from "../components/pedidos/FinalizarPedidoForm";
 import { FiTool, FiCheckCircle, FiAlertTriangle, FiCheck, FiClipboard, FiUser, FiMessageSquare, FiXCircle, FiX, FiFlag, FiSlash, FiRepeat } from "react-icons/fi";
 
 const getDisplayTipo = (r) => {
@@ -288,7 +290,34 @@ export default function PedidoDetalle() {
   const [formFinalizacion, setFormFinalizacion] = useState({ recursos: [] });
   const [recursosFinalizacion, setRecursosFinalizacion] = useState([]);
 
+  // Detalle de la reserva: es la fuente de verdad de qué consumos hay que reportar.
+  // Los itemId de consumos[] salen de acá y no de pedido.recursos, que puede haber
+  // cambiado después de aprobar el pedido.
+  const [reserva, setReserva] = useState(null);
+  const [cargandoReserva, setCargandoReserva] = useState(false);
+  const [errorReserva, setErrorReserva] = useState("");
+  // Las cantidades se guardan como string: Number("") es 0, así que un estado
+  // numérico no distinguiría "sin completar" de "consumí 0", y esa diferencia es
+  // justamente lo que el backend exige reportar.
+  const [consumosForm, setConsumosForm] = useState({});
+  const [erroresConsumo, setErroresConsumo] = useState({});
+  const [errorFinalizacion, setErrorFinalizacion] = useState("");
+
   const tieneConflictos = conflictos.length > 0;
+
+  const consumosRequeridos = (reserva?.materialesReservados || []).filter(
+    (material) => material.requiereConsumo
+  );
+
+  // Sin el detalle de la reserva no sabemos qué consumibles exige el backend, así que
+  // finalizar sería un 400 seguro: mejor bloquear y ofrecer reintentar.
+  const finalizacionBloqueada =
+    cargandoReserva ||
+    !!errorReserva ||
+    consumosRequeridos.some((material) => {
+      const valor = consumosForm[material.itemId];
+      return valor === "" || valor == null;
+    });
 
   // Reservas del pedido (para reflejar el consumo real tras finalizar, ver §3.4).
   const materialesReservados =
@@ -475,8 +504,113 @@ export default function PedidoDetalle() {
     }
   };
 
+  const cargarReserva = async () => {
+    setErrorReserva("");
+    setCargandoReserva(true);
+    try {
+      const data = await getReservaPorPedido(id);
+      setReserva(data);
+      setConsumosForm((prev) =>
+        Object.fromEntries(
+          (data?.materialesReservados || [])
+            .filter((material) => material.requiereConsumo)
+            // Arranca vacío a propósito: precargar el total permitiría confirmar sin
+            // mirar y perder el sobrante, que es el bug que este flujo vino a evitar.
+            .map((material) => [material.itemId, prev[material.itemId] ?? ""])
+        )
+      );
+      return data;
+    } catch {
+      setReserva(null);
+      setErrorReserva("No se pudo cargar el detalle de la reserva.");
+      return null;
+    } finally {
+      setCargandoReserva(false);
+    }
+  };
+
+  const abrirFinalizacion = () => {
+    setMostrarFinalizar(true);
+    setErrorFinalizacion("");
+    setErroresConsumo({});
+    setConsumosForm({});
+    cargarReserva();
+  };
+
+  const cerrarFinalizacion = () => {
+    setMostrarFinalizar(false);
+    // La reserva se relee al reabrir: el cron la mueve cada minuto.
+    setReserva(null);
+    setConsumosForm({});
+    setErroresConsumo({});
+    setErrorFinalizacion("");
+    setErrorReserva("");
+  };
+
+  const actualizarConsumo = (itemId, valor) => {
+    setConsumosForm((prev) => ({ ...prev, [itemId]: valor }));
+    setErroresConsumo((prev) => ({ ...prev, [itemId]: "" }));
+  };
+
+  const validarConsumos = () => {
+    const errores = {};
+    consumosRequeridos.forEach((material) => {
+      const valor = consumosForm[material.itemId];
+      const numero = Number(valor);
+      if (valor === "" || valor == null) {
+        errores[material.itemId] = "Indicá la cantidad consumida (0 si no se usó).";
+      } else if (!Number.isFinite(numero) || numero < 0) {
+        errores[material.itemId] = "Debe ser un número mayor o igual a 0.";
+      } else if (numero > material.cantidadPendiente) {
+        errores[material.itemId] = `El máximo es ${material.cantidadPendiente}.`;
+      }
+    });
+    setErroresConsumo(errores);
+    return Object.keys(errores).length === 0;
+  };
+
+  const manejarErrorFinalizacion = (err) => {
+    const status = err.response?.status;
+    const data = err.response?.data;
+    const detalles = data?.detalles || data?.errors;
+
+    // Body mal formado: el path indexa el array consumos[] que mandamos, que se arma
+    // 1:1 con consumosRequeridos, así que el índice sirve para volver al itemId.
+    if (status === 400 && Array.isArray(detalles) && detalles.length) {
+      const porItem = {};
+      detalles.forEach((detalle) => {
+        const [raiz, indice] = detalle.path || [];
+        const itemId = raiz === "consumos" ? consumosRequeridos[indice]?.itemId : null;
+        if (itemId) porItem[itemId] = detalle.message;
+      });
+      setErroresConsumo(porItem);
+      setErrorFinalizacion(
+        Object.keys(porItem).length
+          ? "Revisá las cantidades marcadas."
+          : detalles.map((detalle) => detalle.message).join(" ")
+      );
+      return;
+    }
+
+    // Falta reportar un consumo: es recuperable y sin efectos colaterales (el pedido
+    // sigue Aceptado). El mensaje ya nombra los faltantes. Releemos la reserva porque
+    // el cron pudo haber marcado items nuevos como requeridos desde que abrimos el form.
+    if (status === 400) {
+      setErrorFinalizacion(data?.error || "No se pudo finalizar el pedido.");
+      cargarReserva();
+      return;
+    }
+
+    const mensajePorStatus = {
+      403: "No tenés permisos para finalizar pedidos.",
+      404: "El pedido ya no existe.",
+    };
+    setErrorFinalizacion(data?.error || mensajePorStatus[status] || "Error al finalizar el pedido.");
+  };
+
   const ejecutarFinalizacion = async () => {
-    setErrorAccion("");
+    setErrorFinalizacion("");
+    setErroresConsumo({});
     try {
       const descartes = formFinalizacion.recursos
         .filter((recurso) => recurso.registrarDescarte && recurso.tipo !== "Equipo" && !recurso.esConsumible)
@@ -494,29 +628,20 @@ export default function PedidoDetalle() {
           motivo: recurso.motivoDefecto || "Desperfecto informado al finalizar el pedido",
         }));
 
-      const consumos = formFinalizacion.recursos
-        .filter((recurso) => recurso.esConsumible && recurso.tipo !== "Equipo" && recurso.registrarConsumo)
-        .map((recurso) => ({
-          itemId: recurso.recursoId,
-          cantidadConsumida: Math.max(0, Number(recurso.cantidadConsumida ?? recurso.cantidadSolicitada)),
-        }));
+      // Se mandan todos los requeridos, incluidos los que valen 0: omitir uno da 400.
+      // El orden debe seguir a consumosRequeridos para poder mapear los errores de Joi.
+      const consumos = consumosRequeridos.map((material) => ({
+        itemId: material.itemId,
+        cantidadConsumida: Math.max(0, Number(consumosForm[material.itemId] || 0)),
+      }));
 
       const payload = { consumos, descartes, desperfectos };
       const res = await api.patch(`/pedido/${id}/finalizar`, payload);
       setPedido(res.data.pedido || res.data);
-      setMostrarFinalizar(false);
       setFormFinalizacion({ recursos: [] });
+      cerrarFinalizacion();
     } catch (err) {
-      const status = err.response?.status;
-      const mensajePorStatus = {
-        403: "No tenés permisos para finalizar pedidos.",
-        404: "El pedido ya no existe.",
-      };
-      const fallback =
-        status === 400
-          ? "Datos de finalización inválidos. Revisá las cantidades o el estado del pedido."
-          : mensajePorStatus[status] || "Error al finalizar el pedido.";
-      setErrorAccion(err.response?.data?.error || fallback);
+      manejarErrorFinalizacion(err);
     }
   };
 
@@ -600,8 +725,6 @@ export default function PedidoDetalle() {
           motivo: existente?.motivo || "",
           registrarDefecto: existente?.registrarDefecto || false,
           motivoDefecto: existente?.motivoDefecto || "",
-          registrarConsumo: existente?.registrarConsumo || false,
-          cantidadConsumida: existente?.cantidadConsumida ?? recurso.cantidadSolicitada,
         };
       }),
     }));
@@ -917,16 +1040,18 @@ export default function PedidoDetalle() {
               </div>
             )}
 
+            {/* Fuera del panel de acciones: una acción puede mover el pedido a un estado
+                que oculta el panel y fallar después, y el error tiene que verse igual. */}
+            {errorAccion && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-300 text-red-600 text-sm rounded-xl flex justify-between items-start">
+                <span className="flex items-center gap-2"><strong className="flex items-center gap-1"><FiAlertTriangle /> Error:</strong> {errorAccion}</span>
+                <button onClick={() => setErrorAccion("")} className="ml-4 text-red-400 hover:text-red-600 font-bold text-lg"><FiX /></button>
+              </div>
+            )}
+
             {/* PANEL DE ACCIONES (Pendientes y Aceptados) */}
             {["Pendiente", "Aceptado"].includes(pedido.estado) && (
               <div className="border-t border-slate-200 pt-6 flex flex-col gap-3">
-                {errorAccion && (
-                  <div className="p-4 bg-red-50 border border-red-300 text-red-600 text-sm rounded-xl flex justify-between items-start">
-                    <span className="flex items-center gap-2"><strong className="flex items-center gap-1"><FiAlertTriangle /> Error:</strong> {errorAccion}</span>
-                    <button onClick={() => setErrorAccion("")} className="ml-4 text-red-400 hover:text-red-600 font-bold text-lg"><FiX /></button>
-                  </div>
-                )}
-
                 {/* INLINE FORM: RECHAZO */}
                 {mostrarMotivRechazo && (
                   <div className="border border-red-300 bg-red-50 rounded-xl p-4 space-y-3">
@@ -947,129 +1072,23 @@ export default function PedidoDetalle() {
 
                 {/* INLINE FORM: FINALIZACIÓN */}
                 {mostrarFinalizar && (
-                  <div className="border border-blue-300 bg-blue-50 rounded-xl p-4 space-y-4">
-                    <p className="text-sm font-semibold text-blue-800">Finalizar pedido: reportá consumo real, descartes y desperfectos</p>
-                    <p className="text-xs text-blue-700">Los reutilizables y lo no consumido de cada consumible vuelven al stock automáticamente.</p>
-
-                    <div className="space-y-3">
-                      <p className="text-sm font-medium text-blue-700">Recursos solicitados</p>
-                      <div className="space-y-3">
-                        {recursosFinalizacion.map((recurso) => {
-                          const recursoForm = formFinalizacion.recursos.find((entry) => entry.recursoId === recurso.recursoId) || recurso;
-                          const esEquipo = recurso.tipo === "Equipo";
-                          const esConsumible = !esEquipo && (recurso.esConsumible ?? true);
-
-                          return (
-                            <div key={recurso.recursoId} className="rounded-lg border border-blue-200 bg-white p-3 space-y-2">
-                              <div className="flex items-center justify-between gap-2">
-                                <div>
-                                  <p className="text-sm font-semibold text-slate-800">{recurso.nombre}</p>
-                                  <p className="text-xs text-slate-500">Solicitado: {recurso.cantidadSolicitada} · {recurso.tipoDetalle}</p>
-                                </div>
-                                <span className="text-xs font-medium text-blue-700">{esEquipo ? "Equipo" : "Inventario"}</span>
-                              </div>
-
-                              {!esEquipo && !esConsumible && (
-                                <label className="flex items-center gap-2 text-sm text-slate-700">
-                                  <input
-                                    type="checkbox"
-                                    checked={!!recursoForm.registrarDescarte}
-                                    onChange={(e) => actualizarRecursoFinalizacion(recurso.recursoId, { registrarDescarte: e.target.checked, cantidadDescartada: e.target.checked ? recurso.cantidadSolicitada : 0 })}
-                                  />
-                                  Registrar descarte
-                                </label>
-                              )}
-
-                              {esEquipo ? (
-                                <label className="flex items-center gap-2 text-sm text-slate-700">
-                                  <input
-                                    type="checkbox"
-                                    checked={!!recursoForm.registrarDefecto}
-                                    onChange={(e) => actualizarRecursoFinalizacion(recurso.recursoId, { registrarDefecto: e.target.checked, motivoDefecto: e.target.checked ? recursoForm.motivoDefecto || "" : "" })}
-                                  />
-                                  Marcar como desperfecto
-                                </label>
-                              ) : recursoForm.registrarDescarte ? (
-                                <>
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    max={recurso.cantidadSolicitada}
-                                    value={recursoForm.cantidadDescartada === undefined ? "" : recursoForm.cantidadDescartada}
-                                    onChange={(e) => {
-                                      const val = e.target.value;
-                                      actualizarRecursoFinalizacion(recurso.recursoId, {
-                                        cantidadDescartada: val === "" ? "" : Number(val)
-                                      });
-                                    }}
-                                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                    placeholder="Cantidad descartada"
-                                  />
-                                  <input
-                                    type="text"
-                                    value={recursoForm.motivo || ""}
-                                    onChange={(e) => actualizarRecursoFinalizacion(recurso.recursoId, { motivo: e.target.value })}
-                                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                    placeholder="Motivo"
-                                  />
-                                </>
-                              ) : null}
-
-                              {esEquipo && recursoForm.registrarDefecto ? (
-                                <input
-                                  type="text"
-                                  value={recursoForm.motivoDefecto || ""}
-                                  onChange={(e) => actualizarRecursoFinalizacion(recurso.recursoId, { motivoDefecto: e.target.value })}
-                                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                  placeholder="Motivo del desperfecto"
-                                />
-                              ) : null}
-
-                              {esConsumible && (
-                                <label className="flex items-center gap-2 text-sm text-slate-700">
-                                  <input
-                                    type="checkbox"
-                                    checked={!!recursoForm.registrarConsumo}
-                                    onChange={(e) => actualizarRecursoFinalizacion(recurso.recursoId, {
-                                      registrarConsumo: e.target.checked,
-                                      cantidadConsumida: recurso.cantidadSolicitada,
-                                    })}
-                                  />
-                                  Reportar consumo real
-                                </label>
-                              )}
-
-                              {esConsumible && recursoForm.registrarConsumo ? (
-                                <>
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    max={recurso.cantidadSolicitada}
-                                    value={recursoForm.cantidadConsumida ?? 0}
-                                    onChange={(e) => actualizarRecursoFinalizacion(recurso.recursoId, { cantidadConsumida: Number(e.target.value) })}
-                                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                                    placeholder={`Consumido de ${recurso.cantidadSolicitada}`}
-                                  />
-                                  <p className="text-xs text-slate-500">
-                                    Lo no consumido vuelve al stock. Omitir el reporte cuenta como consumido al 100 %.
-                                  </p>
-                                </>
-                              ) : null}
-
-                              {!esEquipo && !esConsumible && (
-                                <p className="text-xs text-slate-500 italic flex items-center gap-1"><FiRepeat /> Reutilizable — vuelve al stock al finalizar.</p>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button onClick={() => setMostrarConfirmFinalizar(true)} className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold">Confirmar Finalización</button>
-                      <button onClick={() => setMostrarFinalizar(false)} className="flex-1 px-4 py-2 border border-slate-300 hover:bg-slate-100 rounded-lg text-sm font-semibold">Volver</button>
-                    </div>
-                  </div>
+                  <FinalizarPedidoForm
+                    consumosRequeridos={consumosRequeridos}
+                    consumosForm={consumosForm}
+                    erroresConsumo={erroresConsumo}
+                    onChangeConsumo={actualizarConsumo}
+                    cargandoReserva={cargandoReserva}
+                    errorReserva={errorReserva}
+                    onReintentarReserva={cargarReserva}
+                    recursosFinalizacion={recursosFinalizacion}
+                    formFinalizacion={formFinalizacion}
+                    onChangeRecurso={actualizarRecursoFinalizacion}
+                    errorFinalizacion={errorFinalizacion}
+                    onCerrarError={() => setErrorFinalizacion("")}
+                    bloqueado={finalizacionBloqueada}
+                    onConfirmar={() => { if (validarConsumos()) setMostrarConfirmFinalizar(true); }}
+                    onVolver={cerrarFinalizacion}
+                  />
                 )}
 
                 {/* BOTONES PRIMARIOS */}
@@ -1095,7 +1114,7 @@ export default function PedidoDetalle() {
                     )}
 
                     {pedido.estado === "Aceptado" && (
-                      <button onClick={() => setMostrarFinalizar(true)} className="flex-1 px-4 py-2.5 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-md">
+                      <button onClick={abrirFinalizacion} className="flex-1 px-4 py-2.5 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-md">
                         <FiFlag /> Finalizar Pedido
                       </button>
                     )}
@@ -1119,7 +1138,7 @@ export default function PedidoDetalle() {
                 setMostrarConfirmFinalizar(false);
               }}
               title="¿Finalizar pedido?"
-              message="El pedido será marcado como finalizado. Los recursos serán devueltos al stock según corresponda. Esta acción no se puede deshacer."
+              message="El pedido será marcado como finalizado. Se registrará el consumo reportado y volverá al stock el sobrante. Esta acción no se puede deshacer."
               confirmText="Sí, finalizar"
               cancelText="Volver"
               tipo="success"

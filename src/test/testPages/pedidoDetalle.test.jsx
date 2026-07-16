@@ -38,68 +38,250 @@ const pedidoAceptado = {
   comentarios: [],
 };
 
-const finalizarConsumos = async () => {
-  // Abrir el form de finalización.
-  fireEvent.click(await screen.findByRole('button', { name: /Finalizar Pedido/i }));
-  // Confirmar.
-  fireEvent.click(await screen.findByRole('button', { name: /Confirmar Finalización/i }));
-  // Aceptar el ConfirmModal de acción crítica.
-  fireEvent.click(await screen.findByRole('button', { name: /Sí, finalizar/i }));
-  const finalizarCall = await waitFor(() => {
-    const call = api.patch.mock.calls.find(([url]) => url === '/pedido/pedido-1/finalizar');
-    expect(call).toBeTruthy();
-    return call;
+// Reserva con un consumible que ya salió del inventario: hay que reportar su consumo.
+const reservaConConsumo = {
+  reservaId: 'reserva-1',
+  pedidoId: 'pedido-1',
+  estado: 'Finalizada',
+  requiereReporteConsumo: true,
+  materialesReservados: [
+    {
+      itemId: 'item-1',
+      nombre: 'Alcohol etílico',
+      cantidadTotal: 10,
+      esConsumible: true,
+      consumoEjecutado: true,
+      liquidado: false,
+      requiereConsumo: true,
+      cantidadPendiente: 10,
+    },
+  ],
+};
+
+// Misma reserva pero con el stock todavía adentro: no hay nada que reportar.
+const reservaSinConsumo = {
+  ...reservaConConsumo,
+  estado: 'Pendiente',
+  requiereReporteConsumo: false,
+  materialesReservados: [
+    {
+      ...reservaConConsumo.materialesReservados[0],
+      consumoEjecutado: false,
+      requiereConsumo: false,
+    },
+  ],
+};
+
+const error404 = Object.assign(new Error('Not Found'), {
+  response: { status: 404, data: { error: 'El pedido no tiene reserva asociada' } },
+});
+
+// El mock de api.get tiene que discriminar por URL: el detalle del pedido y la
+// reserva se piden al mismo mock. `reserva` acepta un objeto, o un error a rechazar.
+const mockGets = ({ pedido = pedidoAceptado, reserva = reservaSinConsumo } = {}) => {
+  api.get.mockImplementation((url) => {
+    if (url === '/pedido/pedido-1') return Promise.resolve({ data: pedido });
+    if (url === '/reservas/pedido/pedido-1') {
+      return reserva instanceof Error ? Promise.reject(reserva) : Promise.resolve({ data: reserva });
+    }
+    return Promise.resolve({ data: {} });
   });
-  return finalizarCall[1];
 };
 
 describe('PedidoDetalle — finalización con consumos[]', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    api.get.mockResolvedValue({ data: pedidoAceptado });
+    mockGets({ reserva: reservaConConsumo });
     api.patch.mockResolvedValue({ data: { pedido: { ...pedidoAceptado, estado: 'Finalizado' } } });
   });
 
-  test('omitir el reporte de consumo envía consumos vacío (consumo total por default)', async () => {
+  const abrirFormulario = async () => {
     render(
       <MemoryRouter>
         <PedidoDetalle />
       </MemoryRouter>
     );
-
-    const payload = await finalizarConsumos();
-    expect(payload.consumos).toEqual([]);
-  });
-
-  test('reportar consumo real incluye el item en consumos[]', async () => {
-    render(
-      <MemoryRouter>
-        <PedidoDetalle />
-      </MemoryRouter>
-    );
-
-    // Abrir el form.
     fireEvent.click(await screen.findByRole('button', { name: /Finalizar Pedido/i }));
+  };
 
-    // Marcar "Reportar consumo real".
-    const checkConsumo = await screen.findByLabelText(/Reportar consumo real/i);
-    fireEvent.click(checkConsumo);
-
-    // Ingresar la cantidad consumida (6 de 10 → devuelve 4).
-    const inputConsumo = screen.getByPlaceholderText(/Consumido de 10/i);
-    fireEvent.change(inputConsumo, { target: { value: '6' } });
-
-    // Confirmar.
+  const confirmar = async () => {
     fireEvent.click(screen.getByRole('button', { name: /Confirmar Finalización/i }));
     fireEvent.click(await screen.findByRole('button', { name: /Sí, finalizar/i }));
-
-    const payload = await waitFor(() => {
+    return waitFor(() => {
       const call = api.patch.mock.calls.find(([url]) => url === '/pedido/pedido-1/finalizar');
       expect(call).toBeTruthy();
       return call[1];
     });
+  };
+
+  test('no deja finalizar sin reportar el consumo de un item requerido', async () => {
+    await abrirFormulario();
+
+    // El input existe pero está vacío: confirmar tiene que estar bloqueado.
+    expect(await screen.findByLabelText(/Cantidad consumida de Alcohol etílico/i)).toHaveValue(null);
+    expect(screen.getByRole('button', { name: /Confirmar Finalización/i })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: /Confirmar Finalización/i }));
+
+    expect(api.patch.mock.calls.some(([url]) => url === '/pedido/pedido-1/finalizar')).toBe(false);
+  });
+
+  test('reportar consumo real incluye el item en consumos[]', async () => {
+    await abrirFormulario();
+
+    // 6 de 10 → devuelve 4 al stock.
+    fireEvent.change(await screen.findByLabelText(/Cantidad consumida de Alcohol etílico/i), {
+      target: { value: '6' },
+    });
+
+    const payload = await confirmar();
 
     expect(payload.consumos).toEqual([{ itemId: 'item-1', cantidadConsumida: 6 }]);
+  });
+
+  test('reportar 0 se envía como 0 y no como item omitido', async () => {
+    await abrirFormulario();
+
+    fireEvent.change(await screen.findByLabelText(/Cantidad consumida de Alcohol etílico/i), {
+      target: { value: '0' },
+    });
+
+    const payload = await confirmar();
+
+    expect(payload.consumos).toEqual([{ itemId: 'item-1', cantidadConsumida: 0 }]);
+  });
+
+  test('los itemId salen de la reserva y no de pedido.recursos', async () => {
+    // El id del catálogo en el pedido difiere del de la reserva: gana el de la reserva.
+    mockGets({
+      reserva: {
+        ...reservaConConsumo,
+        materialesReservados: [
+          { ...reservaConConsumo.materialesReservados[0], itemId: 'item-de-reserva' },
+        ],
+      },
+    });
+
+    await abrirFormulario();
+    fireEvent.change(await screen.findByLabelText(/Cantidad consumida de Alcohol etílico/i), {
+      target: { value: '3' },
+    });
+
+    const payload = await confirmar();
+
+    expect(payload.consumos).toEqual([{ itemId: 'item-de-reserva', cantidadConsumida: 3 }]);
+  });
+
+  test('pide el consumo de un item que ya no está en pedido.recursos', async () => {
+    // Si los recursos se editaron después de aprobar, el item puede faltar del pedido
+    // pero seguir exigiendo reporte: igual tiene que poder reportarse.
+    mockGets({
+      pedido: { ...pedidoAceptado, recursos: [] },
+      reserva: reservaConConsumo,
+    });
+
+    await abrirFormulario();
+    fireEvent.change(await screen.findByLabelText(/Cantidad consumida de Alcohol etílico/i), {
+      target: { value: '2' },
+    });
+
+    const payload = await confirmar();
+
+    expect(payload.consumos).toEqual([{ itemId: 'item-1', cantidadConsumida: 2 }]);
+  });
+
+  test('no pide nada si la reserva no requiere reporte', async () => {
+    mockGets({ reserva: reservaSinConsumo });
+
+    await abrirFormulario();
+
+    expect(await screen.findByText(/No hay consumibles pendientes/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Cantidad consumida/i)).toBeNull();
+
+    const payload = await confirmar();
+    expect(payload.consumos).toEqual([]);
+  });
+
+  test('un pedido sin reserva (404) se finaliza sin reportar consumos', async () => {
+    mockGets({ reserva: error404 });
+
+    await abrirFormulario();
+    // Hay que esperar a que cargue: mientras tanto confirmar está bloqueado.
+    await screen.findByText(/No hay consumibles pendientes/i);
+
+    const payload = await confirmar();
+    expect(payload.consumos).toEqual([]);
+  });
+
+  test('bloquea la finalización si no se puede cargar la reserva', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockGets({ reserva: Object.assign(new Error('Boom'), { response: { status: 500 } }) });
+
+    await abrirFormulario();
+
+    expect(await screen.findByText(/No se pudo cargar el detalle de la reserva/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Confirmar Finalización/i })).toBeDisabled();
+  });
+
+  test('valida que el consumo no supere la cantidad pendiente', async () => {
+    await abrirFormulario();
+
+    fireEvent.change(await screen.findByLabelText(/Cantidad consumida de Alcohol etílico/i), {
+      target: { value: '15' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Confirmar Finalización/i }));
+
+    expect(await screen.findByText('El máximo es 10.')).toBeInTheDocument();
+    expect(api.patch.mock.calls.some(([url]) => url === '/pedido/pedido-1/finalizar')).toBe(false);
+  });
+
+  test('muestra el error de negocio del backend y deja el form abierto', async () => {
+    api.patch.mockImplementation((url) => {
+      if (url === '/pedido/pedido-1/finalizar') {
+        return Promise.reject({
+          response: {
+            status: 400,
+            data: { error: 'Debe indicar la cantidad consumida de los siguientes consumibles para finalizar: Alcohol etílico.' },
+          },
+        });
+      }
+      return Promise.resolve({ data: {} });
+    });
+
+    await abrirFormulario();
+    fireEvent.change(await screen.findByLabelText(/Cantidad consumida de Alcohol etílico/i), {
+      target: { value: '4' },
+    });
+    await confirmar();
+
+    expect(await screen.findByText(/Debe indicar la cantidad consumida/i)).toBeInTheDocument();
+    // El form sigue abierto para corregir y reintentar.
+    expect(screen.getByLabelText(/Cantidad consumida de Alcohol etílico/i)).toBeInTheDocument();
+  });
+
+  test('mapea el error de validación de Joi al input del item', async () => {
+    api.patch.mockImplementation((url) => {
+      if (url === '/pedido/pedido-1/finalizar') {
+        return Promise.reject({
+          response: {
+            status: 400,
+            data: {
+              error: 'Error de validación',
+              detalles: [{ message: 'cantidadConsumida es obligatoria', path: ['consumos', 0, 'cantidadConsumida'] }],
+            },
+          },
+        });
+      }
+      return Promise.resolve({ data: {} });
+    });
+
+    await abrirFormulario();
+    fireEvent.change(await screen.findByLabelText(/Cantidad consumida de Alcohol etílico/i), {
+      target: { value: '4' },
+    });
+    await confirmar();
+
+    expect(await screen.findByText('cantidadConsumida es obligatoria')).toBeInTheDocument();
   });
 });
 
@@ -127,7 +309,7 @@ describe('PedidoDetalle — descartes solo para reutilizables', () => {
   });
 
   test('el consumible no ofrece descarte, solo consumo', async () => {
-    api.get.mockResolvedValue({ data: pedidoAceptado });
+    mockGets({ pedido: pedidoAceptado, reserva: reservaConConsumo });
     render(
       <MemoryRouter>
         <PedidoDetalle />
@@ -136,12 +318,30 @@ describe('PedidoDetalle — descartes solo para reutilizables', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: /Finalizar Pedido/i }));
 
-    expect(await screen.findByLabelText(/Reportar consumo real/i)).toBeInTheDocument();
+    expect(await screen.findByLabelText(/Cantidad consumida de Alcohol etílico/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/Registrar descarte/i)).toBeNull();
   });
 
   test('el reutilizable ofrece descarte y lo envía en descartes[]', async () => {
-    api.get.mockResolvedValue({ data: pedidoReutilizable });
+    // El reutilizable no exige reporte de consumo: vuelve al stock solo.
+    mockGets({
+      pedido: pedidoReutilizable,
+      reserva: {
+        ...reservaSinConsumo,
+        materialesReservados: [
+          {
+            itemId: 'item-2',
+            nombre: 'Matraz Erlenmeyer',
+            cantidadTotal: 5,
+            esConsumible: false,
+            consumoEjecutado: false,
+            liquidado: true,
+            requiereConsumo: false,
+            cantidadPendiente: 5,
+          },
+        ],
+      },
+    });
     render(
       <MemoryRouter>
         <PedidoDetalle />
@@ -152,7 +352,7 @@ describe('PedidoDetalle — descartes solo para reutilizables', () => {
 
     // El reutilizable muestra descarte y no muestra consumo.
     const checkDescarte = await screen.findByLabelText(/Registrar descarte/i);
-    expect(screen.queryByLabelText(/Reportar consumo real/i)).toBeNull();
+    expect(screen.queryByLabelText(/Cantidad consumida/i)).toBeNull();
 
     fireEvent.click(checkDescarte);
     fireEvent.click(screen.getByRole('button', { name: /Confirmar Finalización/i }));
