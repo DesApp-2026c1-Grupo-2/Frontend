@@ -128,12 +128,20 @@ La aplicación sigue una estructura modular para facilitar el mantenimiento y la
 
 Actualmente el sistema cuenta con las siguientes vistas principales.
 
+## Landing
+
+Presentacion de nuestra pagina.
+
+<img width="1920" height="994" alt="image" src="https://github.com/user-attachments/assets/db6b2426-2cb0-4763-b68e-7c5acce713a4" />
 
 ## Inicio de sesión
 
 Permite autenticar usuarios registrados para acceder a la plataforma.
 
---- ![alt text](image.png)
+--- 
+
+<img width="1920" height="998" alt="image" src="https://github.com/user-attachments/assets/a804f6be-43dc-4842-96c0-f5c21562f3e4" />
+
 
 ## Registro
 
@@ -145,7 +153,10 @@ Formulario para registrar nuevos usuarios.
 
 Panel principal desde el cual se accede a las distintas funcionalidades del sistema.
 
---- ![alt text](image-1.png)
+--- 
+
+<img width="1920" height="997" alt="image" src="https://github.com/user-attachments/assets/321c78ce-9852-4d9c-8762-88a6ddafac42" />
+
 
 ## Laboratorios
 
@@ -182,7 +193,10 @@ Administración de las actividades académicas que requieren la utilización de 
 
 Visualización y administración de los pedidos realizados por docentes.
 
---- ![alt text](image-2.png)
+--- 
+
+<img width="1920" height="996" alt="image" src="https://github.com/user-attachments/assets/9b6711d1-480a-499e-9265-2a9afe3bf36f" />
+
 
 ## Detalle de pedido
 
