@@ -51,6 +51,8 @@ const formatRangoPeriodo = (desde, hasta) => {
 export function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const puedeVerEstadisticas =
+    user?.rol === "ADMIN" || user?.rol === "PERSONAL";
 
   const { pedidos, loading: loadingPedidos } = usePedidos();
   //misPedidos para docente
@@ -73,11 +75,18 @@ export function Dashboard() {
   // Período del ranking (Top 5) de uso de equipos: "dia" | "semana" | "mes".
   const [periodo, setPeriodo] = useState("mes");
   const esMes = periodo === "mes";
-  const { estadisticas, loading: loadingUso } = useUsoEquipos(periodo);
-  // La stat card superior muestra SIEMPRE el total del mes, independiente del
-  // selector del Top 5. Si el Top 5 ya está en "mes", reutilizamos esa misma
-  // data en vez de disparar una segunda consulta idéntica.
-  const { estadisticas: usoMensualSeparado, loading: loadingMensualSeparado } = useUsoEquipos("mes", { enabled: !esMes });
+  
+  const { estadisticas, loading: loadingUso } = useUsoEquipos(periodo, {
+    enabled: puedeVerEstadisticas,
+  });
+
+  const {
+    estadisticas: usoMensualSeparado,
+    loading: loadingMensualSeparado,
+  } = useUsoEquipos("mes", {
+    enabled: puedeVerEstadisticas && !esMes,
+  });
+
   const usoMensual = esMes ? estadisticas : usoMensualSeparado;
   const loadingUsoMensual = esMes ? loadingUso : loadingMensualSeparado;
 

@@ -762,19 +762,23 @@ useEffect(() => {
   // Elimina el ítem completo: da de baja todos sus lotes (incluidos los
   // descartados, que no viven en el grupo) y luego el ítem.
   const handleDeleteGroup = async (group) => {
-
     try {
-      // getLotesByItemId trae TODOS los lotes del ítem (incluidos descartados).
       const lotesDelItem = await equipamientoService.getLotesByItemId(group.itemId);
+
       for (const lote of lotesDelItem || []) {
         await equipamientoService.deleteLote(lote.id || lote._id);
       }
+
       await equipamientoService.deleteItem(group.itemId);
+
       invalidarLotes(group.itemId);
       recargarTodo();
+
     } catch (err) {
-      console.error("Error al eliminar el ítem:", err);
-      const msg = "No se pudo eliminar el ítem: " + (err.response?.data?.error || err.message);
+      const msg =
+        "No se pudo eliminar el ítem: " +
+        (err.response?.data?.error || err.message);
+
       setErrorOperacion(msg);
       setTimeout(() => setErrorOperacion(""), 5000);
     }
@@ -1345,7 +1349,15 @@ useEffect(() => {
                               </button>
                               <button
                                 type="button"
-onClick={() => handleDeleteGroup(g)}
+                                onClick={() => {
+                                  setTituloConfirm("¿Eliminar ítem?");
+                                  setMensajeConfirm(
+                                    "Se eliminarán el ítem y todos sus lotes asociados. Esta acción no se puede deshacer."
+                                  );
+
+                                  setAccionPendiente(() => () => handleDeleteGroup(g));
+                                  setMostrarConfirmEliminar(true);
+                                }}
                                 className="rounded-lg p-1.5 text-rose-500 bg-rose-50 hover:bg-rose-100 transition"
                                 aria-label={`Eliminar ${g.tipo}`}
                               >
@@ -1367,7 +1379,13 @@ onClick={() => handleDeleteGroup(g)}
                                   item={{ ...item, unidad: g.unidad }}
                                   hideIdentity
                                   onEdit={() => openLoteEdit(item)}
-                                  onDelete={() => handleDeleteLote(item, g)}
+                                  onDelete={() =>
+                                      abrirConfirmacion({
+                                        title: "¿Eliminar lote?",
+                                        message: `¿Seguro que querés eliminar el lote ubicado en "${item.ubicacionLote}"? Esta acción no se puede deshacer.`,
+                                        action: () => handleDeleteLote(item, g),
+                                      })
+                                    }
                                   onReportDesperfecto={() => openDesperfectoModal(item)}
                                   onUpdateEstado={() => openEstadoModal(item)}
                                   onTransfer={() => openTransferModal(item)}
@@ -1519,7 +1537,17 @@ onClick={() => handleDeleteGroup(g)}
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={(e) => { e.stopPropagation(); handleDeleteGroup(g); }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+
+                                      setTituloConfirm("¿Eliminar ítem?");
+                                      setMensajeConfirm(
+                                        "Se eliminarán el ítem y todos sus lotes asociados. Esta acción no se puede deshacer."
+                                      );
+
+                                      setAccionPendiente(() => () => handleDeleteGroup(g));
+                                      setMostrarConfirmEliminar(true);
+                                    }}
                                     className="rounded-lg p-2 text-rose-500 bg-rose-50 hover:bg-rose-100 transition"
                                     aria-label={`Eliminar ${g.tipo}`}
                                   >
@@ -1572,7 +1600,13 @@ onClick={() => handleDeleteGroup(g)}
                                           </button>
                                           <button
                                             type="button"
-onClick={() => handleDeleteLote(item, g)}
+                                            onClick={() => {
+                                              abrirConfirmacion({
+                                                title: "¿Eliminar lote?",
+                                                message: `¿Seguro que querés eliminar el lote ubicado en "${item.ubicacionLote}"? Esta acción no se puede deshacer.`,
+                                                action: () => handleDeleteLote(item, g),
+                                              });
+                                            }}
                                             className="rounded-lg p-2 text-rose-500 bg-rose-50 hover:bg-rose-100 transition"
                                             aria-label={`Eliminar lote en ${item.ubicacionLote}`}
                                           >
