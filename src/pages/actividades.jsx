@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FiEdit2, FiTrash2 } from "react-icons/fi";
+import { FiEdit2, FiTrash2, FiCalendar } from "react-icons/fi";
 import { PageHeader } from "../components/SharedUi";
 import FormularioActividad from "../components/actividades/FormularioActividad";
 import ConfirmModal from "../components/common/ConfirmModal";
@@ -188,7 +188,7 @@ export default function Actividades() {
                   >
                     {/* Cabecera tarjeta */}
                     <div className="flex justify-between items-start mb-3">
-                      <h2 className="text-base font-bold text-slate-800 leading-snug pr-2">
+                      <h2 className="text-xl font-bold text-slate-800 leading-snug pr-2">
                         {a.nombre}
                       </h2>
                       {puedeEditar && (
@@ -196,9 +196,14 @@ export default function Actividades() {
                           <button
                             title="Editar actividad"
                             onClick={() => abrirEditar(a)}
-                            className="p-1.5 rounded-lg hover:text-emerald-600 hover:bg-emerald-50 transition"
+                            className="
+                              p-1 rounded-lg
+                            hover:bg-emerald-50
+                            text-emerald-700
+                              transition
+                            "
                           >
-                            <FiEdit2 size={14} />
+                            <FiEdit2 size={16} />
                           </button>
                           <button
                             title="Eliminar actividad"
@@ -206,9 +211,14 @@ export default function Actividades() {
                               setActividadAEliminar(id);
                               setMostrarConfirmEliminar(true);
                             }}
-                            className="p-1.5 rounded-lg hover:text-red-500 hover:bg-red-50 transition"
+                            className="
+                              p-1 rounded-lg
+                              hover:bg-red-50
+                              text-red-600
+                              transition
+                            "
                           >
-                            <FiTrash2 size={14} />
+                            <FiTrash2 size={16} />
                           </button>
                         </div>
                       )}
@@ -225,11 +235,19 @@ export default function Actividades() {
                     </div>
 
                     {/* Fecha */}
-                    <p className="text-xs text-slate-400">
-                      {a.fecha
-                        ? new Date(a.fecha).toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric" })
-                        : "—"}
-                    </p>
+                    <div className="flex items-center gap-2 text-sm text-slate-500 mt-1">
+                      <FiCalendar className="shrink-0" size={14} />
+
+                      <span>
+                        {a.fecha
+                          ? new Date(a.fecha).toLocaleDateString("es-AR", {
+                              day: "2-digit",
+                              month: "long",
+                              year: "numeric",
+                            })
+                          : "—"}
+                      </span>
+                    </div>
                   </div>
                 );
               })}

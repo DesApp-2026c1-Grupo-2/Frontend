@@ -16,6 +16,7 @@ import {
 
 import LaboratorioModal from "../components/laboratorios/LaboratorioModal";
 import { PageHeader } from "../components/SharedUi";
+import ConfirmModal from "../components/common/ConfirmModal";
 
 import {
   FiEdit2,
@@ -59,6 +60,16 @@ export default function Laboratorios() {
 
   //Errores
   const [errores, setErrores] = useState({});
+
+  //Modal de confirmacion al eliminar
+  const [mostrarConfirmEliminar, setMostrarConfirmEliminar] = useState(false);
+
+  const [confirmData, setConfirmData] = useState({
+    title: "",
+    message: "",
+  });
+
+  const [accionPendiente, setAccionPendiente] = useState(null);
 
   /*
     =========================
@@ -310,6 +321,21 @@ export default function Laboratorios() {
     );
   }
 
+  //confirmar eliminacion de laboratorio 
+  const abrirConfirmacion = ({
+    title,
+    message,
+    action,
+  }) => {
+    setConfirmData({
+      title,
+      message,
+    });
+
+    setAccionPendiente(() => action);
+    setMostrarConfirmEliminar(true);
+  };
+
   /*
     =========================
     ELIMINAR
@@ -528,15 +554,18 @@ export default function Laboratorios() {
                           <FiEdit2 size={16} />
                         </button>
                         <button
-                          onClick={() => {
-                            if (!confirm("¿Seguro que querés eliminar este laboratorio?")) return;
-                            handleEliminar(lab._id || lab.id);
-                          }}
+                          onClick={() =>
+                            abrirConfirmacion({
+                              title: "¿Eliminar laboratorio?",
+                              message: `¿Seguro que querés eliminar el laboratorio "${lab.nombre}"? Esta acción no se puede deshacer.`,
+                              action: () => handleEliminar(lab._id || lab.id),
+                            })
+                          }
                           className="
                             p-1 rounded-lg
-                         hover:bg-red-50
-                        text-red-600
-                      transition
+                            hover:bg-red-50
+                            text-red-600
+                            transition
                           "
                         >
                           <FiTrash2 size={16} />
@@ -651,6 +680,26 @@ export default function Laboratorios() {
         handleChange={handleChange}
         handleSubmit={handleSubmit}
         esEdicion={!!laboratorioEditando}
+      />
+
+      <ConfirmModal
+        isOpen={mostrarConfirmEliminar}
+        title={confirmData.title}
+        message={confirmData.message}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        tipo="danger"
+        onClose={() => {
+          setMostrarConfirmEliminar(false);
+          setAccionPendiente(null);
+        }}
+        onConfirm={async () => {
+          if (accionPendiente) {
+            await accionPendiente();
+          }
+
+          setAccionPendiente(null);
+        }}
       />
     </div>
   );

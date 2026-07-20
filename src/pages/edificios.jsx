@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 
 import CrearEdificioModal from "../components/edificios/CrearEdificioModal";
 import { PageHeader } from "../components/SharedUi";
+import ConfirmModal from "../components/common/ConfirmModal";
 
 import {
   obtenerEdificios,
@@ -45,6 +46,15 @@ export default function Edificios() {
   });
 
   const [errores, setErrores] = useState({});
+
+  const [mostrarConfirmEliminar, setMostrarConfirmEliminar] = useState(false);
+
+  const [confirmData, setConfirmData] = useState({
+    title: "",
+    message: "",
+  });
+
+  const [accionPendiente, setAccionPendiente] = useState(null);
 
   /*
     =========================
@@ -206,28 +216,32 @@ export default function Edificios() {
     setMostrarModal(true);
   };
 
+  //Agrego confirmacion para eliminar un edificio
+  const abrirConfirmacion = ({
+    title,
+    message,
+    action,
+  }) => {
+    setConfirmData({
+      title,
+      message,
+    });
+
+    setAccionPendiente(() => action);
+    setMostrarConfirmEliminar(true);
+  };
+
 
   /*
     =========================
     ELIMINAR EDIFICIO
     =========================
   */
-  const handleEliminar = async (id, nombre) => {
-
-    const confirmar = window.confirm(
-      `¿Eliminar el edificio "${nombre}"?`
-    );
-
-    if (!confirmar) return;
-
+  const handleEliminar = async (id) => {
     try {
-
       await eliminarEdificio(id);
-
       await cargarEdificios();
-
     } catch (error) {
-
       console.error(error);
     }
   };
@@ -434,7 +448,13 @@ export default function Edificios() {
 
                   <button
                     title="Eliminar edificio"
-                    onClick={() => handleEliminar(e._id || e.id, e.nombre)}
+                    onClick={() =>
+                      abrirConfirmacion({
+                        title: "¿Eliminar edificio?",
+                        message: `¿Seguro que querés eliminar el edificio "${e.nombre}"? Esta acción no se puede deshacer.`,
+                        action: () => handleEliminar(e._id || e.id),
+                      })
+                    }
                     className="
                       p-1 rounded-lg
                       hover:bg-red-50
@@ -502,6 +522,27 @@ export default function Edificios() {
         handleChange={handleChange}
         handleSubmit={handleCrearEdificio}
       />
+
+      <ConfirmModal
+        isOpen={mostrarConfirmEliminar}
+        title={confirmData.title}
+        message={confirmData.message}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        tipo="danger"
+        onClose={() => {
+          setMostrarConfirmEliminar(false);
+          setAccionPendiente(null);
+        }}
+        onConfirm={async () => {
+          if (accionPendiente) {
+            await accionPendiente();
+          }
+
+          setAccionPendiente(null);
+        }}
+      />
+
     </div>
   );
 }
